@@ -15,7 +15,6 @@ from app.ai.sessions import (
     append_ai_session_turn,
     create_ai_session,
     delete_owned_ai_session,
-    get_owned_ai_session,
     list_owned_ai_sessions,
     read_owned_ai_session,
 )
@@ -120,23 +119,55 @@ def submit_ai_request(
         })
 
     session_cipher = None
+    conversation_history: list[dict[str, str]] = []
     if payload.session_id is not None:
         if not settings.ai_sessions_enabled:
             raise HTTPException(status_code=503, detail={"code": "ai_session_storage_disabled"})
+        session_policy = AIPolicyEngine(settings).evaluate(
+            capability=payload.capability, has_patient_context=True
+        )
+        if (
+            not session_policy.allowed
+            or session_policy.provider_class != "local"
+            or not orchestrator.gateway.has_provider("local")
+        ):
+            reason = session_policy.reason_code if not session_policy.allowed else "session_requires_local_model"
+            _audit(
+                db, user_id=user.id, hospital_id=hospital_id,
+                action="ai.session.blocked", outcome="denied",
+                reason=reason, metadata={**metadata, "session_id": str(payload.session_id)},
+                resource_type="ai_session", resource_id=str(payload.session_id),
+            )
+            raise HTTPException(status_code=503, detail={
+                "code": reason,
+                "message": "Conversation sessions require an approved local model. No hosted transfer was attempted."
+            })
         session_cipher = _session_cipher(settings)
         try:
-            get_owned_ai_session(
+            _, previous_messages = read_owned_ai_session(
                 db,
                 hospital_id=hospital_id,
                 owner_user_id=user.id,
                 session_id=payload.session_id,
+                cipher=session_cipher,
+                max_messages=40,
+                max_chars=20000,
             )
+            conversation_history = [
+                {"role": item["role"], "content": item["content"]}
+                for item in previous_messages
+            ]
         except AISessionUnavailable as exc:
             raise HTTPException(status_code=404, detail={"code": str(exc)}) from exc
+        except SessionEncryptionError as exc:
+            raise HTTPException(status_code=503, detail={
+                "code": "ai_session_content_unavailable",
+                "message": "Conversation history could not be safely decrypted."
+            }) from exc
         metadata = {**metadata, "session_id": str(payload.session_id)}
 
     patient_context = None
-    if payload.patient_context_id is None:
+    if payload.patient_context_id is None and payload.session_id is None:
         route_decision = AIPolicyEngine(settings).evaluate(
             capability=payload.capability, has_patient_context=False
         )
@@ -229,8 +260,9 @@ def submit_ai_request(
             prompt=payload.prompt,
             hospital_id=hospital_id,
             actor_user_id=user.id,
-            has_patient_context=patient_context is not None,
+            has_patient_context=patient_context is not None or payload.session_id is not None,
             patient_context=patient_context,
+            conversation_history=conversation_history,
         )
     except PermissionError as exc:
         reason = str(exc) or "ai_policy_denied"
