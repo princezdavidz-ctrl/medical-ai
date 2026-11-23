@@ -1,6 +1,6 @@
 from uuid import uuid4
 import pytest
-from app.ai.contracts import AICapability, AIModelResponse
+from app.ai.contracts import AICapability
 from app.ai.gateway import ModelGateway, ModelUnavailable
 from app.ai.policy import AIPolicyEngine
 from app.core.config import Settings
@@ -54,3 +54,16 @@ def test_gateway_rejects_unknown_provider_class() -> None:
         provider_class = "third_party"
     with pytest.raises(ValueError):
         gateway.register(InvalidProvider())  # type: ignore[arg-type]
+
+
+def test_hybrid_patient_context_uses_local_provider_when_enabled() -> None:
+    settings = Settings(
+        _env_file=None, secret_key="unit-test-secret-key-long-enough-123456",
+        ai_operating_mode="hybrid", ai_enabled_capabilities=["medical_information"],
+        ai_allow_hosted=True, ai_local_model_enabled=True,
+    )
+    decision = AIPolicyEngine(settings).evaluate(
+        capability=AICapability.MEDICAL_INFORMATION, has_patient_context=True
+    )
+    assert decision.allowed
+    assert decision.provider_class == "local"
