@@ -226,3 +226,37 @@ def delete_owned_ai_session(
     session.message_count = 0
     session.last_message_at = None
     db.flush()
+
+def purge_expired_ai_sessions(
+    db: Session,
+    *,
+    now: datetime | None = None,
+    batch_size: int = 100,
+) -> int:
+    """Purge expired encrypted message bodies in bounded batches; caller commits."""
+    current = _current_time(now)
+    if not 1 <= batch_size <= 1000:
+        raise AISessionUnavailable("invalid_session_purge_batch_size")
+    expired = db.scalars(
+        select(AISession)
+        .where(
+            AISession.status == "active",
+            AISession.expires_at <= current,
+        )
+        .order_by(AISession.expires_at)
+        .limit(batch_size)
+        .with_for_update(skip_locked=True)
+    ).all()
+    for session in expired:
+        db.execute(
+            delete(AISessionMessage).where(
+                AISessionMessage.hospital_id == session.hospital_id,
+                AISessionMessage.session_id == session.id,
+            )
+        )
+        session.status = "expired"
+        session.deleted_at = current
+        session.message_count = 0
+        session.last_message_at = None
+    db.flush()
+    return len(expired)
