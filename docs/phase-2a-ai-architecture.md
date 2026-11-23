@@ -307,3 +307,138 @@ Phase 2A is complete only when:
 - The implementation backlog is prioritized and accepted.
 
 **Important:** This plan is an architecture proposal. It does not authorize production use, external model transmission of patient data, autonomous clinical decisions or deployment of unvalidated AI capabilities.
+
+
+## 16. Locked decision: hybrid AI with full offline capability
+
+**Decision status:** Approved by the project owner for the Phase 2A architecture baseline.  
+**Selected strategy:** Hybrid — approved hosted models plus hospital-controlled local models.  
+**Offline requirement:** Full offline capability for the hospital platform's explicitly supported functions, with task-specific AI availability determined by local evaluation and hardware capacity.
+
+This decision means the project owns the complete Medical AI platform and its control plane: gateway, orchestration, policies, knowledge governance, retrieval, safety checks, capability definitions, audit, evaluation and user experience. Hosted and local models are interchangeable reasoning engines behind our own model gateway. The system is not a thin wrapper around one vendor API.
+
+### 16.1 Operating modes
+
+| Mode | Behavior |
+|---|---|
+| Connected / hybrid | Use approved hosted or local models according to task policy, data classification, quality, latency, cost and availability. |
+| Offline | Keep the hospital application and approved local AI capabilities operating without internet or hosted model access. |
+| Degraded / isolated | If a local model, local knowledge index or required dependency is unavailable or fails its evaluation threshold, disable only the affected capability, explain the limitation and provide the approved human/manual workflow. |
+
+The model router must not silently change the task's safety level when switching modes. It must record which model, model version, mode, policy and knowledge snapshot served each request.
+
+### 16.2 Full offline requirement — scope and boundaries
+
+"Full offline" is a system resilience requirement, not a promise that every advanced AI capability will work without connectivity. The design must support:
+
+- Hospital login and locally available identity/authorization checks, subject to the approved offline session and revocation policy.
+- Access to the hospital's locally available patient records and operational data under the same role, department, tenant and purpose-of-use controls.
+- Locally hosted AI models for capabilities that have passed independent offline clinical and technical evaluation.
+- Local medical knowledge search, hybrid retrieval and citations from a versioned, approved knowledge snapshot.
+- Local language/voice processing only where the required speech models and language packs are installed and evaluated.
+- Local audit/event queuing with durable storage, timestamps and tamper-evident sequencing; queued events synchronize when connectivity returns.
+- Offline-safe workflows and clear status indicators for unavailable external integrations, hosted models, partner hospitals, national services and live data sources.
+- Controlled synchronization with idempotency, conflict handling, replay protection and delivery acknowledgements.
+
+Offline operation must not create an authorization bypass. Cached patient information must remain encrypted, scoped, access-controlled and subject to retention/expiry rules. Revocation and account disablement must be reconciled safely; the offline policy must define maximum cache age and the response when authorization freshness cannot be established.
+
+### 16.3 Local-first data and model architecture
+
+- Run the local model runtime within hospital-controlled infrastructure or an approved private deployment. Keep model serving behind the same authenticated Model Gateway contract used for hosted providers.
+- Keep the approved medical knowledge index, embeddings, retrieval/reranking components and necessary reference metadata available locally.
+- Maintain explicit model/task approval records, hardware requirements, resource limits, version pinning, checksums and rollback packages.
+- Support a local-only processing policy for data classes that are not approved for external processing.
+- Hosted provider access is opt-in per approved task and data class; no restricted patient data may be sent to a hosted provider merely because the local model is busy or unavailable.
+- Downloads, updates and knowledge synchronization happen through signed, verified packages when connectivity is available. Offline sites must be able to continue using the last approved snapshot and show its version/date.
+- The local runtime must have resource isolation, health checks, bounded queues, concurrency limits and graceful degradation so AI cannot starve core hospital services.
+
+### 16.4 Safety rules across modes
+
+- Every capability is evaluated separately on hosted and local model configurations. Passing one does not approve the other.
+- High-risk diagnostic, medication, emergency, radiology and other clinical tasks remain disabled or restricted offline until that exact local model, retrieval snapshot and workflow pass the relevant clinical release gates.
+- The system must not invent a result when the model, evidence, patient context or required service is unavailable.
+- Critical alerts, emergency escalation and clinical action approvals must follow hospital-approved procedures; AI is not the sole emergency channel.
+- Human approval remains mandatory for consequential clinical actions in both connected and offline modes.
+- Patient data is not used to train or fine-tune models by default. Feedback is collected as governed evaluation material only after appropriate review and lawful approval.
+
+### 16.5 Connectivity and synchronization controls
+
+Introduce an explicit connectivity/operating-mode service with:
+- Health status for internet, hosted providers, local model runtime, local knowledge index, hospital database and synchronization queue.
+- Per-capability availability, rather than one misleading global "AI online" flag.
+- Durable outbound event queue, idempotency keys, retry/backoff, dead-letter handling and operator-visible reconciliation.
+- Conflict rules for records changed both locally and remotely; clinical record conflicts require authorized human resolution.
+- Signed/versioned knowledge and model package manifests, integrity verification and rollback.
+- Monitoring for queue age, storage pressure, failed synchronization, stale knowledge and local model resource exhaustion.
+
+A successful local write must be distinguished from a successfully synchronized remote write. The user interface must never display a remote delivery or partner-hospital acknowledgement until it has actually been received.
+
+### 16.6 Additional architecture components
+
+Add these logical components to the existing architecture (initially modular within the backend where practical):
+
+| Component | Responsibility |
+|---|---|
+| Local Model Runtime Manager | Deploys, monitors, versions and health-checks hospital-controlled model runtimes |
+| Offline Knowledge Node | Serves approved local medical knowledge, embeddings and retrieval indexes |
+| Connectivity & Mode Manager | Determines connected/offline/degraded state and per-capability availability |
+| Sync & Reconciliation Engine | Queues, verifies, retries and reconciles authorized data/events after reconnection |
+| Model/Knowledge Package Manager | Verifies signed releases, manifests, checksums, compatibility and rollback |
+| Offline Audit Buffer | Durably records access, AI decisions and actions until secure synchronization is possible |
+
+### 16.7 Additional data model requirements
+
+Extend the proposed model with these entities or equivalent tables after detailed schema review:
+
+- ai_runtime_deployments — site, runtime, hardware profile, status and deployed version.
+- ai_capability_model_approvals — exact capability/model/version/mode approval and evaluation reference.
+- ai_knowledge_release_snapshots — approved knowledge release, jurisdiction, version, checksum and effective dates.
+- ai_site_sync_cursors — synchronization position and last acknowledged event per site/stream.
+- ai_sync_events — durable event metadata, idempotency key, delivery attempts and acknowledgement state.
+- ai_connectivity_events — mode transitions and dependency health history.
+- ai_package_manifests — signed model/knowledge package metadata and integrity verification state.
+
+These records must not store plaintext secrets. Tenant-owned records remain hospital-scoped and protected by authorization/RLS. Global package metadata must be separated from hospital-specific deployment state.
+
+### 16.8 Revised implementation backlog
+
+The Phase 2 implementation backlog must now include:
+
+1. **Architecture and governance:** document site deployment topology, offline threat model, data classification, cache/retention rules, offline identity/revocation policy and clinical owners.
+2. **Model Gateway:** define provider-neutral hosted/local adapters, task routing, data-class policy, timeouts, quotas, version pinning and fail-closed fallback.
+3. **Local AI runtime:** select candidate open-weight models and runtime only after hardware, license, language, privacy and task requirements are documented.
+4. **Local knowledge:** build governed ingestion and review, local snapshots, lexical/vector retrieval, citations, version checks and rollback.
+5. **Offline application resilience:** define which hospital functions work without connectivity, local dependency behavior, operator indicators and safe degraded workflows.
+6. **Synchronization:** implement durable queues, idempotency, signatures/integrity, retries, conflict resolution, acknowledgements and reconciliation.
+7. **Evaluation:** establish separate hosted/local task-specific test suites, including offline retrieval, stale-source behavior, latency, resource pressure, adversarial inputs and clinical safety.
+8. **Pilot:** deploy to a controlled non-production hospital-like environment using synthetic/de-identified data before any clinical use.
+9. **Release governance:** require clinical, privacy, security and operations sign-off for each capability and each operating mode.
+
+### 16.9 Phase 2A decision record
+
+The following decisions are now locked:
+- One central Medical AI platform shared by all 40 modules.
+- Hybrid hosted + hospital-controlled local model strategy.
+- Full offline system capability as a design requirement, with per-capability safety qualification.
+- Own provider-neutral Model Gateway; no direct vendor coupling in modules.
+- Local approved medical knowledge and retrieval capability.
+- No automatic external transmission of restricted patient data.
+- No autonomous clinical decisions; human approval gates remain in force.
+- No default training on identifiable patient records.
+- Offline synchronization must be explicit, durable, auditable and conflict-aware.
+
+The following remain open design choices for the implementation backlog, not reasons to delay the architecture decision: initial model candidates, local runtime technology, deployment hardware profile, initial hosted provider, embedding/reranking implementation, knowledge source licenses, first pilot capability, cache retention limits and task-specific clinical thresholds.
+
+## 17. Updated Phase 2A completion criteria
+
+In addition to the original completion criteria, Phase 2A must produce:
+- A connected/offline/degraded operating-mode specification and capability availability matrix.
+- A local deployment and hardware-sizing decision record based on actual site requirements.
+- A model/provider policy covering hosted/local routing, data classification and fail-closed behavior.
+- A local knowledge snapshot, update, integrity and rollback design.
+- An offline identity, authorization freshness, cache and revocation policy.
+- A synchronization and conflict-reconciliation contract.
+- Separate hosted and local evaluation/release gates.
+- A prioritized implementation backlog with clinical, privacy, security and operations owners.
+
+**Safety and deployment note:** Full offline capability does not mean that all 40 AI capabilities are automatically approved for offline clinical use. Each task, model version, knowledge snapshot and workflow must pass its own release gates. Until those approvals are complete, the platform is an engineering/planning system and must not be used to make or execute clinical decisions.
