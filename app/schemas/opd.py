@@ -63,6 +63,8 @@ class OPDTriageCreate(BaseModel):
             self.red_flag_note is None or len(self.red_flag_note.strip()) < 3
         ):
             raise ValueError("red_flag_requires_escalation_note")
+        if self.red_flag_present and self.triage_level in {"standard", "non_urgent"}:
+            raise ValueError("red_flag_requires_urgent_triage_level")
         return self
 
 
@@ -149,8 +151,24 @@ class OPDDispositionCreate(BaseModel):
     note: str = Field(min_length=3, max_length=4000)
 
 
+class OPDPatientSummary(BaseModel):
+    id: UUID
+    medical_record_number: str
+    given_name: str
+    preferred_name: str | None
+    family_name: str
+    date_of_birth: date | None
+    administrative_sex: str | None
+
+
+class OPDQueueItemRead(BaseModel):
+    visit: OPDVisitRead
+    patient: OPDPatientSummary
+
+
 class OPDVisitDetailRead(BaseModel):
     visit: OPDVisitRead
+    patient: OPDPatientSummary
     triage: OPDTriageRead | None
     consultation: OPDConsultationRead | None
     diagnoses: list[OPDDiagnosisRead]
