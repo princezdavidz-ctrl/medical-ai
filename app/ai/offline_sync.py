@@ -197,10 +197,10 @@ def apply_next_incoming_event(
     if cursor is None or event.sequence_number != cursor.last_sequence + 1:
         raise OfflineSyncRejected("sync_cursor_order_violation")
 
-    apply_domain_change(db, event)
     current = now or datetime.now(timezone.utc)
     if current.tzinfo is None:
         raise OfflineSyncRejected("timezone_required")
+    apply_domain_change(db, event)
     event.status = "applied"
     event.applied_at = current
     cursor.last_sequence = event.sequence_number
@@ -291,8 +291,8 @@ def mark_outbound_delivered(
     )
     if item is None:
         raise OfflineSyncRejected("outbound_delivery_not_found")
-    if item.status not in {"sending", "queued"}:
-        raise OfflineSyncRejected("outbound_delivery_not_deliverable")
+    if item.status != "sending":
+        raise OfflineSyncRejected("outbound_delivery_not_sending")
     current = now or datetime.now(timezone.utc)
     if current.tzinfo is None:
         raise OfflineSyncRejected("timezone_required")
