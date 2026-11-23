@@ -564,21 +564,29 @@ def get_ai_usage(
         .order_by(AIUsageEvent.created_at.desc())
         .limit(100)
     ).all()
+    event_data = [{
+        "capability": item.capability,
+        "operating_mode": item.operating_mode,
+        "provider": item.provider_id,
+        "model": item.model_id,
+        "model_version": item.model_version,
+        "input_tokens": item.input_tokens,
+        "output_tokens": item.output_tokens,
+        "cost_micros": item.cost_micros,
+        "currency": item.currency,
+        "latency_ms": item.latency_ms,
+        "usage_is_estimated": item.usage_is_estimated,
+        "outcome": item.outcome,
+        "created_at": item.created_at,
+    } for item in events]
+    _audit(
+        db, user_id=user.id, hospital_id=hospital_id,
+        action="ai.usage.viewed", outcome="success",
+        reason="Hospital AI usage dashboard viewed",
+        metadata={"event_count": len(event_data), "policy_configured": snapshot.get("configured", False)},
+        resource_type="ai_usage", resource_id=str(hospital_id),
+    )
     return {
         "usage": snapshot,
-        "recent_events": [{
-            "capability": item.capability,
-            "operating_mode": item.operating_mode,
-            "provider": item.provider_id,
-            "model": item.model_id,
-            "model_version": item.model_version,
-            "input_tokens": item.input_tokens,
-            "output_tokens": item.output_tokens,
-            "cost_micros": item.cost_micros,
-            "currency": item.currency,
-            "latency_ms": item.latency_ms,
-            "usage_is_estimated": item.usage_is_estimated,
-            "outcome": item.outcome,
-            "created_at": item.created_at,
-        } for item in events],
+        "recent_events": event_data,
     }
