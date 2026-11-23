@@ -90,6 +90,7 @@ class AIOrchestrator:
             provider_class=decision.provider_class,
             provider_id=provider.provider_id,
             model_id=getattr(provider, "model_name", provider.provider_id),
+            model_version=getattr(provider, "model_version", "unverified"),
             estimated_input_tokens=estimate_tokens(prompt + evidence_context),
             provider_max_output_tokens=getattr(provider, "max_tokens", 1200),
         )
