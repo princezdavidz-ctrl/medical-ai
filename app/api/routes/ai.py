@@ -28,7 +28,7 @@ def list_capabilities(
             "capability": capability.value,
             "enabled": approved,
             "operating_mode": mode,
-            "status": "configured" if approved and runtime_ready else "not_configured",
+            "status": "not_configured",
         })
     return {"capabilities": statuses, "clinical_use_enabled": False}
 
