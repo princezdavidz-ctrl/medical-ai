@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from datetime import date, datetime, timezone
+from datetime import date, datetime, timedelta, timezone
 import json
 from math import ceil
 from uuid import UUID, uuid4
@@ -34,6 +34,7 @@ class AIUsageMeter:
         self.db = db
         self.settings = settings
         self._pricing = json.loads(settings.ai_model_pricing_json)
+        self.reservation_ttl_seconds = settings.ai_usage_reservation_ttl_seconds
 
     def _set_rls_context(self, hospital_id: UUID, actor_user_id: UUID) -> None:
         self.db.execute(
@@ -169,6 +170,7 @@ class AIUsageMeter:
             currency=policy.currency,
             pricing_snapshot_json=pricing,
             status="reserved",
+            expires_at=current + timedelta(seconds=self.reservation_ttl_seconds),
         )
         counter.requests_reserved += 1
         counter.input_tokens_reserved += estimated_input_tokens
@@ -336,3 +338,130 @@ class AIUsageMeter:
         ))
         self.db.commit()
         self._set_rls_context(hospital_id, actor_user_id)
+
+    def current_snapshot(
+        self, *, hospital_id: UUID, now: datetime | None = None
+    ) -> dict:
+        current = now or datetime.now(timezone.utc)
+        today = current.date()
+        policies = self.db.scalars(
+            select(AIUsagePolicy)
+            .where(
+                AIUsagePolicy.hospital_id == hospital_id,
+                AIUsagePolicy.status == "active",
+                AIUsagePolicy.period_start <= today,
+                AIUsagePolicy.period_end > today,
+            )
+            .order_by(AIUsagePolicy.period_start.desc())
+            .limit(2)
+        ).all()
+        if not policies:
+            return {"configured": False}
+        if len(policies) != 1:
+            raise AIUsageQuotaExceeded("ambiguous_ai_usage_policy")
+        policy = policies[0]
+        counter = self.db.scalar(
+            select(AIUsageCounter).where(
+                AIUsageCounter.hospital_id == hospital_id,
+                AIUsageCounter.policy_id == policy.id,
+            )
+        )
+        values = {
+            "requests_used": counter.requests_used if counter else 0,
+            "requests_reserved": counter.requests_reserved if counter else 0,
+            "input_tokens_used": counter.input_tokens_used if counter else 0,
+            "input_tokens_reserved": counter.input_tokens_reserved if counter else 0,
+            "output_tokens_used": counter.output_tokens_used if counter else 0,
+            "output_tokens_reserved": counter.output_tokens_reserved if counter else 0,
+            "cost_micros_used": counter.cost_micros_used if counter else 0,
+            "cost_micros_reserved": counter.cost_micros_reserved if counter else 0,
+        }
+        return {
+            "configured": True,
+            "plan_code": policy.plan_code,
+            "subscription_reference": policy.subscription_reference,
+            "period_start": policy.period_start,
+            "period_end": policy.period_end,
+            "request_limit": policy.request_limit,
+            "input_token_limit": policy.input_token_limit,
+            "output_token_limit": policy.output_token_limit,
+            "max_output_tokens_per_request": policy.max_output_tokens_per_request,
+            "cost_limit_micros": policy.cost_limit_micros,
+            "currency": policy.currency,
+            **values,
+        }
+
+    def release_expired_reservations(
+        self,
+        *,
+        hospital_id: UUID,
+        actor_user_id: UUID,
+        now: datetime | None = None,
+        batch_size: int = 100,
+    ) -> int:
+        """Release stale reservations for one authenticated hospital/user context."""
+        current = now or datetime.now(timezone.utc)
+        if current.tzinfo is None or not 1 <= batch_size <= 1000:
+            raise AIUsageQuotaExceeded("invalid_expired_reservation_cleanup")
+        self._set_rls_context(hospital_id, actor_user_id)
+        reservations = self.db.scalars(
+            select(AIUsageReservation)
+            .where(
+                AIUsageReservation.hospital_id == hospital_id,
+                AIUsageReservation.actor_user_id == actor_user_id,
+                AIUsageReservation.status == "reserved",
+                AIUsageReservation.expires_at <= current,
+            )
+            .order_by(AIUsageReservation.expires_at)
+            .limit(batch_size)
+            .with_for_update(skip_locked=True)
+        ).all()
+        for reservation in reservations:
+            counter = self.db.scalar(
+                select(AIUsageCounter)
+                .where(
+                    AIUsageCounter.id == reservation.counter_id,
+                    AIUsageCounter.hospital_id == hospital_id,
+                )
+                .with_for_update()
+            )
+            if counter is None:
+                raise AIUsageQuotaExceeded("ai_usage_counter_unavailable")
+            counter.requests_reserved = max(0, counter.requests_reserved - 1)
+            counter.input_tokens_reserved = max(
+                0, counter.input_tokens_reserved - reservation.reserved_input_tokens
+            )
+            counter.output_tokens_reserved = max(
+                0, counter.output_tokens_reserved - reservation.reserved_output_tokens
+            )
+            counter.cost_micros_reserved = max(
+                0, counter.cost_micros_reserved - reservation.estimated_cost_micros
+            )
+            counter.requests_used += 1
+            counter.input_tokens_used += reservation.reserved_input_tokens
+            if reservation.pricing_snapshot_json is not None:
+                counter.cost_micros_used += reservation.estimated_cost_micros
+            reservation.status = "released"
+            reservation.settled_at = current
+            self.db.add(AIUsageEvent(
+                hospital_id=hospital_id,
+                reservation_id=reservation.id,
+                actor_user_id=actor_user_id,
+                capability=reservation.capability,
+                operating_mode=reservation.operating_mode,
+                provider_id=reservation.provider_id,
+                model_id=reservation.model_id,
+                input_tokens=reservation.reserved_input_tokens,
+                output_tokens=0,
+                cost_micros=(
+                    reservation.estimated_cost_micros
+                    if reservation.pricing_snapshot_json is not None else None
+                ),
+                currency=reservation.currency,
+                latency_ms=0,
+                usage_is_estimated=True,
+                outcome="failed",
+            ))
+        self.db.commit()
+        self._set_rls_context(hospital_id, actor_user_id)
+        return len(reservations)
