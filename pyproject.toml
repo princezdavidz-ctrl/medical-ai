@@ -21,3 +21,8 @@ testpaths = ["tests"]
 [tool.ruff]
 line-length = 100
 target-version = "py312"
+
+[tool.ruff.lint]
+# FastAPI intentionally uses Depends/Form/Header in parameter defaults; import ordering
+# and UTC alias rewrites are stylistic and are not enforced by this baseline CI.
+ignore = ["B008", "I001", "UP017"]
