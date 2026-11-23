@@ -7,6 +7,16 @@ from app.ai.gateway import ModelGateway, ModelUnavailable
 from app.ai.orchestrator import AIOrchestrator, KnowledgeUnavailable, UnsafeModelOutput
 from app.ai.patient_context import PatientContextDenied, load_authorized_patient_context
 from app.ai.policy import AIPolicyEngine
+from app.ai.session_crypto import SessionCipher, SessionEncryptionError
+from app.ai.sessions import (
+    AISessionUnavailable,
+    append_ai_session_turn,
+    create_ai_session,
+    delete_owned_ai_session,
+    get_owned_ai_session,
+    list_owned_ai_sessions,
+    read_owned_ai_session,
+)
 from app.api.deps import get_current_context
 from app.core.config import get_settings
 from app.db.session import get_db
@@ -267,3 +277,132 @@ def submit_ai_request(
         "clinical_use_enabled": False,
         "requires_clinician_review": True,
     }
+
+
+def _session_cipher(settings) -> SessionCipher:
+    if not settings.ai_sessions_enabled or settings.ai_session_encryption_keys is None:
+        raise HTTPException(status_code=503, detail={
+            "code": "ai_session_storage_disabled"
+        })
+    return SessionCipher.from_secret(
+        keyring_secret=settings.ai_session_encryption_keys.get_secret_value(),
+        active_key_version=settings.ai_session_active_key_version,
+    )
+
+
+@router.post("/sessions", summary="Create a private encrypted AI conversation session")
+def create_session(
+    context=Depends(get_current_context),
+    db: Session = Depends(get_db),
+) -> dict:
+    user, hospital_id = context
+    settings = get_settings()
+    _session_cipher(settings)
+    session = create_ai_session(
+        db,
+        hospital_id=hospital_id,
+        owner_user_id=user.id,
+        retention_days=settings.ai_session_retention_days,
+    )
+    _audit(
+        db, user_id=user.id, hospital_id=hospital_id,
+        action="ai.session.created", outcome="success",
+        reason="Encrypted AI session created",
+        metadata={"session_id": str(session.id)},
+        resource_type="ai_session", resource_id=str(session.id),
+    )
+    return {
+        "id": str(session.id),
+        "status": session.status,
+        "message_count": session.message_count,
+        "created_at": session.created_at,
+        "expires_at": session.expires_at,
+    }
+
+
+@router.get("/sessions", summary="List the current staff user's AI sessions")
+def list_sessions(
+    context=Depends(get_current_context),
+    db: Session = Depends(get_db),
+) -> dict:
+    user, hospital_id = context
+    settings = get_settings()
+    _session_cipher(settings)
+    sessions = list_owned_ai_sessions(
+        db, hospital_id=hospital_id, owner_user_id=user.id
+    )
+    return {
+        "sessions": [{
+            "id": str(item.id),
+            "status": item.status,
+            "message_count": item.message_count,
+            "created_at": item.created_at,
+            "last_message_at": item.last_message_at,
+            "expires_at": item.expires_at,
+        } for item in sessions]
+    }
+
+
+@router.get("/sessions/{session_id}", summary="Read an owned encrypted AI conversation")
+def read_session(
+    session_id: UUID,
+    context=Depends(get_current_context),
+    db: Session = Depends(get_db),
+) -> dict:
+    user, hospital_id = context
+    cipher = _session_cipher(get_settings())
+    try:
+        session, messages = read_owned_ai_session(
+            db,
+            hospital_id=hospital_id,
+            owner_user_id=user.id,
+            session_id=session_id,
+            cipher=cipher,
+        )
+    except AISessionUnavailable as exc:
+        raise HTTPException(status_code=404, detail={"code": str(exc)}) from exc
+    except SessionEncryptionError as exc:
+        raise HTTPException(status_code=503, detail={
+            "code": "ai_session_content_unavailable",
+            "message": "Encrypted session content could not be safely decrypted."
+        }) from exc
+    _audit(
+        db, user_id=user.id, hospital_id=hospital_id,
+        action="ai.session.read", outcome="success",
+        reason="Owned encrypted AI session read",
+        metadata={"session_id": str(session.id), "message_count": len(messages)},
+        resource_type="ai_session", resource_id=str(session.id),
+    )
+    return {
+        "id": str(session.id),
+        "message_count": session.message_count,
+        "expires_at": session.expires_at,
+        "messages": messages,
+    }
+
+
+@router.delete("/sessions/{session_id}", summary="Delete an owned AI session and its encrypted messages")
+def delete_session(
+    session_id: UUID,
+    context=Depends(get_current_context),
+    db: Session = Depends(get_db),
+) -> dict:
+    user, hospital_id = context
+    _session_cipher(get_settings())
+    try:
+        delete_owned_ai_session(
+            db,
+            hospital_id=hospital_id,
+            owner_user_id=user.id,
+            session_id=session_id,
+        )
+    except AISessionUnavailable as exc:
+        raise HTTPException(status_code=404, detail={"code": str(exc)}) from exc
+    _audit(
+        db, user_id=user.id, hospital_id=hospital_id,
+        action="ai.session.deleted", outcome="success",
+        reason="Encrypted AI session content deleted",
+        metadata={"session_id": str(session_id)},
+        resource_type="ai_session", resource_id=str(session_id),
+    )
+    return {"id": str(session_id), "status": "deleted"}
