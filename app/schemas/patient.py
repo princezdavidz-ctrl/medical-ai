@@ -178,3 +178,8 @@ class PatientStatusUpdate(BaseModel):
 
     status: Literal["active", "inactive", "deceased"]
     reason: str = Field(min_length=3, max_length=1000)
+
+
+class PatientDuplicateCandidateRead(BaseModel):
+    case: PatientDuplicateCaseRead
+    candidate: PatientRead
