@@ -126,12 +126,12 @@ class AIUsageMeter:
             raise AIUsageQuotaExceeded("model_pricing_required_for_cost_limited_plan")
 
         max_output_tokens = min(
-            provider_max_output_tokens, policy.max_output_tokens_per_request
+            provider_max_output_tokens,
+            policy.max_output_tokens_per_request,
+            policy.output_token_limit - counter.output_tokens_used - counter.output_tokens_reserved,
         )
-        estimated_cost = self._cost(
-            estimated_input_tokens, max_output_tokens, pricing
-        ) or 0
-
+        if max_output_tokens < 1:
+            raise AIUsageQuotaExceeded("monthly_ai_output_token_limit_reached")
         if counter.requests_used + counter.requests_reserved + 1 > policy.request_limit:
             raise AIUsageQuotaExceeded("monthly_ai_request_limit_reached")
         if (
@@ -139,17 +139,28 @@ class AIUsageMeter:
             > policy.input_token_limit
         ):
             raise AIUsageQuotaExceeded("monthly_ai_input_token_limit_reached")
-        if (
-            counter.output_tokens_used + counter.output_tokens_reserved + max_output_tokens
-            > policy.output_token_limit
-        ):
-            raise AIUsageQuotaExceeded("monthly_ai_output_token_limit_reached")
-        if (
-            policy.cost_limit_micros is not None
-            and counter.cost_micros_used + counter.cost_micros_reserved + estimated_cost
-            > policy.cost_limit_micros
-        ):
-            raise AIUsageQuotaExceeded("monthly_ai_cost_limit_reached")
+
+        if policy.cost_limit_micros is not None:
+            remaining_cost = (
+                policy.cost_limit_micros
+                - counter.cost_micros_used
+                - counter.cost_micros_reserved
+            )
+            input_cost = self._cost(estimated_input_tokens, 0, pricing)
+            if input_cost is None or input_cost > remaining_cost:
+                raise AIUsageQuotaExceeded("monthly_ai_cost_limit_reached")
+            output_rate = pricing["output_micros_per_million_tokens"]
+            if output_rate > 0:
+                max_output_by_cost = (
+                    (remaining_cost - input_cost) * 1_000_000
+                ) // output_rate
+                max_output_tokens = min(max_output_tokens, max_output_by_cost)
+            if max_output_tokens < 1:
+                raise AIUsageQuotaExceeded("monthly_ai_cost_limit_reached")
+
+        estimated_cost = self._cost(
+            estimated_input_tokens, max_output_tokens, pricing
+        ) or 0
 
         reservation_id = uuid4()
         reservation = AIUsageReservation(
