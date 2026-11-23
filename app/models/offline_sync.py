@@ -112,7 +112,11 @@ class OfflineSyncConflict(Base):
 
     id: Mapped[uuid.UUID] = mapped_column(Uuid(as_uuid=True), primary_key=True, default=uuid.uuid4)
     hospital_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("hospitals.id"), nullable=False)
-    event_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("offline_sync_events.id"), nullable=False)
+    event_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("offline_sync_events.id"))
+    source_node_id: Mapped[str] = mapped_column(String(160), nullable=False)
+    stream_name: Mapped[str] = mapped_column(String(100), nullable=False)
+    incoming_event_id: Mapped[str] = mapped_column(String(160), nullable=False)
+    incoming_sequence: Mapped[int] = mapped_column(BigInteger, nullable=False)
     conflict_code: Mapped[str] = mapped_column(String(100), nullable=False)
     details_json: Mapped[dict[str, Any]] = mapped_column(JSON, nullable=False, default=dict)
     status: Mapped[str] = mapped_column(String(24), nullable=False, default="open")
