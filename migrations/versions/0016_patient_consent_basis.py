@@ -80,7 +80,6 @@ def downgrade() -> None:
     op.drop_column("patient_consents", "withdrawn_by_user_id")
     op.drop_column("patient_consents", "recorded_by_user_id")
     op.drop_column("patient_consents", "requested_by_user_id")
-    op.drop_column("patient_consents", "recorded_by_user_id")
     op.drop_column("patient_consents", "evidence_reference")
     op.drop_column("patient_consents", "consent_method")
     op.drop_column("patient_consents", "basis_code")
