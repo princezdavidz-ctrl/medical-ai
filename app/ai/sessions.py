@@ -230,16 +230,20 @@ def delete_owned_ai_session(
 def purge_expired_ai_sessions(
     db: Session,
     *,
+    hospital_id: UUID,
+    owner_user_id: UUID,
     now: datetime | None = None,
     batch_size: int = 100,
 ) -> int:
-    """Purge expired encrypted message bodies in bounded batches; caller commits."""
+    """Purge one owner's expired messages in bounded batches; caller commits."""
     current = _current_time(now)
     if not 1 <= batch_size <= 1000:
         raise AISessionUnavailable("invalid_session_purge_batch_size")
     expired = db.scalars(
         select(AISession)
         .where(
+            AISession.hospital_id == hospital_id,
+            AISession.owner_user_id == owner_user_id,
             AISession.status == "active",
             AISession.expires_at <= current,
         )
