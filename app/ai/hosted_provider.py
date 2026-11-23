@@ -73,6 +73,8 @@ class HostedOpenAICompatibleProvider:
     def generate(self, request: AIModelRequest) -> AIModelResponse:
         if request.operating_mode is not OperatingMode.HYBRID:
             raise HostedModelUnavailable("hosted_provider_forbidden_outside_hybrid_mode")
+        if "AUTHORIZED PATIENT CONTEXT" in request.evidence_context:
+            raise HostedModelUnavailable("hosted_provider_rejects_patient_context")
         if not request.prompt.strip() or len(request.prompt) > 8000:
             raise HostedModelUnavailable("prompt_empty_or_exceeds_limit")
         if len(request.evidence_context) > 50000:
