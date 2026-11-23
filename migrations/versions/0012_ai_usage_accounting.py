@@ -83,6 +83,8 @@ def upgrade() -> None:
         sa.Column("reserved_input_tokens", sa.BigInteger(), nullable=False),
         sa.Column("reserved_output_tokens", sa.BigInteger(), nullable=False),
         sa.Column("estimated_cost_micros", sa.BigInteger(), nullable=False, server_default="0"),
+        sa.Column("currency", sa.String(3), nullable=False),
+        sa.Column("pricing_snapshot_json", sa.JSON()),
         sa.Column("status", sa.String(24), nullable=False),
         sa.Column("created_at", sa.DateTime(timezone=True), server_default=sa.func.now(), nullable=False),
         sa.Column("settled_at", sa.DateTime(timezone=True)),
