@@ -161,6 +161,8 @@ class AIUsageMeter:
         estimated_cost = self._cost(
             estimated_input_tokens, max_output_tokens, pricing
         ) or 0
+        if policy.cost_limit_micros is not None and estimated_cost > remaining_cost:
+            raise AIUsageQuotaExceeded("monthly_ai_cost_limit_reached")
 
         reservation_id = uuid4()
         reservation = AIUsageReservation(
