@@ -137,6 +137,8 @@ class PatientIdentityDocumentRead(BaseModel):
 
 
 class PatientNextOfKinRead(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
     id: UUID
     full_name: str
     relationship: str
