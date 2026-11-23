@@ -14,13 +14,20 @@ from app.models.knowledge_ingestion import (
     StagedKnowledgeDocument,
     TerminologyMapping,
 )
-from app.models.offline_sync import (\n    OfflineDeliveryOutbox,\n    OfflineKnowledgeInstallation,\n    OfflineSyncConflict,\n    OfflineSyncCursor,\n    OfflineSyncEvent,\n)\nfrom app.models.ai_evaluation import (
+from app.models.ai_evaluation import (
     AIEvaluationDataset,
     AIEvaluationRunRecord,
     AIEvaluationThresholdSet,
     AIModelRelease,
     AIReleaseApproval,
     AIGovernanceEvent,
+)
+from app.models.offline_sync import (
+    OfflineDeliveryOutbox,
+    OfflineKnowledgeInstallation,
+    OfflineSyncConflict,
+    OfflineSyncCursor,
+    OfflineSyncEvent,
 )
 
 __all__ = [
@@ -47,6 +54,11 @@ __all__ = [
     "MedicalKnowledgeDocument",
     "MedicalKnowledgeSource",
     "MedicationSafetyRule",
+    "OfflineDeliveryOutbox",
+    "OfflineKnowledgeInstallation",
+    "OfflineSyncConflict",
+    "OfflineSyncCursor",
+    "OfflineSyncEvent",
     "Organization",
     "Patient",
     "PatientConsent",
