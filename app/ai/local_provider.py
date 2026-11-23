@@ -4,6 +4,7 @@ import httpx
 
 from app.ai.gateway import ModelUnavailable
 from app.ai.contracts import AIModelRequest, AIModelResponse
+from app.ai.token_usage import extract_token_usage
 
 
 class LocalModelUnavailable(ModelUnavailable):
@@ -85,7 +86,7 @@ class LocalOpenAICompatibleProvider:
                 {"role": "user", "content": request.prompt},
             ],
             "temperature": 0,
-            "max_tokens": self.max_tokens,
+            "max_tokens": min(self.max_tokens, request.max_output_tokens),
             "stream": False,
         }
         try:
@@ -113,9 +114,18 @@ class LocalOpenAICompatibleProvider:
         if len(content) > self.max_response_chars:
             raise LocalModelUnavailable("Local model response exceeds the configured output limit")
 
+        prompt_tokens, completion_tokens, total_tokens, usage_is_estimated = extract_token_usage(
+            body,
+            prompt_text=system_message + request.prompt,
+            completion_text=content,
+        )
         return AIModelResponse(
             content=content.strip(),
             provider=self.provider_id,
             model=self.model_name,
             model_version=self.model_version,
+            prompt_tokens=prompt_tokens,
+            completion_tokens=completion_tokens,
+            total_tokens=total_tokens,
+            usage_is_estimated=usage_is_estimated,
         )
