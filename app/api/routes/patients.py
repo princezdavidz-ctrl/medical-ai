@@ -323,6 +323,7 @@ def get_patient_registration(
             "document_type": item.document_type,
             "issuing_country": item.issuing_country,
             "verification_status": item.verification_status,
+            "verification_reason_code": item.verification_reason_code,
             "expires_at": item.expires_at,
             "verified_at": item.verified_at,
         } for item in documents],
