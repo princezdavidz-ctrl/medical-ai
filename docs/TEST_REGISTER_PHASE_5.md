@@ -41,6 +41,11 @@ These corrections are included in the current development branch; they have not 
 - [ ] Offline/degraded provider routing never invokes hosted, even during local runtime failure.
 - [ ] Offline and degraded mode: no network dependency, no accidental hosted calls.
 - [ ] Model identity/version/digest pinning and artifact attestation.
+- [ ] Capability prompt version/digest stability, registry tampering detection and evaluation-to-prompt digest binding.
+- [ ] Verify local and hosted providers receive identical capability-specific instructions, workflow contracts, response schemas and explicit tool allow-lists.
+- [ ] Verify no unapproved tool can be invoked and tool permissions remain empty until separately approved.
+- [ ] Validate response envelope against Pydantic schema and enforce clinical-use=false / clinician-review=true invariants.
+- [ ] Verify prompt changes force a new evaluation and stale evaluation approvals cannot authorize changed prompts.
 - [ ] Approved-evidence retrieval, source freshness, jurisdiction filtering and tenant scoping.
 - [ ] Citation token validation, citation-to-source accuracy and unsupported-answer abstention.
 - [ ] Prompt injection in user prompts, retrieved documents and tool outputs.
