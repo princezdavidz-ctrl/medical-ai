@@ -14,7 +14,7 @@ from app.models.knowledge_ingestion import (
     StagedKnowledgeDocument,
     TerminologyMapping,
 )
-from app.models.ai_evaluation import (
+from app.models.offline_sync import (\n    OfflineDeliveryOutbox,\n    OfflineKnowledgeInstallation,\n    OfflineSyncConflict,\n    OfflineSyncCursor,\n    OfflineSyncEvent,\n)\nfrom app.models.ai_evaluation import (
     AIEvaluationDataset,
     AIEvaluationRunRecord,
     AIEvaluationThresholdSet,
