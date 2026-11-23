@@ -124,16 +124,17 @@ class PatientConsent(TimestampMixin, Base):
         ),
         CheckConstraint(
             "basis_code IS NULL OR "
-            "(status = 'pending' AND recorded_by_user_id IS NULL AND evidence_reference IS NULL "
-            "AND consent_method IS NULL AND granted_at IS NULL AND withdrawn_at IS NULL "
-            "AND withdrawn_by_user_id IS NULL AND decision_reason_code IS NULL) OR "
-            "(status = 'granted' AND recorded_by_user_id IS NOT NULL AND evidence_reference IS NOT NULL "
-            "AND consent_method IS NOT NULL AND granted_at IS NOT NULL AND withdrawn_at IS NULL "
-            "AND withdrawn_by_user_id IS NULL AND decision_reason_code = 'evidence_confirmed') OR "
-            "(status = 'rejected' AND recorded_by_user_id IS NOT NULL AND decision_reason_code IN "
-            "('patient_declined', 'guardian_declined', 'other') AND granted_at IS NULL "
-            "AND withdrawn_at IS NULL AND withdrawn_by_user_id IS NULL) OR "
-            "(status = 'withdrawn' AND withdrawn_by_user_id IS NOT NULL AND withdrawn_at IS NOT NULL "
+            "(status = 'pending' AND requested_by_user_id IS NOT NULL AND recorded_by_user_id IS NULL "
+            "AND evidence_reference IS NULL AND consent_method IS NULL AND granted_at IS NULL "
+            "AND withdrawn_at IS NULL AND withdrawn_by_user_id IS NULL AND decision_reason_code IS NULL) OR "
+            "(status = 'granted' AND requested_by_user_id IS NOT NULL AND recorded_by_user_id IS NOT NULL "
+            "AND evidence_reference IS NOT NULL AND consent_method IS NOT NULL AND granted_at IS NOT NULL "
+            "AND withdrawn_at IS NULL AND withdrawn_by_user_id IS NULL AND decision_reason_code = 'evidence_confirmed') OR "
+            "(status = 'rejected' AND requested_by_user_id IS NOT NULL AND recorded_by_user_id IS NOT NULL "
+            "AND decision_reason_code IN ('patient_declined', 'guardian_declined', 'other') "
+            "AND granted_at IS NULL AND withdrawn_at IS NULL AND withdrawn_by_user_id IS NULL) OR "
+            "(status = 'withdrawn' AND requested_by_user_id IS NOT NULL AND recorded_by_user_id IS NOT NULL "
+            "AND withdrawn_by_user_id IS NOT NULL AND withdrawn_at IS NOT NULL "
             "AND decision_reason_code IN ('withdrawn_by_patient', 'lawful_basis_ended', 'other'))",
             name="ck_patient_consent_decision_state",
         ),
@@ -147,6 +148,7 @@ class PatientConsent(TimestampMixin, Base):
     basis_code: Mapped[str | None] = mapped_column(String(32))
     consent_method: Mapped[str | None] = mapped_column(String(24))
     evidence_reference: Mapped[str | None] = mapped_column(String(80))
+    requested_by_user_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("users.id"))
     recorded_by_user_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("users.id"))
     withdrawn_by_user_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("users.id"))
     decision_reason_code: Mapped[str | None] = mapped_column(String(40))
