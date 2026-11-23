@@ -52,6 +52,25 @@ def upgrade() -> None:
     op.create_index("ix_knowledge_review_events_staged_document_id", "knowledge_review_events", ["staged_document_id"])
     op.create_index("ix_knowledge_review_event_document_time", "knowledge_review_events", ["staged_document_id", "occurred_at"])
 
+    op.create_unique_constraint(
+        "uq_knowledge_document_source_version",
+        "medical_knowledge_documents",
+        ["source_id", "version"],
+    )
+    op.execute("""
+        CREATE FUNCTION prevent_knowledge_review_event_mutation()
+        RETURNS trigger AS $
+        BEGIN
+            RAISE EXCEPTION 'knowledge review events are append-only';
+        END;
+        $ LANGUAGE plpgsql
+    """)
+    op.execute("""
+        CREATE TRIGGER knowledge_review_events_append_only
+        BEFORE UPDATE OR DELETE ON knowledge_review_events
+        FOR EACH ROW EXECUTE FUNCTION prevent_knowledge_review_event_mutation()
+    """)
+
     # Credential grants are managed by a trusted platform process, never ordinary tenant users.
     op.execute("ALTER TABLE clinical_knowledge_reviewer_authorizations ENABLE ROW LEVEL SECURITY")
     op.execute("ALTER TABLE clinical_knowledge_reviewer_authorizations FORCE ROW LEVEL SECURITY")
@@ -96,6 +115,9 @@ def downgrade() -> None:
     op.execute("DROP POLICY IF EXISTS knowledge_review_events_tenant_insert ON knowledge_review_events")
     op.execute("DROP POLICY IF EXISTS knowledge_review_events_tenant_read ON knowledge_review_events")
     op.execute("DROP POLICY IF EXISTS knowledge_reviewer_auth_read ON clinical_knowledge_reviewer_authorizations")
+    op.execute("DROP TRIGGER IF EXISTS knowledge_review_events_append_only ON knowledge_review_events")
+    op.execute("DROP FUNCTION IF EXISTS prevent_knowledge_review_event_mutation()")
+    op.drop_constraint("uq_knowledge_document_source_version", "medical_knowledge_documents", type_="unique")
     op.drop_index("ix_knowledge_review_event_document_time", table_name="knowledge_review_events")
     op.drop_index("ix_knowledge_review_events_staged_document_id", table_name="knowledge_review_events")
     op.drop_table("knowledge_review_events")
