@@ -58,7 +58,7 @@ These corrections are included in the current development branch; they have not 
 - [ ] AI session retention, access controls, deletion/export and audit privacy.
 - [ ] AES-GCM round trip, ciphertext tampering, AAD binding, key rotation and missing-key behavior.
 - [ ] Database RLS owner isolation, composite session/message ownership, cross-hospital access and deletion.
-- [ ] Session expiry, scheduled purge, append-turn atomicity and no plaintext prompt/response persistence.
+- [ ] Session expiry, scheduled purge, append-turn atomicity and no plaintext prompt/response persistence.\n- [ ] Bounded history reconstruction, truncation signaling, prompt-injection isolation and local-only session routing.
 - [ ] Usage metering accuracy, tenant quotas, billing aggregation and fail-safe behavior.
 
 ## Clinical safety and interoperability
