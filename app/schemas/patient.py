@@ -317,6 +317,9 @@ class PatientConsentCreate(BaseModel):
             raise ValueError("duplicate_data_category")
         if len(set(self.permitted_uses)) != len(self.permitted_uses):
             raise ValueError("duplicate_permitted_use")
+        required_use = "other_lawful_use" if self.purpose == "other" else self.purpose
+        if required_use not in self.permitted_uses:
+            raise ValueError("consent_scope_must_include_declared_purpose")
         return self
 
 
