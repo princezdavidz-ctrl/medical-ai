@@ -9,6 +9,7 @@ Source: GitHub Actions Backend CI run 45144650972 on commit 6307a0ec2b9ab969a926
 - [ ] Re-run Ruff after the lint corrections in the Phase 2B.11 branch are merged.
 - [ ] Confirm all lint checks are clean across app, tests and migrations.
 - [ ] Run Alembic migrations from an empty PostgreSQL 16 database through head.
+- [ ] Confirm the frozen 0001 Phase 1 baseline creates only its historical core tables and all later schemas are created exactly once by explicit revisions.
 - [ ] Confirm the least-privileged application DB role can access only its intended tenant rows and cannot access governance tables.
 - [ ] Execute the complete pytest suite. The run above stopped at lint, so migrations and pytest were skipped.
 - [ ] Resolve any additional failures found after lint is clean.
@@ -90,7 +91,8 @@ These corrections are included in the current development branch; they have not 
 - [ ] Each of the 40 modules: permissions, workflow, data integrity, audit, accessibility and usability.
 - [ ] Phase 3.1 patient registration: duplicate candidate detection, human-reviewed identity matching, no automatic merge, consent/lawful basis, next-of-kin access, patient status transitions and audit history.
 - [ ] Patient MRN uniqueness per hospital and composite foreign-key tenant isolation across registration profile, identity documents, next of kin and duplicate cases.
-- [ ] Patient create/list/read/update RBAC: registration-role access, active care-assignment-only clinical reads, assignment expiry/revocation and cross-hospital denial.
+- [ ] Patient create/list/read/update RBAC: registration-role access, active care-assignment-only clinical reads, assignment expiry/revocation, department matching and cross-hospital denial.
+- [ ] Patient demographic updates: required-name null rejection, immutable MRN, future DOB rejection, duplicate re-detection and no duplicate-case duplication.
 - [ ] Duplicate candidate rules: normalized names, date-of-birth and phone matches; heuristic score interpretation; same-hospital-only matching; concurrent duplicate case creation.
 - [ ] Human duplicate review state transitions, reviewer attribution, no automatic merge/delete, and immutable audit evidence.
 - [ ] Identity document API accepts only opaque encrypted-vault references, never returns vault references/fingerprints, and enforces pending-to-verified/rejected review with controlled reason codes.
