@@ -11,6 +11,13 @@ from app.models.knowledge_ingestion import KnowledgeImportBatch, StagedKnowledge
 from app.models.knowledge_review import ClinicalKnowledgeReviewerAuthorization, KnowledgeReviewEvent
 
 
+def validate_review_separation(*, submitter_id: UUID, reviewer_id: UUID, publisher_id: UUID | None = None) -> None:
+    if reviewer_id == submitter_id:
+        raise PermissionError("submitter_cannot_review_own_import")
+    if publisher_id is not None and publisher_id in {submitter_id, reviewer_id}:
+        raise PermissionError("publisher_must_be_independent_of_submitter_and_reviewer")
+
+
 def _authorization(session: Session, user_id: UUID, hospital_id: UUID | None, scope: str):
     now = datetime.now(timezone.utc)
     q = select(ClinicalKnowledgeReviewerAuthorization).where(
@@ -57,8 +64,7 @@ def review_staged_document(
     staged, batch = _get_staged(session, staged_document_id)
     if staged.status not in {"staged", "pending_review"}:
         raise ValueError("staged_document_not_reviewable")
-    if batch.submitted_by_user_id == reviewer_user_id:
-        raise PermissionError("submitter_cannot_review_own_import")
+    validate_review_separation(submitter_id=batch.submitted_by_user_id, reviewer_id=reviewer_user_id)
     if batch.scope == "hospital" and batch.hospital_id != hospital_id:
         raise PermissionError("hospital_scope_mismatch")
     if batch.scope == "global" and hospital_id is not None:
@@ -91,8 +97,7 @@ def publish_approved_document(
     staged, batch = _get_staged(session, staged_document_id)
     if staged.status != "approved":
         raise ValueError("document_requires_approved_review")
-    if batch.submitted_by_user_id == publisher_user_id:
-        raise PermissionError("submitter_cannot_publish_own_import")
+    validate_review_separation(submitter_id=batch.submitted_by_user_id, reviewer_id=approval.actor_user_id if "approval" in locals() and approval else publisher_user_id, publisher_id=publisher_user_id)
     if batch.scope == "hospital" and batch.hospital_id != hospital_id:
         raise PermissionError("hospital_scope_mismatch")
     if batch.scope == "global" and hospital_id is not None:
@@ -102,8 +107,13 @@ def publish_approved_document(
         KnowledgeReviewEvent.staged_document_id == staged.id,
         KnowledgeReviewEvent.decision == "approved",
     ).order_by(KnowledgeReviewEvent.occurred_at.desc()).limit(1))
-    if approval is None or approval.actor_user_id in {publisher_user_id, batch.submitted_by_user_id}:
+    if approval is None:
         raise PermissionError("independent_clinical_approval_required")
+    validate_review_separation(
+        submitter_id=batch.submitted_by_user_id,
+        reviewer_id=approval.actor_user_id,
+        publisher_id=publisher_user_id,
+    )
     if approval.reviewer_authorization_id is None:
         raise PermissionError("approval_requires_verified_reviewer")
     approval_auth = session.get(
