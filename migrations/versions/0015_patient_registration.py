@@ -86,8 +86,13 @@ def upgrade() -> None:
             name="ck_patient_identity_document_reason",
         ),
         sa.CheckConstraint(
-            "verification_status = 'pending' OR "
-            "(verified_by_user_id IS NOT NULL AND verified_at IS NOT NULL AND verification_reason_code IS NOT NULL)",
+            "(verification_status = 'pending' AND verification_reason_code IS NULL "
+            "AND verified_by_user_id IS NULL AND verified_at IS NULL) OR "
+            "(verification_status = 'verified' AND verification_reason_code = 'verified_document' "
+            "AND verified_by_user_id IS NOT NULL AND verified_at IS NOT NULL) OR "
+            "(verification_status = 'rejected' AND verification_reason_code IN "
+            "('expired_document', 'unreadable_document', 'identity_mismatch', 'unsupported_document') "
+            "AND verified_by_user_id IS NOT NULL AND verified_at IS NOT NULL)",
             name="ck_patient_identity_document_reviewed",
         ),
         sa.CheckConstraint(
@@ -160,7 +165,8 @@ def upgrade() -> None:
             name="ck_patient_duplicate_status",
         ),
         sa.CheckConstraint(
-            "status = 'pending' OR (reviewed_by_user_id IS NOT NULL AND reviewed_at IS NOT NULL)",
+            "(status = 'pending' AND reviewed_by_user_id IS NULL AND reviewed_at IS NULL AND review_note IS NULL) OR "
+            "(status <> 'pending' AND reviewed_by_user_id IS NOT NULL AND reviewed_at IS NOT NULL AND review_note IS NOT NULL)",
             name="ck_patient_duplicate_reviewed",
         ),
     )
