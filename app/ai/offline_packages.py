@@ -11,7 +11,7 @@ import base64
 import hashlib
 import json
 import re
-from typing import Mapping
+from collections.abc import Mapping
 
 from cryptography.exceptions import InvalidSignature
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PublicKey
