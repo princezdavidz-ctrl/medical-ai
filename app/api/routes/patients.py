@@ -25,6 +25,7 @@ from app.schemas.patient import (
     PatientDuplicateCaseRead,
     PatientDuplicateCaseReview,
     PatientIdentityDocumentVerification,
+    PatientDemographicsUpdate,
     PatientRead,
     PatientRegistrationProfileUpdate,
     PatientRegistrationRead,
@@ -123,27 +124,36 @@ def _has_active_patient_assignment(
 
 
 def _duplicate_candidates(
-    db: Session, *, hospital_id: UUID, payload: PatientCreate
+    db: Session,
+    *,
+    hospital_id: UUID,
+    given_name: str,
+    family_name: str,
+    date_of_birth,
+    phone_number: str | None,
+    exclude_patient_id: UUID | None = None,
 ) -> list[tuple[Patient, int, dict[str, bool]]]:
-    given = payload.given_name.strip().casefold()
-    family = payload.family_name.strip().casefold()
+    given = given_name.strip().casefold()
+    family = family_name.strip().casefold()
     conditions = []
-    if payload.date_of_birth is not None:
+    if date_of_birth is not None:
         conditions.append(and_(
             func.lower(func.trim(Patient.given_name)) == given,
             func.lower(func.trim(Patient.family_name)) == family,
-            Patient.date_of_birth == payload.date_of_birth,
+            Patient.date_of_birth == date_of_birth,
         ))
-    if payload.phone_number:
-        conditions.append(Patient.phone_number == payload.phone_number.strip())
+    if phone_number:
+        conditions.append(Patient.phone_number == phone_number.strip())
     if not conditions:
         return []
 
+    query = select(Patient).where(
+        Patient.hospital_id == hospital_id, or_(*conditions)
+    )
+    if exclude_patient_id is not None:
+        query = query.where(Patient.id != exclude_patient_id)
     candidates = db.scalars(
-        select(Patient)
-        .where(Patient.hospital_id == hospital_id, or_(*conditions))
-        .order_by(Patient.created_at.desc())
-        .limit(25)
+        query.order_by(Patient.created_at.desc()).limit(25)
     ).all()
     matches = []
     for candidate in candidates:
@@ -151,14 +161,11 @@ def _duplicate_candidates(
             candidate.given_name.strip().casefold() == given
             and candidate.family_name.strip().casefold() == family
         )
-        same_dob = (
-            payload.date_of_birth is not None
-            and candidate.date_of_birth == payload.date_of_birth
-        )
+        same_dob = date_of_birth is not None and candidate.date_of_birth == date_of_birth
         same_phone = bool(
-            payload.phone_number
+            phone_number
             and candidate.phone_number
-            and candidate.phone_number.strip() == payload.phone_number.strip()
+            and candidate.phone_number.strip() == phone_number.strip()
         )
         signals = {
             "same_normalized_name": same_name,
@@ -180,7 +187,14 @@ def create_patient(
     _require_patient_role(
         db, user=user, hospital_id=hospital_id, allowed_roles=_REGISTRATION_ROLES
     )
-    candidates = _duplicate_candidates(db, hospital_id=hospital_id, payload=payload)
+    candidates = _duplicate_candidates(
+        db,
+        hospital_id=hospital_id,
+        given_name=payload.given_name,
+        family_name=payload.family_name,
+        date_of_birth=payload.date_of_birth,
+        phone_number=payload.phone_number,
+    )
     now = datetime.now(timezone.utc)
     patient_data = payload.model_dump(
         exclude={"profile", "identity_documents", "next_of_kin"}
