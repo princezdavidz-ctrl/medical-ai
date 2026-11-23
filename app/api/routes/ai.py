@@ -295,9 +295,7 @@ def submit_ai_request(
             action="ai.request.quota_blocked", outcome="denied",
             reason=reason, metadata=metadata,
         )
-        status_code = 503 if reason in {
-            "ai_usage_policy_not_configured", "ambiguous_ai_usage_policy"
-        } else 429
+        status_code = 429 if reason.startswith("monthly_ai_") else 503
         raise HTTPException(status_code=status_code, detail={
             "code": reason,
             "message": "The hospital AI subscription quota or usage policy does not permit this request."
