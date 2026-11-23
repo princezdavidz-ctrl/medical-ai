@@ -28,6 +28,7 @@ def build_run(*, score: float = 0.99, approved_dataset: bool = True) -> Evaluati
         model_version="1.0.0",
         model_digest=DIGEST,
         prompt_version="prompt-v1",
+        prompt_digest="d" * 64,
         dataset_id="synthetic-suite",
         dataset_version="v1",
         dataset_digest="b" * 64,
