@@ -68,6 +68,11 @@ class PatientIdentityDocument(Base):
             name="ck_patient_identity_document_status",
         ),
         CheckConstraint(
+            "verification_reason_code IS NULL OR verification_reason_code IN "
+            "('verified_document', 'expired_document', 'unreadable_document', 'identity_mismatch', 'unsupported_document')",
+            name="ck_patient_identity_document_reason",
+        ),
+        CheckConstraint(
             "identifier_fingerprint_hmac IS NULL OR length(identifier_fingerprint_hmac) = 64",
             name="ck_patient_identity_fingerprint_length",
         ),
@@ -85,6 +90,7 @@ class PatientIdentityDocument(Base):
     identifier_fingerprint_hmac: Mapped[str | None] = mapped_column(String(64))
     expires_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     verification_status: Mapped[str] = mapped_column(String(24), nullable=False, default="pending")
+    verification_reason_code: Mapped[str | None] = mapped_column(String(40))
     verified_by_user_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("users.id"))
     verified_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     created_by_user_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id"), nullable=False)
