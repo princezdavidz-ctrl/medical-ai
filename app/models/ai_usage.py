@@ -98,6 +98,7 @@ class AIUsageReservation(Base):
     pricing_snapshot_json: Mapped[dict | None] = mapped_column(JSON)
     status: Mapped[str] = mapped_column(String(24), nullable=False, default="reserved")
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+    expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
     settled_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
 
