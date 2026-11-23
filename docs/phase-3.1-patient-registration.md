@@ -58,6 +58,9 @@ Base prefix: `/api/v1`.
 | PATCH | `/patients/duplicate-cases/{case_id}` | Record a human duplicate review decision; does not merge |
 | PATCH | `/patients/{patient_id}/identity-documents/{document_id}/verification` | Verify/reject a pending identity document |
 | PATCH | `/patients/{patient_id}/status` | Change patient active/inactive/deceased status |
+| POST | `/patients/{patient_id}/consents` | Create a pending purpose/scope/lawful-basis request |
+| GET | `/patients/{patient_id}/consents` | Read consent history and effective status |
+| PATCH | `/patients/{patient_id}/consents/{consent_id}/decision` | Grant, reject or withdraw consent/authorization |
 
 ## Role scope
 
@@ -75,7 +78,8 @@ Role names must be provisioned consistently by hospital administration. Unknown 
 - Encrypted vault storage and the keyed HMAC fingerprint service are external integration prerequisites; this milestone accepts opaque references only.
 - No automated identity match, cross-hospital patient matching or patient merge is performed.
 - Consent records are not inferred from a next-of-kin record. A next-of-kin contact permission is separately recorded and is false by default.
-- Full patient identity matching, document vault integration, portal registration, referral intake and HIE matching are later integration work.\n- A complete patient-processing lawful-basis and consent grant/withdrawal workflow is not yet exposed. Do not infer consent from registration or next-of-kin details; complete this as a subsequent Module 1 milestone with legal review before real patient data is used.
+- Full patient identity matching, document vault integration, portal registration, referral intake and HIE matching are later integration work.
+- Purpose-scoped patient consent and declared lawful-basis records are implemented in Module 1B; see `docs/phase-3.1b-patient-consent-lawful-basis.md`. Their legal validity still requires jurisdiction-specific legal review.
 - No real patient data is to be used in development.
 
 ## Phase 5 verification
