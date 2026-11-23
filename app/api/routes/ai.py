@@ -1,6 +1,7 @@
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Request
+from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.ai.contracts import AICapability
@@ -10,6 +11,7 @@ from app.ai.orchestrator import AIOrchestrator, KnowledgeUnavailable, UnsafeMode
 from app.ai.patient_context import PatientContextDenied, load_authorized_patient_context
 from app.ai.policy import AIPolicyEngine
 from app.ai.session_crypto import SessionCipher, SessionEncryptionError
+from app.ai.usage import AIUsageMeter, AIUsageQuotaExceeded
 from app.ai.sessions import (
     AISessionUnavailable,
     append_ai_session_turn,
@@ -22,7 +24,7 @@ from app.api.deps import get_current_context
 from app.core.config import get_settings
 from app.db.session import get_db
 from app.knowledge.retriever import SQLAlchemyKnowledgeRetriever
-from app.models import AuditEvent
+from app.models import AIUsageEvent, AuditEvent, HospitalMembership, Role
 from app.schemas.ai import AIRequestCreate
 
 router = APIRouter(prefix="/ai", tags=["central-medical-ai"])
@@ -35,6 +37,7 @@ def get_ai_orchestrator(request: Request, db: Session = Depends(get_db)) -> AIOr
         policy=AIPolicyEngine(settings),
         gateway=gateway,
         retriever=SQLAlchemyKnowledgeRetriever(db),
+        usage_meter=AIUsageMeter(db=db, settings=settings),
     )
 
 
@@ -285,6 +288,18 @@ def submit_ai_request(
             patient_context=patient_context,
             conversation_history=conversation_history,
         )
+    except AIUsageQuotaExceeded as exc:
+        reason = str(exc) or "ai_usage_quota_exceeded"
+        _audit(
+            db, user_id=user.id, hospital_id=hospital_id,
+            action="ai.request.quota_blocked", outcome="denied",
+            reason=reason, metadata=metadata,
+        )
+        status_code = 429 if reason.startswith("monthly_ai_") else 503
+        raise HTTPException(status_code=status_code, detail={
+            "code": reason,
+            "message": "The hospital AI subscription quota or usage policy does not permit this request."
+        }) from exc
     except PermissionError as exc:
         reason = str(exc) or "ai_policy_denied"
         _audit(db, user_id=user.id, hospital_id=hospital_id, action="ai.request.blocked",
@@ -515,3 +530,61 @@ def delete_session(
         resource_type="ai_session", resource_id=str(session_id),
     )
     return {"id": str(session_id), "status": "deleted"}
+
+
+@router.get("/usage", summary="View this hospital's AI subscription usage")
+def get_ai_usage(
+    context=Depends(get_current_context),
+    db: Session = Depends(get_db),
+) -> dict:
+    user, hospital_id = context
+    membership = db.scalar(
+        select(HospitalMembership)
+        .join(Role, Role.id == HospitalMembership.role_id)
+        .where(
+            HospitalMembership.hospital_id == hospital_id,
+            HospitalMembership.user_id == user.id,
+            HospitalMembership.status == "active",
+        )
+    )
+    role = db.get(Role, membership.role_id) if membership else None
+    role_name = role.name.strip().casefold().replace(" ", "_") if role else ""
+    if role_name not in {"hospital_admin", "hospital_director", "finance_manager", "system_admin"}:
+        raise HTTPException(status_code=403, detail={"code": "ai_usage_admin_role_required"})
+    meter = AIUsageMeter(db=db, settings=get_settings())
+    try:
+        snapshot = meter.current_snapshot(hospital_id=hospital_id)
+    except AIUsageQuotaExceeded as exc:
+        raise HTTPException(status_code=503, detail={"code": str(exc)}) from exc
+    events = db.scalars(
+        select(AIUsageEvent)
+        .where(AIUsageEvent.hospital_id == hospital_id)
+        .order_by(AIUsageEvent.created_at.desc())
+        .limit(100)
+    ).all()
+    event_data = [{
+        "capability": item.capability,
+        "operating_mode": item.operating_mode,
+        "provider": item.provider_id,
+        "model": item.model_id,
+        "model_version": item.model_version,
+        "input_tokens": item.input_tokens,
+        "output_tokens": item.output_tokens,
+        "cost_micros": item.cost_micros,
+        "currency": item.currency,
+        "latency_ms": item.latency_ms,
+        "usage_is_estimated": item.usage_is_estimated,
+        "outcome": item.outcome,
+        "created_at": item.created_at,
+    } for item in events]
+    _audit(
+        db, user_id=user.id, hospital_id=hospital_id,
+        action="ai.usage.viewed", outcome="success",
+        reason="Hospital AI usage dashboard viewed",
+        metadata={"event_count": len(event_data), "policy_configured": snapshot.get("configured", False)},
+        resource_type="ai_usage", resource_id=str(hospital_id),
+    )
+    return {
+        "usage": snapshot,
+        "recent_events": event_data,
+    }
