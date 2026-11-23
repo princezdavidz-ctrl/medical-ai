@@ -22,6 +22,7 @@ from app.models.ai_evaluation import (
     AIReleaseApproval,
     AIGovernanceEvent,
 )
+from app.models.patient_context import PatientCareAssignment
 from app.models.offline_sync import (
     OfflineDeliveryOutbox,
     OfflineKnowledgeInstallation,
@@ -61,6 +62,7 @@ __all__ = [
     "OfflineSyncEvent",
     "Organization",
     "Patient",
+    "PatientCareAssignment",
     "PatientConsent",
     "Role",
     "StagedKnowledgeDocument",

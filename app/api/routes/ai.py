@@ -4,6 +4,7 @@ from sqlalchemy.orm import Session
 from app.ai.contracts import AICapability
 from app.ai.gateway import ModelGateway, ModelUnavailable
 from app.ai.orchestrator import AIOrchestrator, KnowledgeUnavailable, UnsafeModelOutput
+from app.ai.patient_context import PatientContextDenied, load_authorized_patient_context
 from app.ai.policy import AIPolicyEngine
 from app.api.deps import get_current_context
 from app.core.config import get_settings
@@ -28,13 +29,14 @@ def get_ai_orchestrator(request: Request, db: Session = Depends(get_db)) -> AIOr
 def _audit(
     db: Session, *, user_id, hospital_id, action: str,
     outcome: str, reason: str, metadata: dict,
+    resource_type: str = "ai_request", resource_id: str | None = None,
 ) -> None:
     db.add(AuditEvent(
         hospital_id=hospital_id,
         actor_user_id=user_id,
         action=action,
-        resource_type="ai_request",
-        resource_id=None,
+        resource_type=resource_type,
+        resource_id=resource_id,
         outcome=outcome,
         reason=reason,
         metadata_json=metadata,
@@ -99,13 +101,60 @@ def submit_ai_request(
             "code": reason, "message": "AI request execution is disabled. No clinical output was generated."
         })
 
-    if payload.patient_context_id is not None:
-        reason = "patient_context_adapter_not_implemented"
-        _audit(db, user_id=user.id, hospital_id=hospital_id, action="ai.request.blocked",
-               outcome="denied", reason=reason, metadata=metadata)
-        raise HTTPException(status_code=503, detail={
-            "code": reason, "message": "Patient-context AI is not available. No patient data was accessed."
+    if payload.encounter_id is not None and payload.patient_context_id is None:
+        raise HTTPException(status_code=422, detail={
+            "code": "patient_id_required_for_encounter_context"
         })
+
+    patient_context = None
+    if payload.patient_context_id is not None:
+        preflight = AIPolicyEngine(settings).evaluate(
+            capability=payload.capability, has_patient_context=True
+        )
+        if (
+            not preflight.allowed
+            or preflight.provider_class != "local"
+            or not orchestrator.gateway.has_provider("local")
+        ):
+            reason = preflight.reason_code if not preflight.allowed else "local_model_provider_not_configured"
+            _audit(
+                db, user_id=user.id, hospital_id=hospital_id,
+                action="ai.patient_context.blocked", outcome="denied",
+                reason=reason, metadata={**metadata, "patient_context_requested": True},
+                resource_type="patient_context", resource_id=str(payload.patient_context_id),
+            )
+            raise HTTPException(status_code=503, detail={
+                "code": reason,
+                "message": "Patient-context AI requires an approved, configured local model. No patient data was accessed."
+            })
+        try:
+            authorized_context = load_authorized_patient_context(
+                db,
+                hospital_id=hospital_id,
+                actor_user_id=user.id,
+                patient_id=payload.patient_context_id,
+                encounter_id=payload.encounter_id,
+            )
+            patient_context = authorized_context.patient_context
+            metadata = {
+                **metadata,
+                "patient_context_requested": True,
+                "patient_context_authorized": True,
+                "encounter_id": str(authorized_context.encounter_id),
+                "consent_id": str(authorized_context.consent_id),
+                "assignment_id": str(authorized_context.assignment_id),
+            }
+        except PatientContextDenied as exc:
+            reason = str(exc) or "patient_context_access_denied"
+            _audit(
+                db, user_id=user.id, hospital_id=hospital_id,
+                action="ai.patient_context.denied", outcome="denied",
+                reason=reason, metadata={**metadata, "patient_context_requested": True},
+                resource_type="patient_context", resource_id=str(payload.patient_context_id),
+            )
+            raise HTTPException(status_code=403, detail={
+                "code": reason, "message": "Patient context access was denied. No patient data was sent to a model."
+            }) from exc
 
     try:
         response = orchestrator.execute(
@@ -113,7 +162,8 @@ def submit_ai_request(
             prompt=payload.prompt,
             hospital_id=hospital_id,
             actor_user_id=user.id,
-            has_patient_context=False,
+            has_patient_context=patient_context is not None,
+            patient_context=patient_context,
         )
     except PermissionError as exc:
         reason = str(exc) or "ai_policy_denied"

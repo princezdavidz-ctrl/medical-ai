@@ -42,6 +42,9 @@ These corrections are included in the current development branch; they have not 
 - [ ] Prompt injection in user prompts, retrieved documents and tool outputs.
 - [ ] Context limits, timeouts, cancellation, concurrency, resource exhaustion and malicious payloads.
 - [ ] Patient-context authorization, consent, purpose limitation and minimum-necessary access.
+- [ ] Patient assignment creation/revocation, role allow-list, consent expiry/withdrawal and same-hospital encounter enforcement.
+- [ ] Confirm patient context is never queried without a registered local provider and never routed to hosted models.
+- [ ] Verify no direct identifiers or unredacted free-text notes enter model context.
 - [ ] Clinical capability evaluations by capability, model, prompt, dataset and operating mode.
 - [ ] Red-flag sensitivity, false alarms, uncertainty calibration, omissions and subgroup analysis.
 - [ ] Governance worker role isolation, approval separation, expiry, revocation and rollback.

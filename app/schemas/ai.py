@@ -9,6 +9,7 @@ class AIRequestCreate(BaseModel):
     capability: AICapability
     prompt: str = Field(min_length=1, max_length=8000)
     patient_context_id: UUID | None = None
+    encounter_id: UUID | None = None
 
 
 class AICapabilityStatus(BaseModel):
