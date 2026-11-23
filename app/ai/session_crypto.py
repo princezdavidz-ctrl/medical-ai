@@ -42,13 +42,14 @@ class SessionCipher:
     def associated_data(
         *,
         hospital_id: UUID,
+        owner_user_id: UUID,
         session_id: UUID,
         sequence_number: int,
         role: str,
         key_version: str,
     ) -> bytes:
         return (
-            f"{hospital_id}:{session_id}:{sequence_number}:{role}:{key_version}"
+            f"{hospital_id}:{owner_user_id}:{session_id}:{sequence_number}:{role}:{key_version}"
         ).encode("utf-8")
 
     def encrypt(self, plaintext: str, *, associated_data: bytes) -> tuple[bytes, bytes, str]:
