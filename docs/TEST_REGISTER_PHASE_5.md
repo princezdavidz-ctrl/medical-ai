@@ -55,7 +55,7 @@ These corrections are included in the current development branch; they have not 
 - [ ] Offline sync replay, duplicate events, sequence gaps, conflict resolution and reconnect reconciliation.
 - [ ] Offline cursor concurrency, atomic apply/cursor commit, first-cursor race retry and RLS isolation.
 - [ ] Outbox idempotency, SKIP LOCKED worker concurrency, bounded retries and verified partner acknowledgement.
-- [ ] AI session retention, access controls, deletion/export and audit privacy.
+- [ ] AI session retention, access controls, deletion/export and audit privacy.\n- [ ] AES-GCM round trip, ciphertext tampering, AAD binding, key rotation and missing-key behavior.\n- [ ] Database RLS owner isolation, composite session/message ownership, cross-hospital access and deletion.\n- [ ] Session expiry, scheduled purge, append-turn atomicity and no plaintext prompt/response persistence.
 - [ ] Usage metering accuracy, tenant quotas, billing aggregation and fail-safe behavior.
 
 ## Clinical safety and interoperability
