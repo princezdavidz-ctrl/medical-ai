@@ -26,7 +26,7 @@ from app.core.config import get_settings
 from app.db.session import get_db
 from app.knowledge.retriever import SQLAlchemyKnowledgeRetriever
 from app.models import AIUsageEvent, AuditEvent, HospitalMembership, Role
-from app.schemas.ai import AIRequestCreate
+from app.schemas.ai import AIRequestCreate, AIResponseRead
 
 router = APIRouter(prefix="/ai", tags=["central-medical-ai"])
 
@@ -101,7 +101,11 @@ def list_capabilities(
     }
 
 
-@router.post("/requests", summary="Submit a request to the central Medical AI platform")
+@router.post(
+    "/requests",
+    summary="Submit a request to the central Medical AI platform",
+    response_model=AIResponseRead,
+)
 def submit_ai_request(
     payload: AIRequestCreate,
     context=Depends(get_current_context),
