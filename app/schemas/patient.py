@@ -2,7 +2,7 @@ from datetime import date, datetime
 from typing import Literal
 from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 
 class PatientRegistrationProfileCreate(BaseModel):
@@ -42,6 +42,17 @@ class PatientNextOfKinCreate(BaseModel):
     phone_number: str = Field(min_length=1, max_length=40)
     email: str | None = Field(default=None, max_length=320)
     can_be_contacted: bool = False
+    permission_basis: Literal[
+        "patient_consent", "legal_guardian_consent", "other_lawful_basis"
+    ] | None = None
+
+    @model_validator(mode="after")
+    def validate_contact_permission(self):
+        if self.can_be_contacted and self.permission_basis is None:
+            raise ValueError("permission_basis_required_when_contact_is_allowed")
+        if not self.can_be_contacted and self.permission_basis is not None:
+            raise ValueError("permission_basis_requires_contact_permission")
+        return self
 
 
 class PatientCreate(BaseModel):
@@ -146,3 +157,24 @@ class PatientIdentityDocumentVerification(BaseModel):
 
     verification_status: Literal["verified", "rejected"]
     review_note: str = Field(min_length=3, max_length=1000)
+
+
+class PatientRegistrationProfileUpdate(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    email: str | None = Field(default=None, max_length=320)
+    alternate_phone_number: str | None = Field(default=None, max_length=40)
+    address_line_1: str | None = Field(default=None, max_length=240)
+    address_line_2: str | None = Field(default=None, max_length=240)
+    county: str | None = Field(default=None, max_length=100)
+    sub_county: str | None = Field(default=None, max_length=100)
+    country_code: str | None = Field(default=None, pattern="^[A-Z]{2}$")
+    postal_code: str | None = Field(default=None, max_length=24)
+    preferred_language: str | None = Field(default=None, max_length=60)
+
+
+class PatientStatusUpdate(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    status: Literal["active", "inactive", "deceased"]
+    reason: str = Field(min_length=3, max_length=1000)
