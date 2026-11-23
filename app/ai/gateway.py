@@ -16,6 +16,9 @@ class ModelGateway:
             raise ValueError("Provider class must be 'local' or 'hosted'")
         self._providers[provider.provider_class] = provider
 
+    def has_provider(self, provider_class: str) -> bool:
+        return provider_class in self._providers
+
     def generate(self, *, provider_class: str, request: AIModelRequest) -> AIModelResponse:
         provider = self._providers.get(provider_class)
         if provider is None:
