@@ -29,6 +29,10 @@ class LocalOpenAICompatibleProvider:
         max_response_chars: int = 50000,
         client: httpx.Client | None = None,
     ) -> None:
+        if not 1 <= max_tokens <= 8192:
+            raise ValueError("max_tokens_must_be_between_1_and_8192")
+        if not 1000 <= max_response_chars <= 100000:
+            raise ValueError("max_response_chars_must_be_between_1000_and_100000")
         self.base_url = base_url.rstrip("/")
         self.model_name = model_name
         self.model_version = (
