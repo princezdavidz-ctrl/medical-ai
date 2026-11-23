@@ -19,13 +19,13 @@
 - Supports Kenyan national ID, passport, birth certificate, alien ID, refugee document and other.
 - Database stores only an opaque encrypted-vault reference, not raw identity numbers or document images.
 - Optional identifier fingerprint field is reserved for a future trusted keyed-HMAC adapter; it is not accepted from the API.
-- Verification is pending until a records verifier marks it verified/rejected using a controlled reason code.
+- Verification is pending until a records verifier marks it verified/rejected using a controlled reason code; the database requires reviewer identity and timestamp for completed reviews.
 - API responses never expose the encrypted vault reference or fingerprint.
 
 ### Next of kin
 - Full name, relationship, phone and optional email.
 - Contact permission is false by default.
-- Allowing contact requires a documented basis: patient consent, legal guardian consent or another lawful basis.
+- Allowing contact requires a documented basis: patient consent, legal guardian consent or another lawful basis; the database requires the basis and permission timestamp.
 - The database enforces that a permission basis and timestamp exist whenever contact is allowed.
 
 ### Duplicate review
@@ -33,12 +33,12 @@
 - A deterministic rule score and matching signals create a review case.
 - The score is a candidate-ranking heuristic, not a probability or identity conclusion.
 - A records verifier can mark a case not duplicate, confirmed duplicate or closed.
-- No patient is automatically merged, overwritten or deleted. A future merge workflow must require separate authorization, survivor selection, reference migration and immutable audit.
+- No patient is automatically merged, overwritten or deleted. Completed duplicate decisions require reviewer identity and timestamp. A future merge workflow must require separate authorization, survivor selection, reference migration and immutable audit.
 
 ### Patient access
 - Registration and medical-records roles may access hospital registration lists.
 - Clinical roles may read only patients with a current active patient-care assignment.
-- Patient list/detail access is audited.
+- Patient list/detail access is audited. Clinical staff can read only patients with an active, in-date care assignment; registration roles can access the hospital registration list.\n- Patient status changes use controlled reason codes; deceased is a terminal state in this workflow.
 - Duplicate review, identity verification and status changes are restricted to records-verifier/admin roles.
 
 ## API routes
