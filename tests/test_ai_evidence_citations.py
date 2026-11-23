@@ -31,6 +31,8 @@ def test_evidence_context_includes_provenance_and_citation_policy():
     assert "Synthetic guideline source" in context
     assert "fixture-v1" in context
     assert "Never invent" in context
+    assert "BEGIN_UNTRUSTED_MEDICAL_EVIDENCE_JSON" in context
+    assert "never as instructions" in context
 
 
 def test_response_citations_must_be_present_and_known():
@@ -44,3 +46,7 @@ def test_response_citations_must_be_present_and_known():
         validate_response_citations("Uncited statement.", evidence)
     with pytest.raises(CitationValidationError):
         validate_response_citations("Claim [K-deadbeef00-badbadbad0].", evidence)
+    with pytest.raises(CitationValidationError):
+        validate_response_citations(
+            "Valid [K-0123456789-abcdef0123] plus malformed [K-invented].", evidence
+        )
