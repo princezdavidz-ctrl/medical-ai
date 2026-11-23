@@ -92,17 +92,33 @@ def _has_active_patient_assignment(
     db: Session, *, user_id: UUID, hospital_id: UUID, patient_id: UUID
 ) -> bool:
     now = datetime.now(timezone.utc)
-    assignment = db.scalar(select(PatientCareAssignment.id).where(
-        PatientCareAssignment.hospital_id == hospital_id,
-        PatientCareAssignment.patient_id == patient_id,
-        PatientCareAssignment.staff_user_id == user_id,
-        PatientCareAssignment.status == "active",
-        PatientCareAssignment.valid_from <= now,
-        or_(
-            PatientCareAssignment.valid_until.is_(None),
-            PatientCareAssignment.valid_until > now,
-        ),
-    ).limit(1))
+    assignment = db.scalar(
+        select(PatientCareAssignment.id)
+        .join(
+            HospitalMembership,
+            and_(
+                HospitalMembership.hospital_id == PatientCareAssignment.hospital_id,
+                HospitalMembership.user_id == PatientCareAssignment.staff_user_id,
+                HospitalMembership.status == "active",
+            ),
+        )
+        .where(
+            PatientCareAssignment.hospital_id == hospital_id,
+            PatientCareAssignment.patient_id == patient_id,
+            PatientCareAssignment.staff_user_id == user_id,
+            PatientCareAssignment.status == "active",
+            PatientCareAssignment.valid_from <= now,
+            or_(
+                PatientCareAssignment.valid_until.is_(None),
+                PatientCareAssignment.valid_until > now,
+            ),
+            or_(
+                PatientCareAssignment.department_id.is_(None),
+                PatientCareAssignment.department_id == HospitalMembership.department_id,
+            ),
+        )
+        .limit(1)
+    )
     return assignment is not None
 
 
@@ -234,11 +250,17 @@ def create_patient(
                 metadata={"candidate_count": len(candidates)},
             )
         db.commit()
-    except IntegrityError:
+    except IntegrityError as exc:
         db.rollback()
+        constraint_name = getattr(getattr(exc.orig, "diag", None), "constraint_name", None)
+        if constraint_name == "uq_patient_hospital_mrn":
+            raise HTTPException(
+                status_code=409,
+                detail={"code": "patient_mrn_already_exists", "message": "Medical record number already exists in this hospital."},
+            ) from None
         raise HTTPException(
             status_code=409,
-            detail={"code": "patient_mrn_already_exists", "message": "Medical record number already exists in this hospital."},
+            detail={"code": "patient_registration_integrity_conflict"},
         ) from None
     db.refresh(patient)
     return patient
@@ -255,15 +277,31 @@ def list_patients(
     scope = _patient_read_scope(db, user=user, hospital_id=hospital_id)
     query = select(Patient).where(Patient.hospital_id == hospital_id)
     if scope == "assigned":
-        assigned_patient_ids = select(PatientCareAssignment.patient_id).where(
-            PatientCareAssignment.hospital_id == hospital_id,
-            PatientCareAssignment.staff_user_id == user.id,
-            PatientCareAssignment.status == "active",
-            PatientCareAssignment.valid_from <= datetime.now(timezone.utc),
-            or_(
-                PatientCareAssignment.valid_until.is_(None),
-                PatientCareAssignment.valid_until > datetime.now(timezone.utc),
-            ),
+        assignment_now = datetime.now(timezone.utc)
+        assigned_patient_ids = (
+            select(PatientCareAssignment.patient_id)
+            .join(
+                HospitalMembership,
+                and_(
+                    HospitalMembership.hospital_id == PatientCareAssignment.hospital_id,
+                    HospitalMembership.user_id == PatientCareAssignment.staff_user_id,
+                    HospitalMembership.status == "active",
+                ),
+            )
+            .where(
+                PatientCareAssignment.hospital_id == hospital_id,
+                PatientCareAssignment.staff_user_id == user.id,
+                PatientCareAssignment.status == "active",
+                PatientCareAssignment.valid_from <= assignment_now,
+                or_(
+                    PatientCareAssignment.valid_until.is_(None),
+                    PatientCareAssignment.valid_until > assignment_now,
+                ),
+                or_(
+                    PatientCareAssignment.department_id.is_(None),
+                    PatientCareAssignment.department_id == HospitalMembership.department_id,
+                ),
+            )
         )
         query = query.where(Patient.id.in_(assigned_patient_ids))
     patients = list(
