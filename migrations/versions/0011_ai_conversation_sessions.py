@@ -31,6 +31,7 @@ def upgrade() -> None:
         "ai_session_messages",
         sa.Column("id", sa.Uuid(), primary_key=True),
         sa.Column("hospital_id", sa.Uuid(), sa.ForeignKey("hospitals.id"), nullable=False),
+        sa.Column("owner_user_id", sa.Uuid(), sa.ForeignKey("users.id"), nullable=False),
         sa.Column("session_id", sa.Uuid(), sa.ForeignKey("ai_sessions.id", ondelete="CASCADE"), nullable=False),
         sa.Column("sequence_number", sa.Integer(), nullable=False),
         sa.Column("role", sa.String(16), nullable=False),
@@ -54,15 +55,21 @@ def upgrade() -> None:
         op.execute(f"ALTER TABLE {table} ENABLE ROW LEVEL SECURITY")
         op.execute(f"ALTER TABLE {table} FORCE ROW LEVEL SECURITY")
         op.execute(
-            f"CREATE POLICY hospital_tenant_isolation ON {table} "
-            "USING (hospital_id = NULLIF(current_setting('app.current_hospital_id', true), '')::uuid) "
-            "WITH CHECK (hospital_id = NULLIF(current_setting('app.current_hospital_id', true), '')::uuid)"
+            f"CREATE POLICY hospital_owner_isolation ON {table} "
+            "USING ("
+            "hospital_id = NULLIF(current_setting('app.current_hospital_id', true), '')::uuid "
+            "AND owner_user_id = NULLIF(current_setting('app.current_user_id', true), '')::uuid"
+            ") "
+            "WITH CHECK ("
+            "hospital_id = NULLIF(current_setting('app.current_hospital_id', true), '')::uuid "
+            "AND owner_user_id = NULLIF(current_setting('app.current_user_id', true), '')::uuid"
+            )
         )
 
 
 def downgrade() -> None:
     for table in ("ai_session_messages", "ai_sessions"):
-        op.execute(f"DROP POLICY IF EXISTS hospital_tenant_isolation ON {table}")
+        op.execute(f"DROP POLICY IF EXISTS hospital_owner_isolation ON {table}")
         op.execute(f"ALTER TABLE {table} NO FORCE ROW LEVEL SECURITY")
         op.execute(f"ALTER TABLE {table} DISABLE ROW LEVEL SECURITY")
     op.drop_index("ix_ai_session_message_tenant_session", table_name="ai_session_messages")
