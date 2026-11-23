@@ -60,11 +60,11 @@ def upgrade() -> None:
     )
     op.execute("""
         CREATE FUNCTION prevent_knowledge_review_event_mutation()
-        RETURNS trigger AS $
+        RETURNS trigger AS $fn$
         BEGIN
             RAISE EXCEPTION 'knowledge review events are append-only';
         END;
-        $ LANGUAGE plpgsql
+        $fn$ LANGUAGE plpgsql
     """)
     op.execute("""
         CREATE TRIGGER knowledge_review_events_append_only
