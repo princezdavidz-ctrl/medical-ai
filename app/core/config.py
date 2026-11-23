@@ -25,6 +25,7 @@ class Settings(BaseSettings):
     ai_local_model_base_url: str | None = None
     ai_local_model_name: str | None = None
     ai_local_model_version: str = "unverified"
+    ai_local_model_digest: str | None = None
     ai_local_model_api_key: SecretStr | None = None
     ai_local_model_timeout_seconds: float = 45.0
     ai_local_model_max_tokens: int = 1200
@@ -42,8 +43,8 @@ class Settings(BaseSettings):
             parsed = urlsplit(self.ai_local_model_base_url)
             if parsed.scheme not in {"http", "https"} or not parsed.hostname:
                 raise ValueError("Local model base URL must be an absolute HTTP(S) URL")
-            if parsed.username or parsed.password or parsed.query or parsed.fragment:
-                raise ValueError("Local model URL must not contain credentials, query or fragment")
+            if parsed.username or parsed.password or parsed.query or parsed.fragment or parsed.path not in {"", "/"}:
+                raise ValueError("Local model URL must not contain credentials, path, query or fragment")
             if parsed.scheme == "http" and parsed.hostname.lower() not in {
                 host.lower() for host in self.ai_local_model_allowed_hosts
             }:
@@ -52,6 +53,14 @@ class Settings(BaseSettings):
                 raise ValueError("AI_LOCAL_MODEL_TIMEOUT_SECONDS must be in (0, 180]")
             if not 1 <= self.ai_local_model_max_tokens <= 8192:
                 raise ValueError("AI_LOCAL_MODEL_MAX_TOKENS must be between 1 and 8192")
+            if self.environment.lower() == "production":
+                if self.ai_local_model_version == "unverified" or not self.ai_local_model_digest:
+                    raise ValueError("Production local AI requires a pinned model version and SHA-256 digest")
+            if self.ai_local_model_digest and (
+                len(self.ai_local_model_digest) != 64
+                or any(ch not in "0123456789abcdefABCDEF" for ch in self.ai_local_model_digest)
+            ):
+                raise ValueError("AI_LOCAL_MODEL_DIGEST must be a SHA-256 hex digest")
         return self
 
 
