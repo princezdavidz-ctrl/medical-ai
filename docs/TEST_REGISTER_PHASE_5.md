@@ -98,6 +98,7 @@ These corrections are included in the current development branch; they have not 
 - [ ] Identity document API accepts only opaque encrypted-vault references, never returns vault references/fingerprints, and enforces pending-to-verified/rejected review with controlled reason codes.
 - [ ] Next-of-kin contact permission defaults false; database rejects contact permission without a lawful-basis code and timestamp.
 - [ ] Patient status transitions, deceased terminal status, reason/audit attribution and unauthorized role denial.
+- [ ] Patient processing lawful-basis and consent workflow: legal-basis review, scoped grant, evidence reference, expiry, withdrawal, emergency exceptions and no implied consent.
 - [ ] Patient registration migration from an empty PostgreSQL database and upgrade from the previous schema head.
 - [ ] Phase 2 closeout: deploy migrations through head, verify operator runbook against deployed configuration, validate API contracts against OpenAPI, and verify all external release prerequisites are tracked.
 - [ ] Module-to-API integration and cross-module workflows.
