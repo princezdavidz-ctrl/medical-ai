@@ -107,7 +107,8 @@ def upgrade() -> None:
             name="fk_patient_next_of_kin_patient", ondelete="CASCADE",
         ),
         sa.CheckConstraint(
-            "permission_basis IS NULL OR permission_basis IN ('patient_consent', 'legal_guardian_consent', 'other_lawful_basis')",
+            "(permission_basis IS NULL OR permission_basis IN ('patient_consent', 'legal_guardian_consent', 'other_lawful_basis')) "
+            "AND (can_be_contacted = false OR (permission_basis IS NOT NULL AND permission_recorded_at IS NOT NULL))",
             name="ck_patient_next_of_kin_permission_basis",
         ),
     )
