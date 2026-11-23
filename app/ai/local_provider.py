@@ -2,10 +2,11 @@ from typing import Any
 
 import httpx
 
+from app.ai.gateway import ModelUnavailable
 from app.ai.contracts import AIModelRequest, AIModelResponse
 
 
-class LocalModelUnavailable(RuntimeError):
+class LocalModelUnavailable(ModelUnavailable):
     pass
 
 
