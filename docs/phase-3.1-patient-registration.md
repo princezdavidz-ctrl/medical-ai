@@ -51,7 +51,8 @@ Base prefix: `/api/v1`.
 | GET | `/patients` | List patients within registration role scope or active care assignments |
 | GET | `/patients/{patient_id}` | Read patient within role/assignment scope |
 | GET | `/patients/{patient_id}/registration` | Read registration profile and safe document/contact metadata |
-| PATCH | `/patients/{patient_id}` | Update patient demographics and re-run duplicate candidate detection |\n| PATCH | `/patients/{patient_id}/registration` | Update registration contact/address/language profile |
+| PATCH | `/patients/{patient_id}` | Update patient demographics and re-run duplicate candidate detection |
+| PATCH | `/patients/{patient_id}/registration` | Update registration contact/address/language profile |
 | GET | `/patients/{patient_id}/duplicate-cases` | List possible duplicate candidates for human review |
 | PATCH | `/patients/duplicate-cases/{case_id}` | Record a human duplicate review decision; does not merge |
 | PATCH | `/patients/{patient_id}/identity-documents/{document_id}/verification` | Verify/reject a pending identity document |
