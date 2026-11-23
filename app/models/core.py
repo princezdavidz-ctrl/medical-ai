@@ -65,14 +65,21 @@ class HospitalMembership(TimestampMixin, Base):
 
 class Patient(TimestampMixin, Base):
     __tablename__ = "patients"
-    __table_args__ = (UniqueConstraint("hospital_id", "medical_record_number", name="uq_patient_hospital_mrn"), Index("ix_patient_hospital_name_dob", "hospital_id", "family_name", "date_of_birth"))
+    __table_args__ = (
+        UniqueConstraint("hospital_id", "medical_record_number", name="uq_patient_hospital_mrn"),
+        UniqueConstraint("hospital_id", "id", name="uq_patient_hospital_id_id"),
+        Index("ix_patient_hospital_name_dob", "hospital_id", "family_name", "date_of_birth"),
+    )
     id: Mapped[uuid.UUID] = mapped_column(Uuid(as_uuid=True), primary_key=True, default=uuid.uuid4)
     hospital_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("hospitals.id"), nullable=False, index=True)
     medical_record_number: Mapped[str] = mapped_column(String(80), nullable=False)
     given_name: Mapped[str] = mapped_column(String(120), nullable=False)
+    middle_name: Mapped[str | None] = mapped_column(String(120))
+    preferred_name: Mapped[str | None] = mapped_column(String(120))
     family_name: Mapped[str] = mapped_column(String(120), nullable=False)
     date_of_birth: Mapped[date | None] = mapped_column(Date)
     administrative_sex: Mapped[str | None] = mapped_column(String(24))
+    nationality: Mapped[str | None] = mapped_column(String(2))
     phone_number: Mapped[str | None] = mapped_column(String(40))
     status: Mapped[str] = mapped_column(String(24), default="active", nullable=False)
 
