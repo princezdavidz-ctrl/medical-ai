@@ -112,6 +112,7 @@ def append_ai_session_turn(
     for sequence, role, ciphertext, nonce, key_version, metadata in encrypted_entries:
         db.add(AISessionMessage(
             hospital_id=hospital_id,
+            owner_user_id=owner_user_id,
             session_id=session.id,
             sequence_number=sequence,
             role=role,
@@ -174,6 +175,7 @@ def read_owned_ai_session(
     for message in messages:
         aad = cipher.associated_data(
             hospital_id=hospital_id,
+            owner_user_id=owner_user_id,
             session_id=session.id,
             sequence_number=message.sequence_number,
             role=message.role,
