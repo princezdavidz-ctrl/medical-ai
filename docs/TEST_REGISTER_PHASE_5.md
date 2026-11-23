@@ -46,7 +46,9 @@ These corrections are included in the current development branch; they have not 
 - [ ] Red-flag sensitivity, false alarms, uncertainty calibration, omissions and subgroup analysis.
 - [ ] Governance worker role isolation, approval separation, expiry, revocation and rollback.
 - [ ] Signed offline package tampering, unknown keys, expired packages, stale packages and jurisdiction rejection.
-- [ ] Offline sync replay, duplicate events, sequence gaps, conflict resolution and reconnect reconciliation.\n- [ ] Offline cursor concurrency, atomic apply/cursor commit, first-cursor race retry and RLS isolation.\n- [ ] Outbox idempotency, SKIP LOCKED worker concurrency, bounded retries and verified partner acknowledgement.
+- [ ] Offline sync replay, duplicate events, sequence gaps, conflict resolution and reconnect reconciliation.
+- [ ] Offline cursor concurrency, atomic apply/cursor commit, first-cursor race retry and RLS isolation.
+- [ ] Outbox idempotency, SKIP LOCKED worker concurrency, bounded retries and verified partner acknowledgement.
 - [ ] AI session retention, access controls, deletion/export and audit privacy.
 - [ ] Usage metering accuracy, tenant quotas, billing aggregation and fail-safe behavior.
 
