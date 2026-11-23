@@ -1,4 +1,3 @@
-from uuid import uuid4
 import pytest
 from app.ai.contracts import AICapability
 from app.ai.gateway import ModelGateway, ModelUnavailable
