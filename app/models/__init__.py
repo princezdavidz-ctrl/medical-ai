@@ -26,6 +26,12 @@ from app.models.ai_sessions import AISession, AISessionMessage
 from app.models.ai_usage import AIUsageCounter, AIUsageEvent, AIUsagePolicy, AIUsageReservation
 from app.models.ai_operations import AIHospitalControl
 from app.models.patient_context import PatientCareAssignment
+from app.models.patient_registration import (
+    PatientDuplicateCase,
+    PatientIdentityDocument,
+    PatientNextOfKin,
+    PatientRegistrationProfile,
+)
 from app.models.offline_sync import (
     OfflineDeliveryOutbox,
     OfflineKnowledgeInstallation,
@@ -73,6 +79,10 @@ __all__ = [
     "Organization",
     "Patient",
     "PatientCareAssignment",
+    "PatientDuplicateCase",
+    "PatientIdentityDocument",
+    "PatientNextOfKin",
+    "PatientRegistrationProfile",
     "PatientConsent",
     "Role",
     "StagedKnowledgeDocument",
