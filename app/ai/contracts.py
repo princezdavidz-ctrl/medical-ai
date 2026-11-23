@@ -57,6 +57,7 @@ class AIModelResponse:
     provider: str
     model: str
     model_version: str
+    citations: tuple[KnowledgeEvidence, ...] = ()
 
 
 class AIProvider(Protocol):
