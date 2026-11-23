@@ -79,6 +79,7 @@ class Settings(BaseSettings):
             if (
                 not self.ai_hosted_model_base_url
                 or not self.ai_hosted_model_name
+                or not self.ai_hosted_model_version.strip()
                 or not self.ai_hosted_model_api_key
                 or not self.ai_hosted_model_api_key.get_secret_value()
             ):
@@ -92,6 +93,7 @@ class Settings(BaseSettings):
                 or parsed_hosted.query
                 or parsed_hosted.fragment
                 or parsed_hosted.path not in {"", "/"}
+                or parsed_hosted.port not in {None, 443}
             ):
                 raise ValueError("Hosted model endpoint must be a clean HTTPS origin")
             if parsed_hosted.hostname.lower() not in {
