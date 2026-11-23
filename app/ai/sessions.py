@@ -155,6 +155,8 @@ def read_owned_ai_session(
     session_id: UUID,
     cipher: SessionCipher,
     now: datetime | None = None,
+    max_messages: int = 200,
+    max_chars: int = 200000,
 ) -> tuple[AISession, list[dict]]:
     session = get_owned_ai_session(
         db,
@@ -163,16 +165,20 @@ def read_owned_ai_session(
         session_id=session_id,
         now=now,
     )
+    if not 1 <= max_messages <= 500 or max_chars < 1000:
+        raise AISessionUnavailable("invalid_session_read_limits")
     messages = db.scalars(
         select(AISessionMessage)
         .where(
             AISessionMessage.hospital_id == hospital_id,
             AISessionMessage.session_id == session.id,
         )
-        .order_by(AISessionMessage.sequence_number)
+        .order_by(AISessionMessage.sequence_number.desc())
+        .limit(max_messages)
     ).all()
     output: list[dict] = []
-    for message in messages:
+    total_chars = 0
+    for message in reversed(messages):
         aad = cipher.associated_data(
             hospital_id=hospital_id,
             owner_user_id=owner_user_id,
@@ -190,13 +196,21 @@ def read_owned_ai_session(
             )
         except SessionEncryptionError:
             raise
+        content_truncated = len(content) > max_chars
+        if content_truncated:
+            content = content[-max_chars:]
         output.append({
             "sequence": message.sequence_number,
             "role": message.role,
             "content": content,
+            "content_truncated": content_truncated,
             "metadata": message.metadata_json,
             "created_at": message.created_at,
         })
+        total_chars += len(content)
+        while total_chars > max_chars and len(output) > 1:
+            removed = output.pop(0)
+            total_chars -= len(removed["content"])
     return session, output
 
 
