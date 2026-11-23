@@ -44,11 +44,11 @@ def _audit(
 
 @router.get("/capabilities", summary="List AI capabilities and their current availability")
 def list_capabilities(
+    request: Request,
     context=Depends(get_current_context),
-    request: Request = None,
 ) -> dict:
     settings = get_settings()
-    gateway: ModelGateway | None = getattr(request.app.state, "ai_gateway", None) if request else None
+    gateway: ModelGateway | None = getattr(request.app.state, "ai_gateway", None)
     statuses = []
     policy = AIPolicyEngine(settings)
     for capability in AICapability:
