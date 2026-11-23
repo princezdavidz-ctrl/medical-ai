@@ -16,6 +16,10 @@ class KnowledgeUnavailable(RuntimeError):
     pass
 
 
+class UnsafeModelOutput(RuntimeError):
+    pass
+
+
 class AIOrchestrator:
     """Coordinates policy, approved evidence retrieval and model execution."""
 
@@ -63,7 +67,7 @@ class AIOrchestrator:
         try:
             citation_ids = validate_response_citations(response.content, evidence)
         except CitationValidationError as exc:
-            raise PermissionError("model_response_failed_evidence_citation_validation") from exc
+            raise UnsafeModelOutput("model_response_failed_evidence_citation_validation") from exc
         evidence_by_id = {item.citation_id: item for item in evidence}
         citations = tuple(evidence_by_id[item] for item in citation_ids)
         return replace(response, citations=citations)
