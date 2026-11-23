@@ -17,6 +17,7 @@ def build_model_gateway(settings: Settings) -> ModelGateway:
             base_url=settings.ai_local_model_base_url,
             model_name=settings.ai_local_model_name,
             model_version=settings.ai_local_model_version,
+            model_digest=settings.ai_local_model_digest,
             timeout_seconds=settings.ai_local_model_timeout_seconds,
             max_tokens=settings.ai_local_model_max_tokens,
             api_key=api_key,
