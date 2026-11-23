@@ -61,7 +61,11 @@ These corrections are included in the current development branch; they have not 
 - [ ] Database RLS owner isolation, composite session/message ownership, cross-hospital access and deletion.
 - [ ] Session expiry, scheduled purge, append-turn atomicity and no plaintext prompt/response persistence.
 - [ ] Bounded history reconstruction, truncation signaling, prompt-injection isolation and local-only session routing.
-- [ ] Usage metering accuracy, tenant quotas, billing aggregation and fail-safe behavior.\n- [ ] Concurrent reservation race tests, policy lock behavior, request/token/cost quota boundaries and ambiguous-period policy rejection.\n- [ ] Pricing snapshot, currency mismatch, unknown pricing with cost caps, cost rounding and historical rate stability.\n- [ ] Provider-reported vs estimated token counts, citation-withheld usage settlement, failed provider charge and expired reservation cleanup.\n- [ ] Hospital RLS, finance/admin-only dashboard access, append-only usage events and absence of prompt/PHI data in ledger.
+- [ ] Usage metering accuracy, tenant quotas, billing aggregation and fail-safe behavior.
+- [ ] Concurrent reservation race tests, policy lock behavior, request/token/cost quota boundaries and ambiguous-period policy rejection.
+- [ ] Pricing snapshot, currency mismatch, unknown pricing with cost caps, cost rounding and historical rate stability.
+- [ ] Provider-reported vs estimated token counts, citation-withheld usage settlement, failed provider charge and expired reservation cleanup.
+- [ ] Hospital RLS, finance/admin-only dashboard access, append-only usage events and absence of prompt/PHI data in ledger.
 
 ## Clinical safety and interoperability
 
