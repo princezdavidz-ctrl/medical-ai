@@ -42,6 +42,7 @@ class MedicalKnowledgeDocument(TimestampMixin, Base):
         CheckConstraint("status IN ('draft', 'pending_review', 'approved', 'rejected', 'superseded', 'archived')", name="ck_knowledge_document_status"),
         Index("ix_knowledge_document_source_status", "source_id", "status"),
         Index("ix_knowledge_document_review_dates", "status", "effective_from", "effective_to"),
+        UniqueConstraint("source_id", "version", name="uq_knowledge_document_source_version"),
     )
 
     id: Mapped[uuid.UUID] = mapped_column(Uuid(as_uuid=True), primary_key=True, default=uuid.uuid4)
