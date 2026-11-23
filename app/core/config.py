@@ -47,6 +47,7 @@ class Settings(BaseSettings):
     ai_session_active_key_version: str = "unset"
     ai_session_retention_days: int = 30
     ai_model_pricing_json: str = "{}"
+    ai_usage_reservation_ttl_seconds: int = 600
 
     @model_validator(mode="after")
     def validate_security_settings(self):
@@ -113,6 +114,8 @@ class Settings(BaseSettings):
                 raise ValueError("AI_HOSTED_MODEL_MAX_TOKENS must be between 1 and 8192")
             if self.environment.lower() == "production" and self.ai_hosted_model_version == "unverified":
                 raise ValueError("Production hosted AI requires a pinned provider model version")
+        if not 60 <= self.ai_usage_reservation_ttl_seconds <= 3600:
+            raise ValueError("AI_USAGE_RESERVATION_TTL_SECONDS must be between 60 and 3600")
         try:
             pricing = json.loads(self.ai_model_pricing_json)
         except (TypeError, ValueError):
