@@ -469,13 +469,17 @@ def verify_patient_identity_document(
     if document.verification_status != "pending":
         raise HTTPException(status_code=409, detail={"code": "identity_document_already_reviewed"})
     document.verification_status = payload.verification_status
+    document.verification_reason_code = payload.reason_code
     document.verified_by_user_id = user.id
     document.verified_at = datetime.now(timezone.utc)
     write_audit_event(
         db, hospital_id=hospital_id, actor_user_id=user.id,
         action="patient.identity_document.reviewed", resource_type="patient_identity_document",
         resource_id=str(document.id),
-        metadata={"verification_status": document.verification_status},
+        metadata={
+            "verification_status": document.verification_status,
+            "reason_code": document.verification_reason_code,
+        },
     )
     db.commit()
     return {"document_id": str(document.id), "verification_status": document.verification_status}
