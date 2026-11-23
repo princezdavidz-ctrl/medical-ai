@@ -2,7 +2,7 @@ import uuid
 from datetime import date, datetime
 
 from sqlalchemy import (
-    BigInteger, CheckConstraint, Date, DateTime, ForeignKey, Index, Integer,
+    BigInteger, CheckConstraint, Date, DateTime, ForeignKey, Index, Integer, JSON,
     String, UniqueConstraint, Uuid, func,
 )
 from sqlalchemy.orm import Mapped, mapped_column
@@ -94,6 +94,8 @@ class AIUsageReservation(Base):
     reserved_input_tokens: Mapped[int] = mapped_column(BigInteger, nullable=False)
     reserved_output_tokens: Mapped[int] = mapped_column(BigInteger, nullable=False)
     estimated_cost_micros: Mapped[int] = mapped_column(BigInteger, nullable=False, default=0)
+    currency: Mapped[str] = mapped_column(String(3), nullable=False)
+    pricing_snapshot_json: Mapped[dict | None] = mapped_column(JSON)
     status: Mapped[str] = mapped_column(String(24), nullable=False, default="reserved")
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
     settled_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
