@@ -131,9 +131,6 @@ def upgrade() -> None:
             name="ck_opd_triage_red_flag_note",
         ),
     )
-    op.create_index(
-        "ix_opd_triage_hospital_visit", "opd_triage_assessments", ["hospital_id", "visit_id"]
-    )
 
     op.create_table(
         "opd_consultation_notes",
@@ -154,9 +151,6 @@ def upgrade() -> None:
         sa.UniqueConstraint("hospital_id", "visit_id", name="uq_opd_consultation_visit"),
         sa.CheckConstraint("length(trim(assessment)) >= 3", name="ck_opd_consultation_assessment"),
         sa.CheckConstraint("length(trim(plan)) >= 3", name="ck_opd_consultation_plan"),
-    )
-    op.create_index(
-        "ix_opd_consultation_hospital_visit", "opd_consultation_notes", ["hospital_id", "visit_id"]
     )
 
     op.create_table(
@@ -200,9 +194,7 @@ def downgrade() -> None:
         op.execute(f"ALTER TABLE {table} DISABLE ROW LEVEL SECURITY")
     op.drop_index("ix_opd_diagnosis_hospital_visit", table_name="opd_diagnoses")
     op.drop_table("opd_diagnoses")
-    op.drop_index("ix_opd_consultation_hospital_visit", table_name="opd_consultation_notes")
     op.drop_table("opd_consultation_notes")
-    op.drop_index("ix_opd_triage_hospital_visit", table_name="opd_triage_assessments")
     op.drop_table("opd_triage_assessments")
     op.drop_index("ix_opd_patient_history", table_name="opd_visits")
     op.drop_index("ix_opd_queue", table_name="opd_visits")
