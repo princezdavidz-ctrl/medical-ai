@@ -37,8 +37,14 @@ def has_active_patient_authorization(
         if record.expires_at is not None and record.expires_at <= current:
             continue
         scope = record.scope if isinstance(record.scope, dict) else {}
-        categories = set(scope.get("data_categories", []))
-        uses = set(scope.get("permitted_uses", []))
+        raw_categories = scope.get("data_categories", [])
+        raw_uses = scope.get("permitted_uses", [])
+        if not isinstance(raw_categories, list) or not isinstance(raw_uses, list):
+            continue
+        if not all(isinstance(item, str) for item in raw_categories + raw_uses):
+            continue
+        categories = set(raw_categories)
+        uses = set(raw_uses)
         if data_categories.issubset(categories) and permitted_use in uses:
             return True
     return False
