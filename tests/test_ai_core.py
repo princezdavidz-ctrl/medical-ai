@@ -66,3 +66,13 @@ def test_hybrid_patient_context_uses_local_provider_when_enabled() -> None:
     )
     assert decision.allowed
     assert decision.provider_class == "local"
+
+def test_ai_request_execution_is_disabled_by_default():
+    settings = Settings(_env_file=None, secret_key="unit-test-secret-key-long-enough-123456")
+    assert settings.ai_requests_enabled is False
+
+
+def test_gateway_reports_only_registered_provider_classes():
+    gateway = ModelGateway()
+    assert not gateway.has_provider("local")
+    assert not gateway.has_provider("hosted")
