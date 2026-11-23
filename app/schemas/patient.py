@@ -27,9 +27,9 @@ class PatientIdentityDocumentCreate(BaseModel):
         "national_id", "passport", "birth_certificate", "alien_id", "refugee_document", "other"
     ]
     issuing_country: str = Field(default="KE", pattern="^[A-Z]{2}$")
-    encrypted_identifier_ref: str = Field(min_length=1, max_length=500)
-    identifier_fingerprint_hmac: str | None = Field(
-        default=None, pattern="^[0-9a-f]{64}$"
+    encrypted_identifier_ref: str = Field(
+        min_length=1, max_length=500,
+        description="Opaque encrypted-vault reference only; never a raw identity number or image.",
     )
     expires_at: datetime | None = None
 
@@ -168,7 +168,7 @@ class PatientRegistrationProfileUpdate(BaseModel):
     address_line_2: str | None = Field(default=None, max_length=240)
     county: str | None = Field(default=None, max_length=100)
     sub_county: str | None = Field(default=None, max_length=100)
-    country_code: str | None = Field(default=None, pattern="^[A-Z]{2}$")
+    country_code: str = Field(default="KE", pattern="^[A-Z]{2}$")
     postal_code: str | None = Field(default=None, max_length=24)
     preferred_language: str | None = Field(default=None, max_length=60)
 
