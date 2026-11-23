@@ -122,6 +122,7 @@ class PatientNextOfKinRead(BaseModel):
     phone_number: str
     email: str | None
     can_be_contacted: bool
+    permission_basis: str | None
 
 
 class PatientRegistrationRead(BaseModel):
@@ -181,7 +182,9 @@ class PatientStatusUpdate(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     status: Literal["active", "inactive", "deceased"]
-    reason: str = Field(min_length=3, max_length=1000)
+    reason_code: Literal[
+        "administrative_correction", "patient_request", "deceased_confirmation", "other",
+    ]
 
 
 class PatientDuplicateCandidateRead(BaseModel):
