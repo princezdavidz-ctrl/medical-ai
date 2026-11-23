@@ -23,7 +23,7 @@ Phase 2 is complete only when the central platform's engineering components are 
 6. [IMPLEMENTED] **2B.16 — AI usage and subscription enforcement.** Meter tokens, requests, model/provider, capability, mode, latency and estimated cost by hospital/tenant; enforce quotas and subscription limits without exposing another tenant's usage.
 7. [IMPLEMENTED] **2B.17 — Capability prompt and workflow registry.** Version system prompts, tool permissions, output schemas and clinical workflow contracts independently for each capability; pin all versions to evaluation runs.
 8. [IMPLEMENTED] **2B.18 — Central AI operational controls.** Add health/readiness, provider availability, offline package freshness, queue status, usage dashboards and administrator controls with strict RBAC and audit.
-9. **2B.19 — Phase 2 integration and documentation closeout.** Wire the components together, publish API contracts and operator runbooks, record remaining external deployment prerequisites, and verify all Phase 2 deliverables are represented in the Phase 5 Test Register.
+9. [IMPLEMENTED] **2B.19 — Phase 2 integration and documentation closeout.** Wire the components together, publish API contracts and operator runbooks, record remaining external deployment prerequisites, and verify all Phase 2 deliverables are represented in the Phase 5 Test Register.
 
 ## Non-negotiable architecture rules
 
@@ -39,6 +39,8 @@ Phase 2 is complete only when the central platform's engineering components are 
 - Full offline support is implemented per approved capability; it does not mean every task is permitted offline.
 
 ## Phase 2 completion exit criteria
+
+<em>Engineering closeout documentation and Phase 3 handoff plan are included in this branch. Phase 2 remains subject to the Phase 5 verification and external clinical release gates.</em>
 
 - All 2B.11–2B.19 milestones merged into main.
 - Provider-neutral routing supports local and hosted providers with strict operating-mode rules.

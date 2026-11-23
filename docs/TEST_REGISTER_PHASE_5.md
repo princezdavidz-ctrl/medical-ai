@@ -88,6 +88,8 @@ These corrections are included in the current development branch; they have not 
 ## Hospital modules and integrations
 
 - [ ] Each of the 40 modules: permissions, workflow, data integrity, audit, accessibility and usability.
+- [ ] Phase 3.1 patient registration: duplicate candidate detection, human-reviewed identity matching, no automatic merge, consent/lawful basis, next-of-kin access, patient status transitions and audit history.
+- [ ] Phase 2 closeout: deploy migrations through head, verify operator runbook against deployed configuration, validate API contracts against OpenAPI, and verify all external release prerequisites are tracked.
 - [ ] Module-to-API integration and cross-module workflows.
 - [ ] Kenya SHA and private insurer claims workflows.
 - [ ] Pharmacy, laboratory, radiology, medical devices, messaging and payment integrations.
