@@ -1,6 +1,7 @@
+from uuid import UUID
+
 from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy.orm import Session
-from uuid import UUID
 
 from app.ai.contracts import AICapability
 from app.ai.data_safety import contains_obvious_personal_identifiers
@@ -346,19 +347,24 @@ def create_session(
         owner_user_id=user.id,
         retention_days=settings.ai_session_retention_days,
     )
+    session_id_value = str(session.id)
+    session_status = session.status
+    session_message_count = session.message_count
+    session_created_at = session.created_at
+    session_expires_at = session.expires_at
     _audit(
         db, user_id=user.id, hospital_id=hospital_id,
         action="ai.session.created", outcome="success",
         reason="Encrypted AI session created",
-        metadata={"session_id": str(session.id)},
-        resource_type="ai_session", resource_id=str(session.id),
+        metadata={"session_id": session_id_value},
+        resource_type="ai_session", resource_id=session_id_value,
     )
     return {
-        "id": str(session.id),
-        "status": session.status,
-        "message_count": session.message_count,
-        "created_at": session.created_at,
-        "expires_at": session.expires_at,
+        "id": session_id_value,
+        "status": session_status,
+        "message_count": session_message_count,
+        "created_at": session_created_at,
+        "expires_at": session_expires_at,
     }
 
 
@@ -408,17 +414,20 @@ def read_session(
             "code": "ai_session_content_unavailable",
             "message": "Encrypted session content could not be safely decrypted."
         }) from exc
+    session_id_value = str(session.id)
+    session_message_count = session.message_count
+    session_expires_at = session.expires_at
     _audit(
         db, user_id=user.id, hospital_id=hospital_id,
         action="ai.session.read", outcome="success",
         reason="Owned encrypted AI session read",
-        metadata={"session_id": str(session.id), "message_count": len(messages)},
-        resource_type="ai_session", resource_id=str(session.id),
+        metadata={"session_id": session_id_value, "message_count": len(messages)},
+        resource_type="ai_session", resource_id=session_id_value,
     )
     return {
-        "id": str(session.id),
-        "message_count": session.message_count,
-        "expires_at": session.expires_at,
+        "id": session_id_value,
+        "message_count": session_message_count,
+        "expires_at": session_expires_at,
         "messages": messages,
     }
 
