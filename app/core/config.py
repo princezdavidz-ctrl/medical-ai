@@ -1,9 +1,9 @@
-import os
 from functools import lru_cache
-from pydantic import field_validator
+from pydantic import model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 _DEVELOPMENT_SECRET = "local-development-only-secret-change-before-deploy-123456"
+_EXAMPLE_SECRET = "replace-with-a-long-random-secret-before-running"
 
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8", extra="ignore")
@@ -16,14 +16,13 @@ class Settings(BaseSettings):
     redis_url: str = "redis://localhost:6379/0"
     cors_origins: list[str] = ["http://localhost:3000", "http://localhost:5173"]
 
-    @field_validator("secret_key")
-    @classmethod
-    def validate_secret_key(cls, value: str) -> str:
-        if len(value) < 32:
+    @model_validator(mode="after")
+    def validate_security_settings(self):
+        if len(self.secret_key) < 32:
             raise ValueError("SECRET_KEY must contain at least 32 characters")
-        if value == _DEVELOPMENT_SECRET and os.getenv("ENVIRONMENT", "development") == "production":
+        if self.environment.lower() == "production" and self.secret_key in {_DEVELOPMENT_SECRET, _EXAMPLE_SECRET}:
             raise ValueError("A unique production SECRET_KEY must be configured")
-        return value
+        return self
 
 @lru_cache
 def get_settings() -> Settings:
