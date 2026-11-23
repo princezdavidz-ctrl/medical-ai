@@ -42,10 +42,7 @@ _REGISTRATION_ROLES = {
     "registration_clerk", "receptionist", "medical_records_officer",
     "hospital_admin", "hospital_director", "system_admin",
 }
-_TRIAGE_ROLES = {
-    "nurse", "triage_nurse", "emergency_nurse", "medical_officer",
-    "doctor", "physician",
-}
+_TRIAGE_ROLES = {"nurse", "triage_nurse", "emergency_nurse"}
 _CLINICIAN_ROLES = {
     "doctor", "physician", "medical_officer", "clinician",
     "pediatrician", "surgeon", "midwife",
