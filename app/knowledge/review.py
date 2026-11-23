@@ -62,6 +62,8 @@ def review_staged_document(
     if decision not in {"approved", "rejected"} or not reason.strip():
         raise ValueError("valid_review_decision_and_reason_required")
     staged, batch = _get_staged(session, staged_document_id)
+    if batch.status not in {"needs_review", "validating"}:
+        raise ValueError("import_batch_not_reviewable")
     if staged.status not in {"staged", "pending_review"}:
         raise ValueError("staged_document_not_reviewable")
     validate_review_separation(submitter_id=batch.submitted_by_user_id, reviewer_id=reviewer_user_id)
@@ -72,8 +74,10 @@ def review_staged_document(
     auth = _authorization(session, reviewer_user_id, hospital_id, batch.scope)
     if decision == "approved":
         source = session.get(MedicalKnowledgeSource, batch.source_id) if batch.source_id else None
-        if (not batch.license_verified or not batch.declared_license or source is None
-            or source.status != "active" or not source.license_name or not source.license_reference
+        if (not batch.license_verified or not batch.declared_license or not batch.license_reference
+            or source is None or source.status != "active" or not source.license_name
+            or not source.license_reference or batch.declared_license != source.license_name
+            or batch.license_reference != source.license_reference
             or source.scope != batch.scope or source.hospital_id != batch.hospital_id):
             raise ValueError("verified_active_licensed_source_required")
         staged.status = "approved"
@@ -118,15 +122,23 @@ def publish_approved_document(
     approval_auth = session.get(
         ClinicalKnowledgeReviewerAuthorization, approval.reviewer_authorization_id
     )
+    now_check = datetime.now(timezone.utc)
     if (approval_auth is None or approval_auth.user_id != approval.actor_user_id
-        or approval_auth.status != "active"
+        or approval_auth.scope != batch.scope
+        or approval_auth.hospital_id != batch.hospital_id
+        or approval_auth.status != "active" or approval_auth.verified_at > now_check
         or (approval_auth.expires_at is not None
-            and approval_auth.expires_at <= datetime.now(timezone.utc))):
+            and approval_auth.expires_at <= now_check)):
         raise PermissionError("approving_clinician_authorization_not_current")
-    source = session.get(MedicalKnowledgeSource, batch.source_id) if batch.source_id else None
+    source = session.scalar(select(MedicalKnowledgeSource).where(
+        MedicalKnowledgeSource.id == batch.source_id
+    ).with_for_update()) if batch.source_id else None
     if (source is None or source.status != "active" or not source.license_name
-        or not source.license_reference or source.scope != batch.scope
-        or source.hospital_id != batch.hospital_id or not batch.license_verified):
+        or not source.license_reference or not batch.license_verified
+        or not batch.declared_license or not batch.license_reference
+        or batch.declared_license != source.license_name
+        or batch.license_reference != source.license_reference
+        or source.scope != batch.scope or source.hospital_id != batch.hospital_id):
         raise ValueError("active_licensed_knowledge_source_required")
     if next_review_at.tzinfo is None or next_review_at <= datetime.now(timezone.utc):
         raise ValueError("future_timezone_aware_review_deadline_required")
