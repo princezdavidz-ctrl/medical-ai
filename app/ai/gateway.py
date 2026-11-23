@@ -19,6 +19,9 @@ class ModelGateway:
     def has_provider(self, provider_class: str) -> bool:
         return provider_class in self._providers
 
+    def get_provider(self, provider_class: str) -> AIProvider | None:
+        return self._providers.get(provider_class)
+
     def generate(self, *, provider_class: str, request: AIModelRequest) -> AIModelResponse:
         provider = self._providers.get(provider_class)
         if provider is None:
