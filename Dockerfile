@@ -3,6 +3,8 @@ ENV PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1
 WORKDIR /srv/app
 COPY pyproject.toml ./
 COPY app ./app
+COPY migrations ./migrations
+COPY alembic.ini ./alembic.ini
 RUN pip install --no-cache-dir .
 USER 10001:10001
 EXPOSE 8000
