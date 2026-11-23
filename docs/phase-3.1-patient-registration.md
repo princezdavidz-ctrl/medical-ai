@@ -38,7 +38,8 @@
 ### Patient access
 - Registration and medical-records roles may access hospital registration lists.
 - Clinical roles may read only patients with a current active patient-care assignment that matches their hospital department when the assignment is department-scoped.
-- Patient list/detail access is audited. Clinical staff can read only patients with an active, in-date care assignment; registration roles can access the hospital registration list.\n- Patient status changes use controlled reason codes; deceased is a terminal state in this workflow.
+- Patient list/detail access is audited. Clinical staff can read only patients with an active, in-date care assignment; registration roles can access the hospital registration list.
+- Patient status changes use controlled reason codes; deceased is a terminal state in this workflow.
 - Duplicate review, identity verification and status changes are restricted to records-verifier/admin roles.
 
 ## API routes
@@ -74,7 +75,7 @@ Role names must be provisioned consistently by hospital administration. Unknown 
 - Encrypted vault storage and the keyed HMAC fingerprint service are external integration prerequisites; this milestone accepts opaque references only.
 - No automated identity match, cross-hospital patient matching or patient merge is performed.
 - Consent records are not inferred from a next-of-kin record. A next-of-kin contact permission is separately recorded and is false by default.
-- Full patient identity matching, document vault integration, portal registration, referral intake and HIE matching are later integration work.
+- Full patient identity matching, document vault integration, portal registration, referral intake and HIE matching are later integration work.\n- A complete patient-processing lawful-basis and consent grant/withdrawal workflow is not yet exposed. Do not infer consent from registration or next-of-kin details; complete this as a subsequent Module 1 milestone with legal review before real patient data is used.
 - No real patient data is to be used in development.
 
 ## Phase 5 verification
