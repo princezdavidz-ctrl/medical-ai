@@ -725,6 +725,7 @@ def close_opd_visit(
         metadata={"disposition": payload.disposition},
     )
     db.commit()
+    _restore_tenant_context(db, user_id=user.id, hospital_id=hospital_id)
     db.refresh(visit)
     return visit
 
@@ -768,5 +769,6 @@ def cancel_opd_visit(
         resource_id=str(visit.id),
     )
     db.commit()
+    _restore_tenant_context(db, user_id=user.id, hospital_id=hospital_id)
     db.refresh(visit)
     return visit
