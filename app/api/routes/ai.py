@@ -3,7 +3,7 @@ from sqlalchemy.orm import Session
 
 from app.ai.contracts import AICapability
 from app.ai.gateway import ModelGateway, ModelUnavailable
-from app.ai.orchestrator import AIOrchestrator, KnowledgeUnavailable
+from app.ai.orchestrator import AIOrchestrator, KnowledgeUnavailable, UnsafeModelOutput
 from app.ai.policy import AIPolicyEngine
 from app.api.deps import get_current_context
 from app.core.config import get_settings
@@ -128,6 +128,13 @@ def submit_ai_request(
                outcome="denied", reason=reason, metadata=metadata)
         raise HTTPException(status_code=503, detail={
             "code": reason, "message": "No approved, current evidence was found. No AI response was generated."
+        }) from exc
+    except UnsafeModelOutput as exc:
+        reason = "model_output_failed_evidence_validation"
+        _audit(db, user_id=user.id, hospital_id=hospital_id, action="ai.request.blocked",
+               outcome="denied", reason=reason, metadata=metadata)
+        raise HTTPException(status_code=502, detail={
+            "code": reason, "message": "The model response failed evidence-citation validation and was withheld."
         }) from exc
     except ModelUnavailable as exc:
         reason = "approved_model_runtime_unavailable"
