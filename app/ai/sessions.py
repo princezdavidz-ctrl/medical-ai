@@ -101,6 +101,7 @@ def append_ai_session_turn(
         key_version = cipher.active_key_version
         aad = cipher.associated_data(
             hospital_id=hospital_id,
+            owner_user_id=owner_user_id,
             session_id=session.id,
             sequence_number=sequence,
             role=role,
