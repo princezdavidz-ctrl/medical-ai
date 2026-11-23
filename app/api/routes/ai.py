@@ -21,9 +21,6 @@ def list_capabilities(
     statuses = []
     for capability in AICapability:
         approved = capability.value in enabled
-        runtime_ready = settings.ai_local_model_enabled or (
-            mode == "hybrid" and settings.ai_allow_hosted
-        )
         statuses.append({
             "capability": capability.value,
             "enabled": approved,
@@ -33,8 +30,7 @@ def list_capabilities(
     return {"capabilities": statuses, "clinical_use_enabled": False}
 
 
-@router.post("/requests", status_code=status.HTTP_202_ACCEPTED,
-             summary="Submit a request to the central Medical AI platform")
+@router.post("/requests", summary="Submit a request to the central Medical AI platform")
 def submit_ai_request(
     payload: AIRequestCreate,
     context=Depends(get_current_context),
