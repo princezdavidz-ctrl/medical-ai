@@ -54,9 +54,11 @@ class Settings(BaseSettings):
                 raise ValueError("AI_LOCAL_MODEL_TIMEOUT_SECONDS must be in (0, 180]")
             if not 1 <= self.ai_local_model_max_tokens <= 8192:
                 raise ValueError("AI_LOCAL_MODEL_MAX_TOKENS must be between 1 and 8192")
-            if self.environment.lower() == "production":
-                if self.ai_local_model_version == "unverified" or not self.ai_local_model_digest:
-                    raise ValueError("Production local AI requires a pinned model version and SHA-256 digest")
+            if (
+                self.environment.lower() == "production"
+                and (self.ai_local_model_version == "unverified" or not self.ai_local_model_digest)
+            ):
+                raise ValueError("Production local AI requires a pinned model version and SHA-256 digest")
             if self.ai_local_model_digest and (
                 len(self.ai_local_model_digest) != 64
                 or any(ch not in "0123456789abcdefABCDEF" for ch in self.ai_local_model_digest)
