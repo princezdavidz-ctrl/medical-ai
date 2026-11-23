@@ -23,7 +23,7 @@ Persist the offline node's knowledge installation state and synchronization life
 - Outbound deliveries are idempotent by hospital, destination and key.
 - Workers claim due deliveries using row locks with SKIP LOCKED.
 - Retry attempts are bounded; errors are stored as short codes, not raw payloads.
-- An outbound delivery is marked delivered only when a partner acknowledgement reference is supplied.
+- An outbound delivery is marked delivered only from the sending state after the transport adapter has cryptographically verified a partner acknowledgement and supplied its reference.
 
 ## Data handling and operational boundary
 
