@@ -118,6 +118,30 @@ def submit_ai_request(
             "code": "patient_id_required_for_encounter_context"
         })
 
+    if contains_obvious_personal_identifiers(payload.prompt):
+        reason = "direct_identifiers_not_allowed_in_free_text_prompt"
+        _audit(
+            db, user_id=user.id, hospital_id=hospital_id,
+            action="ai.request.blocked", outcome="denied",
+            reason=reason, metadata=metadata,
+        )
+        raise HTTPException(status_code=422, detail={
+            "code": reason,
+            "message": "Remove direct identifiers from the prompt. Use authorized structured patient context when needed."
+        })
+
+    if payload.patient_context_id is None and payload.input_classification != "public":
+        reason = "sensitive_input_requires_authorized_patient_context"
+        _audit(
+            db, user_id=user.id, hospital_id=hospital_id,
+            action="ai.request.blocked", outcome="denied",
+            reason=reason, metadata=metadata,
+        )
+        raise HTTPException(status_code=403, detail={
+            "code": reason,
+            "message": "Sensitive or patient-specific requests must use an authorized patient context. Declare public only for non-identifiable general questions."
+        })
+
     session_cipher = None
     conversation_history: list[dict[str, str]] = []
     if payload.session_id is not None:
@@ -183,17 +207,6 @@ def submit_ai_request(
                 raise HTTPException(status_code=403, detail={
                     "code": reason,
                     "message": "Hosted AI accepts only requests explicitly classified as public, non-patient information."
-                })
-            if contains_obvious_personal_identifiers(payload.prompt):
-                reason = "hosted_input_contains_obvious_personal_identifier"
-                _audit(
-                    db, user_id=user.id, hospital_id=hospital_id,
-                    action="ai.hosted_transfer.blocked", outcome="denied",
-                    reason=reason, metadata=metadata,
-                )
-                raise HTTPException(status_code=422, detail={
-                    "code": reason,
-                    "message": "Remove personal identifiers before using hosted AI."
                 })
             if not orchestrator.gateway.has_provider("hosted"):
                 reason = "hosted_model_provider_not_configured"
