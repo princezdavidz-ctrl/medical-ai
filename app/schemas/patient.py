@@ -1,4 +1,4 @@
-from datetime import date, datetime
+from datetime import date, datetime, timezone
 from typing import Literal
 from uuid import UUID
 
@@ -307,8 +307,11 @@ class PatientConsentCreate(BaseModel):
     @field_validator("expires_at")
     @classmethod
     def require_future_expiry(cls, value):
-        if value is not None and value <= datetime.now(value.tzinfo):
-            raise ValueError("consent_expiry_must_be_in_future")
+        if value is not None:
+            if value.tzinfo is None:
+                raise ValueError("consent_expiry_must_include_timezone")
+            if value <= datetime.now(timezone.utc):
+                raise ValueError("consent_expiry_must_be_in_future")
         return value
 
     @model_validator(mode="after")
