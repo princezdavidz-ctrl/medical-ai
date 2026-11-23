@@ -67,13 +67,22 @@ def test_retriever_returns_only_approved_visible_knowledge() -> None:
             ),
             MedicalKnowledgeDocument(
                 source_id=global_source.id, title="Draft fever notes",
-                version="test-1", status="draft",
+                version="test-3", status="draft",
+            ),
+            MedicalKnowledgeDocument(
+                source_id=global_source.id, title="Synthetic fever lab catalog",
+                version="test-2", content_type="lab_catalog", status="approved",
+                reviewed_by_user_id=reviewer.id, reviewed_at=datetime.now(timezone.utc),
+                next_review_at=datetime.now(timezone.utc) + timedelta(days=90),
             ),
         ]
         session.add_all(docs)
         session.flush()
         session.add_all([
-            MedicalKnowledgeChunk(document_id=doc.id, sequence=0, content=f"Synthetic fever content {index}.")
+            MedicalKnowledgeChunk(
+                document_id=doc.id, sequence=0,
+                content=f"Synthetic fever content {index}.",
+            )
             for index, doc in enumerate(docs)
         ])
         session.commit()
@@ -85,3 +94,11 @@ def test_retriever_returns_only_approved_visible_knowledge() -> None:
             "Synthetic fever reference", "Local fever pathway"
         }
         assert all(item.version == "test-1" for item in results)
+        assert all(item.citation_id.startswith("K-") for item in results)
+        assert all(item.document_id and item.chunk_id and item.source_title for item in results)
+        assert all(item.reviewed_at and item.next_review_at for item in results)
+
+        lab_results = SQLAlchemyKnowledgeRetriever(session).search(
+            query="fever", capability=AICapability.LAB_INTERPRETATION, hospital_id=hospital.id
+        )
+        assert "Synthetic fever lab catalog" in {item.title for item in lab_results}
