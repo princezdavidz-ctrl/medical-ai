@@ -138,6 +138,7 @@ class PatientConsent(TimestampMixin, Base):
     __tablename__ = "patient_consents"
     __table_args__ = (
         Index("ix_consent_hospital_patient_status", "hospital_id", "patient_id", "status"),
+        Index("ix_patient_consent_basis_scope", "hospital_id", "patient_id", "basis_code", "status"),
         ForeignKeyConstraint(
             ["hospital_id", "patient_id"],
             ["patients.hospital_id", "patients.id"],
