@@ -1,0 +1,60 @@
+name: Backend CI
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches:
+      - main
+      - "phase-1/**"
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_DB: medical_ai
+          POSTGRES_USER: medical
+          POSTGRES_PASSWORD: medical_test_password
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U medical -d medical_ai"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      SECRET_KEY: test-secret-key-for-unit-tests-only-123456
+      ENVIRONMENT: test
+      DATABASE_URL: postgresql+psycopg://medical:medical_test_password@localhost:5432/medical_ai
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install ".[dev]"
+      - name: Lint
+        run: ruff check app tests migrations
+      - name: Apply database migrations
+        run: alembic upgrade head
+      - name: Create least-privileged application test role
+        env:
+          PGPASSWORD: medical_test_password
+        run: |
+          psql -h localhost -U medical -d medical_ai -v ON_ERROR_STOP=1 <<'SQL'
+          CREATE ROLE medical_app LOGIN PASSWORD 'medical_app_test_password' NOSUPERUSER NOBYPASSRLS;
+          GRANT CONNECT ON DATABASE medical_ai TO medical_app;
+          GRANT USAGE ON SCHEMA public TO medical_app;
+          GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public TO medical_app;
+          GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO medical_app;
+          SQL
+      - name: Test
+        env:
+          DATABASE_URL: postgresql+psycopg://medical_app:medical_app_test_password@localhost:5432/medical_ai
+        run: pytest -q
