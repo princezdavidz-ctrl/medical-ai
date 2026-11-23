@@ -1,5 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from redis import Redis
+from redis.exceptions import RedisError
+from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy import text
 from sqlalchemy.orm import Session
 from app.core.config import get_settings
@@ -20,7 +22,7 @@ def readiness(db: Session = Depends(get_db)) -> dict[str, str]:
             client.ping()
         finally:
             client.close()
-    except Exception:
+    except (SQLAlchemyError, RedisError, OSError):
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             detail="A required backend dependency is unavailable",
