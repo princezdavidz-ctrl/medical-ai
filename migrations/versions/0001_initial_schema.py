@@ -53,7 +53,7 @@ sa.Index("ix_departments_hospital_id", departments.c.hospital_id)
 users = sa.Table(
     "users", metadata,
     sa.Column("id", sa.Uuid(), primary_key=True),
-    sa.Column("email", sa.String(320), unique=True, nullable=False),
+    sa.Column("email", sa.String(320), nullable=False),
     sa.Column("password_hash", sa.String(255), nullable=False),
     sa.Column("full_name", sa.String(200), nullable=False),
     sa.Column("is_active", sa.Boolean(), nullable=False, server_default=sa.true()),
@@ -61,7 +61,7 @@ users = sa.Table(
     sa.Column("created_at", sa.DateTime(timezone=True), server_default=sa.func.now(), nullable=False),
     sa.Column("updated_at", sa.DateTime(timezone=True), server_default=sa.func.now(), nullable=False),
 )
-sa.Index("ix_users_email", users.c.email)
+sa.Index("ix_users_email", users.c.email, unique=True)
 
 roles = sa.Table(
     "roles", metadata,
