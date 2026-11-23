@@ -24,7 +24,7 @@ from app.api.deps import get_current_context
 from app.core.config import get_settings
 from app.db.session import get_db
 from app.knowledge.retriever import SQLAlchemyKnowledgeRetriever
-from app.models import AIUsageEvent, AuditEvent
+from app.models import AIUsageEvent, AuditEvent, HospitalMembership, Role
 from app.schemas.ai import AIRequestCreate
 
 router = APIRouter(prefix="/ai", tags=["central-medical-ai"])
@@ -539,7 +539,20 @@ def get_ai_usage(
     context=Depends(get_current_context),
     db: Session = Depends(get_db),
 ) -> dict:
-    _, hospital_id = context
+    user, hospital_id = context
+    membership = db.scalar(
+        select(HospitalMembership)
+        .join(Role, Role.id == HospitalMembership.role_id)
+        .where(
+            HospitalMembership.hospital_id == hospital_id,
+            HospitalMembership.user_id == user.id,
+            HospitalMembership.status == "active",
+        )
+    )
+    role = db.get(Role, membership.role_id) if membership else None
+    role_name = role.name.strip().casefold().replace(" ", "_") if role else ""
+    if role_name not in {"hospital_admin", "hospital_director", "finance_manager", "system_admin"}:
+        raise HTTPException(status_code=403, detail={"code": "ai_usage_admin_role_required"})
     meter = AIUsageMeter(db=db, settings=get_settings())
     try:
         snapshot = meter.current_snapshot(hospital_id=hospital_id)
