@@ -43,5 +43,16 @@ jobs:
         run: ruff check app tests migrations
       - name: Apply database migrations
         run: alembic upgrade head
+      - name: Create least-privileged application test role
+        run: |
+          psql "$DATABASE_URL" -v ON_ERROR_STOP=1 <<'SQL'
+          CREATE ROLE medical_app LOGIN PASSWORD 'medical_app_test_password' NOSUPERUSER NOBYPASSRLS;
+          GRANT CONNECT ON DATABASE medical_ai TO medical_app;
+          GRANT USAGE ON SCHEMA public TO medical_app;
+          GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public TO medical_app;
+          GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO medical_app;
+          SQL
       - name: Test
+        env:
+          DATABASE_URL: postgresql+psycopg://medical_app:medical_app_test_password@localhost:5432/medical_ai
         run: pytest -q
