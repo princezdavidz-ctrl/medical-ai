@@ -86,6 +86,11 @@ def upgrade() -> None:
             name="ck_patient_identity_document_reason",
         ),
         sa.CheckConstraint(
+            "verification_status = 'pending' OR "
+            "(verified_by_user_id IS NOT NULL AND verified_at IS NOT NULL AND verification_reason_code IS NOT NULL)",
+            name="ck_patient_identity_document_reviewed",
+        ),
+        sa.CheckConstraint(
             "identifier_fingerprint_hmac IS NULL OR length(identifier_fingerprint_hmac) = 64",
             name="ck_patient_identity_fingerprint_length",
         ),
@@ -153,6 +158,10 @@ def upgrade() -> None:
         sa.CheckConstraint(
             "status IN ('pending', 'not_duplicate', 'confirmed_duplicate', 'closed')",
             name="ck_patient_duplicate_status",
+        ),
+        sa.CheckConstraint(
+            "status = 'pending' OR (reviewed_by_user_id IS NOT NULL AND reviewed_at IS NOT NULL)",
+            name="ck_patient_duplicate_reviewed",
         ),
     )
     op.create_index(
