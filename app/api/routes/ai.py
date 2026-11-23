@@ -101,8 +101,32 @@ def submit_ai_request(
             "code": reason, "message": "AI request execution is disabled. No clinical output was generated."
         })
 
+    if payload.encounter_id is not None and payload.patient_context_id is None:
+        raise HTTPException(status_code=422, detail={
+            "code": "patient_id_required_for_encounter_context"
+        })
+
     patient_context = None
     if payload.patient_context_id is not None:
+        preflight = AIPolicyEngine(settings).evaluate(
+            capability=payload.capability, has_patient_context=True
+        )
+        if (
+            not preflight.allowed
+            or preflight.provider_class != "local"
+            or not orchestrator.gateway.has_provider("local")
+        ):
+            reason = preflight.reason_code if not preflight.allowed else "local_model_provider_not_configured"
+            _audit(
+                db, user_id=user.id, hospital_id=hospital_id,
+                action="ai.patient_context.blocked", outcome="denied",
+                reason=reason, metadata={**metadata, "patient_context_requested": True},
+                resource_type="patient_context", resource_id=str(payload.patient_context_id),
+            )
+            raise HTTPException(status_code=503, detail={
+                "code": reason,
+                "message": "Patient-context AI requires an approved, configured local model. No patient data was accessed."
+            })
         try:
             authorized_context = load_authorized_patient_context(
                 db,
