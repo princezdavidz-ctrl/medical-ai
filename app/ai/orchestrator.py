@@ -6,6 +6,7 @@ from app.ai.contracts import (
     KnowledgeRetriever,
     OperatingMode,
 )
+from app.ai.evidence import CitationValidationError, format_evidence_context, validate_response_citations
 from app.ai.gateway import ModelGateway
 from app.ai.policy import AIPolicyEngine
 
@@ -45,11 +46,21 @@ class AIOrchestrator:
         except ValueError:
             raise PermissionError("invalid_operating_mode") from None
 
-        return self.gateway.generate(
-            provider_class=decision.provider_class,
-            request=AIModelRequest(
-                capability=capability, prompt=prompt, evidence=tuple(evidence),
-                hospital_id=hospital_id, actor_user_id=actor_user_id,
-                operating_mode=mode,
-            ),
+        request = AIModelRequest(
+            capability=capability,
+            prompt=prompt,
+            evidence=tuple(evidence),
+            evidence_context=format_evidence_context(evidence),
+            hospital_id=hospital_id,
+            actor_user_id=actor_user_id,
+            operating_mode=mode,
         )
+        response = self.gateway.generate(
+            provider_class=decision.provider_class,
+            request=request,
+        )
+        try:
+            validate_response_citations(response.content, evidence)
+        except CitationValidationError as exc:
+            raise PermissionError("model_response_failed_evidence_citation_validation") from exc
+        return response
