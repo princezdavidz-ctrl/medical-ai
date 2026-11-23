@@ -13,6 +13,6 @@ class AIRequestCreate(BaseModel):
 
 class AICapabilityStatus(BaseModel):
     capability: AICapability
-    enabled: bool
+    approved: bool
     operating_mode: str
     status: str
