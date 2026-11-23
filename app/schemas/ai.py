@@ -43,6 +43,7 @@ class AIResponseRead(BaseModel):
     model: str
     model_version: str
     prompt_version: str
+    prompt_digest: str
     citations: list[AICitationResponse]
     clinical_use_enabled: Literal[False]
     requires_clinician_review: Literal[True]
