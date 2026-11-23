@@ -343,6 +343,7 @@ def submit_ai_request(
                     "provider": response.provider,
                     "model": response.model,
                     "model_version": response.model_version,
+                    "prompt_version": response.prompt_version,
                     "citation_ids": [item.citation_id for item in response.citations],
                     "requires_clinician_review": True,
                 },
@@ -363,6 +364,7 @@ def submit_ai_request(
             "provider": response.provider,
             "model": response.model,
             "model_version": response.model_version,
+            "prompt_version": response.prompt_version,
             "citation_count": len(response.citations),
         },
     )
@@ -371,6 +373,7 @@ def submit_ai_request(
         "provider": response.provider,
         "model": response.model,
         "model_version": response.model_version,
+        "prompt_version": response.prompt_version,
         "citations": [{
             "citation_id": item.citation_id,
             "source_id": item.source_id,
