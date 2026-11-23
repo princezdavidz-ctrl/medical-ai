@@ -74,21 +74,21 @@ class LocalOpenAICompatibleProvider:
         if len(request.evidence_context) > 50000:
             raise LocalModelUnavailable("Evidence context exceeds the configured input limit")
         registry_contract = (
-            "\\n\\nCAPABILITY-SPECIFIC SYSTEM INSTRUCTIONS:\\n"
+            "\n\nCAPABILITY-SPECIFIC SYSTEM INSTRUCTIONS:\n"
             + request.system_prompt
-            + "\\n\\nOUTPUT CONTRACT (metadata for the response envelope):\\n"
+            + "\n\nOUTPUT CONTRACT (metadata for the response envelope):\n"
             + json.dumps(request.output_schema or {}, sort_keys=True)
-            + "\\n\\nWORKFLOW SAFETY CONTRACT:\\n"
+            + "\n\nWORKFLOW SAFETY CONTRACT:\n"
             + json.dumps(request.workflow_contract or {}, sort_keys=True)
-            + "\\n\\nPERMITTED TOOLS: "
+            + "\n\nPERMITTED TOOLS: "
             + json.dumps(request.tool_permissions)
-            + ". No tools are enabled unless explicitly listed.\\n\\n"
+            + ". No tools are enabled unless explicitly listed.\n\n"
         )
         system_message = (
             "You are a medical information and clinical decision-support assistant. "
             "Do not issue autonomous diagnoses, prescriptions, orders or treatment decisions. "
             "Follow the capability-specific system instructions and workflow safety contract. "
-            "Cite exact supplied evidence tokens and state uncertainty.\\n\\n"
+            "Cite exact supplied evidence tokens and state uncertainty.\n\n"
             + registry_contract
             + request.evidence_context
         )
