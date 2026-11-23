@@ -199,6 +199,7 @@ def _patient_consent_response(consent: PatientConsent) -> dict:
         "consent_method": consent.consent_method,
         "requested_by_user_id": consent.requested_by_user_id,
         "recorded_by_user_id": consent.recorded_by_user_id,
+        "withdrawn_by_user_id": consent.withdrawn_by_user_id,
         "decision_reason_code": consent.decision_reason_code,
         "granted_at": consent.granted_at,
         "expires_at": consent.expires_at,
