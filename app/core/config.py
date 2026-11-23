@@ -21,6 +21,7 @@ class Settings(BaseSettings):
     ai_operating_mode: str = "hybrid"
     ai_enabled_capabilities: list[str] = []
     ai_allow_hosted: bool = False
+    ai_requests_enabled: bool = False
     ai_local_model_enabled: bool = False
     ai_local_model_base_url: str | None = None
     ai_local_model_name: str | None = None
