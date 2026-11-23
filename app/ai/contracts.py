@@ -70,6 +70,7 @@ class AIModelResponse:
     usage_is_estimated: bool = True
     citations: tuple[KnowledgeEvidence, ...] = ()
     prompt_version: str = "unregistered"
+    prompt_digest: str = "unregistered"
 
 
 class AIProvider(Protocol):
