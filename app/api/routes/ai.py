@@ -2,6 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy.orm import Session
 
 from app.ai.contracts import AICapability
+from app.ai.data_safety import contains_obvious_personal_identifiers
 from app.ai.gateway import ModelGateway, ModelUnavailable
 from app.ai.orchestrator import AIOrchestrator, KnowledgeUnavailable, UnsafeModelOutput
 from app.ai.patient_context import PatientContextDenied, load_authorized_patient_context
@@ -107,6 +108,44 @@ def submit_ai_request(
         })
 
     patient_context = None
+    if payload.patient_context_id is None:
+        route_decision = AIPolicyEngine(settings).evaluate(
+            capability=payload.capability, has_patient_context=False
+        )
+        if route_decision.provider_class == "hosted":
+            metadata = {**metadata, "input_classification": payload.input_classification}
+            if payload.input_classification != "public":
+                reason = "hosted_input_must_be_declared_public"
+                _audit(
+                    db, user_id=user.id, hospital_id=hospital_id,
+                    action="ai.hosted_transfer.blocked", outcome="denied",
+                    reason=reason, metadata=metadata,
+                )
+                raise HTTPException(status_code=403, detail={
+                    "code": reason,
+                    "message": "Hosted AI accepts only requests explicitly classified as public, non-patient information."
+                })
+            if contains_obvious_personal_identifiers(payload.prompt):
+                reason = "hosted_input_contains_obvious_personal_identifier"
+                _audit(
+                    db, user_id=user.id, hospital_id=hospital_id,
+                    action="ai.hosted_transfer.blocked", outcome="denied",
+                    reason=reason, metadata=metadata,
+                )
+                raise HTTPException(status_code=422, detail={
+                    "code": reason,
+                    "message": "Remove personal identifiers before using hosted AI."
+                })
+            if not orchestrator.gateway.has_provider("hosted"):
+                reason = "hosted_model_provider_not_configured"
+                _audit(
+                    db, user_id=user.id, hospital_id=hospital_id,
+                    action="ai.hosted_transfer.blocked", outcome="denied",
+                    reason=reason, metadata=metadata,
+                )
+                raise HTTPException(status_code=503, detail={
+                    "code": reason, "message": "The explicitly approved hosted provider is unavailable."
+                })
     if payload.patient_context_id is not None:
         preflight = AIPolicyEngine(settings).evaluate(
             capability=payload.capability, has_patient_context=True
