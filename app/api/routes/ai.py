@@ -23,7 +23,7 @@ def list_capabilities(
         approved = capability.value in enabled
         statuses.append({
             "capability": capability.value,
-            "enabled": approved,
+            "approved": approved,
             "operating_mode": mode,
             "status": "not_configured",
         })
