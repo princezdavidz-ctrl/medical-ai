@@ -59,7 +59,7 @@ _WORKFLOW = {
 _OUTPUT_SCHEMA = {
     "type": "object",
     "required": [
-        "content", "provider", "model", "model_version", "prompt_version",
+        "content", "provider", "model", "model_version", "prompt_version", "prompt_digest",
         "citations", "clinical_use_enabled", "requires_clinician_review",
     ],
     "properties": {
@@ -68,6 +68,7 @@ _OUTPUT_SCHEMA = {
         "model": {"type": "string"},
         "model_version": {"type": "string"},
         "prompt_version": {"type": "string"},
+        "prompt_digest": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
         "citations": {"type": "array", "items": {"type": "object"}},
         "clinical_use_enabled": {"const": False},
         "requires_clinician_review": {"const": True},
