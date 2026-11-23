@@ -3,7 +3,7 @@ from datetime import datetime
 from typing import Any
 
 from sqlalchemy import (
-    CheckConstraint, DateTime, ForeignKey, Index, Integer, JSON, LargeBinary,
+    CheckConstraint, DateTime, ForeignKey, ForeignKeyConstraint, Index, Integer, JSON, LargeBinary,
     String, UniqueConstraint, Uuid, func,
 )
 from sqlalchemy.orm import Mapped, mapped_column
@@ -17,6 +17,7 @@ class AISession(TimestampMixin, Base):
 
     __tablename__ = "ai_sessions"
     __table_args__ = (
+        UniqueConstraint("id", "hospital_id", "owner_user_id", name="uq_ai_session_identity_owner"),
         CheckConstraint(
             "status IN ('active', 'deleted', 'expired')",
             name="ck_ai_session_status",
@@ -42,6 +43,12 @@ class AISessionMessage(Base):
     __tablename__ = "ai_session_messages"
     __table_args__ = (
         UniqueConstraint("session_id", "sequence_number", name="uq_ai_session_message_sequence"),
+        ForeignKeyConstraint(
+            ["session_id", "hospital_id", "owner_user_id"],
+            ["ai_sessions.id", "ai_sessions.hospital_id", "ai_sessions.owner_user_id"],
+            ondelete="CASCADE",
+            name="fk_ai_session_message_owner",
+        ),
         CheckConstraint("role IN ('user', 'assistant')", name="ck_ai_session_message_role"),
         CheckConstraint("sequence_number > 0", name="ck_ai_session_message_sequence"),
         CheckConstraint("length(nonce) = 12", name="ck_ai_session_message_nonce"),
@@ -51,7 +58,7 @@ class AISessionMessage(Base):
     id: Mapped[uuid.UUID] = mapped_column(Uuid(as_uuid=True), primary_key=True, default=uuid.uuid4)
     hospital_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("hospitals.id"), nullable=False)
     owner_user_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id"), nullable=False)
-    session_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("ai_sessions.id", ondelete="CASCADE"), nullable=False)
+    session_id: Mapped[uuid.UUID] = mapped_column(Uuid(as_uuid=True), nullable=False)
     sequence_number: Mapped[int] = mapped_column(Integer, nullable=False)
     role: Mapped[str] = mapped_column(String(16), nullable=False)
     ciphertext: Mapped[bytes] = mapped_column(LargeBinary, nullable=False)
