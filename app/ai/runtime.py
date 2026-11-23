@@ -11,7 +11,9 @@ def build_model_gateway(settings: Settings) -> ModelGateway:
             raise ValueError("local_model_runtime_configuration_incomplete")
         api_key = (
             settings.ai_local_model_api_key.get_secret_value()
-            if settings.ai_local_model_api_key is not None else None
+            if settings.ai_local_model_api_key is not None
+            and settings.ai_local_model_api_key.get_secret_value()
+            else None
         )
         gateway.register(LocalOpenAICompatibleProvider(
             base_url=settings.ai_local_model_base_url,
