@@ -240,6 +240,10 @@ def enqueue_outbound_delivery(
     """Create an idempotent outbound delivery record without storing raw payload data."""
     if not _SHA256.fullmatch(payload_sha256):
         raise OfflineSyncRejected("invalid_payload_digest")
+    if not all(value.strip() for value in (
+        destination_node_id, idempotency_key, event_type, encrypted_storage_ref
+    )):
+        raise OfflineSyncRejected("outbound_delivery_identity_missing")
     existing = db.scalar(
         select(OfflineDeliveryOutbox).where(
             OfflineDeliveryOutbox.hospital_id == hospital_id,
@@ -295,4 +299,65 @@ def mark_outbound_delivered(
     item.status = "delivered"
     item.partner_ack_reference = partner_ack_reference
     item.delivered_at = current
+    return item
+
+def claim_next_outbound_delivery(
+    db: Session, *, hospital_id: UUID, now: datetime | None = None
+) -> OfflineDeliveryOutbox | None:
+    """Atomically claim one due delivery; concurrent workers skip already locked rows."""
+    current = now or datetime.now(timezone.utc)
+    if current.tzinfo is None:
+        raise OfflineSyncRejected("timezone_required")
+    item = db.scalar(
+        select(OfflineDeliveryOutbox)
+        .where(
+            OfflineDeliveryOutbox.hospital_id == hospital_id,
+            OfflineDeliveryOutbox.status == "queued",
+            (OfflineDeliveryOutbox.next_attempt_at.is_(None))
+            | (OfflineDeliveryOutbox.next_attempt_at <= current),
+        )
+        .order_by(OfflineDeliveryOutbox.created_at)
+        .limit(1)
+        .with_for_update(skip_locked=True)
+    )
+    if item is None:
+        return None
+    item.status = "sending"
+    item.attempt_count += 1
+    return item
+
+
+def record_outbound_failure(
+    db: Session,
+    *,
+    hospital_id: UUID,
+    delivery_id: UUID,
+    error_code: str,
+    retry_delay: timedelta,
+    maximum_attempts: int = 8,
+    now: datetime | None = None,
+) -> OfflineDeliveryOutbox:
+    """Schedule bounded retry using a non-sensitive error code; no false delivery ack."""
+    if not error_code.strip() or retry_delay.total_seconds() < 0 or maximum_attempts < 1:
+        raise OfflineSyncRejected("invalid_delivery_retry_policy")
+    current = now or datetime.now(timezone.utc)
+    if current.tzinfo is None:
+        raise OfflineSyncRejected("timezone_required")
+    item = db.scalar(
+        select(OfflineDeliveryOutbox)
+        .where(
+            OfflineDeliveryOutbox.id == delivery_id,
+            OfflineDeliveryOutbox.hospital_id == hospital_id,
+        )
+        .with_for_update()
+    )
+    if item is None or item.status != "sending":
+        raise OfflineSyncRejected("outbound_delivery_not_sending")
+    item.last_error_code = error_code[:120]
+    if item.attempt_count >= maximum_attempts:
+        item.status = "failed"
+        item.next_attempt_at = None
+    else:
+        item.status = "queued"
+        item.next_attempt_at = current + retry_delay
     return item
