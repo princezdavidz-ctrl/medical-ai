@@ -99,6 +99,12 @@ These corrections are included in the current development branch; they have not 
 - [ ] Next-of-kin contact permission defaults false; database rejects contact permission without a lawful-basis code and timestamp.
 - [ ] Patient status transitions, deceased terminal status, reason/audit attribution and unauthorized role denial.
 - [ ] Patient processing lawful-basis and consent workflow: legal-basis review, scoped grant, evidence reference, expiry, withdrawal, emergency exceptions and no implied consent.
+- [ ] Consent request lifecycle: pending → granted/rejected → withdrawn, terminal-state enforcement, reviewer/requester attribution and no re-grant after rejection/withdrawal.
+- [ ] Declared basis-to-method consistency, purpose included in permitted uses, category/use scope subset checks and timezone-aware expiry.
+- [ ] Evidence reference accepts only opaque vault UUIDs; evidence material is never returned or copied into audit metadata.
+- [ ] Active authorization service rejects pending, rejected, withdrawn, expired, wrong-purpose, missing-category, wrong-use and malformed-scope records.
+- [ ] Consent RLS and composite patient/hospital foreign key prevent cross-hospital access or linkage.
+- [ ] Legal counsel review of basis codes, processing purposes, retention, minors/guardian consent and lawful exceptions before production use.
 - [ ] Patient registration migration from an empty PostgreSQL database and upgrade from the previous schema head.
 - [ ] Phase 2 closeout: deploy migrations through head, verify operator runbook against deployed configuration, validate API contracts against OpenAPI, and verify all external release prerequisites are tracked.
 - [ ] Module-to-API integration and cross-module workflows.
