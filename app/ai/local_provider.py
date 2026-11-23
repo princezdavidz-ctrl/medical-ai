@@ -26,6 +26,7 @@ class LocalOpenAICompatibleProvider:
         timeout_seconds: float = 45.0,
         max_tokens: int = 1200,
         api_key: str | None = None,
+        max_response_chars: int = 50000,
         client: httpx.Client | None = None,
     ) -> None:
         self.base_url = base_url.rstrip("/")
@@ -35,6 +36,7 @@ class LocalOpenAICompatibleProvider:
             if model_digest else model_version
         )
         self.max_tokens = max_tokens
+        self.max_response_chars = max_response_chars
         self._client = client or httpx.Client(timeout=httpx.Timeout(timeout_seconds))
         self._owns_client = client is None
         self._headers = {"Content-Type": "application/json"}
@@ -61,6 +63,10 @@ class LocalOpenAICompatibleProvider:
             return False
 
     def generate(self, request: AIModelRequest) -> AIModelResponse:
+        if not request.prompt.strip() or len(request.prompt) > 8000:
+            raise LocalModelUnavailable("Prompt is empty or exceeds the configured input limit")
+        if len(request.evidence_context) > 50000:
+            raise LocalModelUnavailable("Evidence context exceeds the configured input limit")
         system_message = (
             "You are a medical information and clinical decision-support assistant. "
             "You are not a doctor and must not issue autonomous diagnoses, prescriptions, "
@@ -100,6 +106,8 @@ class LocalOpenAICompatibleProvider:
         content = message.get("content") if isinstance(message, dict) else None
         if not isinstance(content, str) or not content.strip():
             raise LocalModelUnavailable("Local model returned no usable response content")
+        if len(content) > self.max_response_chars:
+            raise LocalModelUnavailable("Local model response exceeds the configured output limit")
 
         return AIModelResponse(
             content=content.strip(),
