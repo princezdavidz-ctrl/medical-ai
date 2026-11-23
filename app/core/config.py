@@ -130,8 +130,13 @@ class Settings(BaseSettings):
                 if not isinstance(amount, int) or isinstance(amount, bool) or amount < 0:
                     raise ValueError(f"AI model pricing {field} must be a non-negative integer")
             currency = price.get("currency")
-            if not isinstance(currency, str) or len(currency) != 3:
-                raise ValueError("AI model pricing currency must be a three-letter code")
+            if (
+                not isinstance(currency, str)
+                or len(currency) != 3
+                or not currency.isalpha()
+                or not currency.isupper()
+            ):
+                raise ValueError("AI model pricing currency must be an uppercase three-letter code")
         if self.ai_sessions_enabled:
             if self.ai_session_encryption_keys is None:
                 raise ValueError("AI sessions require an encryption keyring")
