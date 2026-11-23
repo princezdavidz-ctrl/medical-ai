@@ -1,4 +1,4 @@
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 
 from sqlalchemy import create_engine
 from sqlalchemy.orm import Session
@@ -53,7 +53,7 @@ def test_retriever_returns_only_approved_visible_knowledge() -> None:
             MedicalKnowledgeDocument(
                 source_id=global_source.id, title="Synthetic fever reference",
                 version="test-1", status="approved", reviewed_by_user_id=reviewer.id,
-                reviewed_at=datetime.now(timezone.utc),
+                reviewed_at=datetime.now(timezone.utc), next_review_at=datetime.now(timezone.utc) + timedelta(days=90),
             ),
             MedicalKnowledgeDocument(
                 source_id=local_source.id, title="Local fever pathway",
