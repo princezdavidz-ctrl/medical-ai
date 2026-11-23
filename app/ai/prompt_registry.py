@@ -59,14 +59,16 @@ _WORKFLOW = {
 _OUTPUT_SCHEMA = {
     "type": "object",
     "required": [
-        "answer", "citations", "uncertainty", "escalation",
-        "clinical_use_enabled", "requires_clinician_review",
+        "content", "provider", "model", "model_version", "prompt_version",
+        "citations", "clinical_use_enabled", "requires_clinician_review",
     ],
     "properties": {
-        "answer": {"type": "string"},
-        "citations": {"type": "array", "items": {"type": "string"}},
-        "uncertainty": {"type": "string"},
-        "escalation": {"type": "string"},
+        "content": {"type": "string"},
+        "provider": {"type": "string"},
+        "model": {"type": "string"},
+        "model_version": {"type": "string"},
+        "prompt_version": {"type": "string"},
+        "citations": {"type": "array", "items": {"type": "object"}},
         "clinical_use_enabled": {"const": False},
         "requires_clinician_review": {"const": True},
     },
