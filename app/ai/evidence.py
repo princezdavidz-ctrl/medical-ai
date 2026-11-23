@@ -4,7 +4,7 @@ from collections.abc import Sequence
 from app.ai.contracts import KnowledgeEvidence
 
 
-_CITATION_PATTERN = re.compile(r"\[(K-[a-f0-9]{10}-[a-f0-9]{10})\]")
+_CITATION_PATTERN = re.compile(r"\[(K-[^\]\s]+)\]")
 
 
 class CitationValidationError(ValueError):
