@@ -20,3 +20,29 @@ class AICapabilityStatus(BaseModel):
     approved: bool
     operating_mode: str
     status: str
+
+
+class AICitationResponse(BaseModel):
+    citation_id: str
+    source_id: str
+    source_title: str
+    publisher: str
+    canonical_url: str | None
+    document_id: str
+    title: str
+    version: str
+    jurisdiction: str
+    evidence_grade: str | None
+    reviewed_at: str
+    next_review_at: str
+
+
+class AIResponseRead(BaseModel):
+    content: str
+    provider: str
+    model: str
+    model_version: str
+    prompt_version: str
+    citations: list[AICitationResponse]
+    clinical_use_enabled: Literal[False]
+    requires_clinician_review: Literal[True]
