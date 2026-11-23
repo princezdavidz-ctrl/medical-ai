@@ -21,3 +21,9 @@ class ModelGateway:
         if provider is None:
             raise ModelUnavailable(f"No approved {provider_class} model provider is configured")
         return provider.generate(request)
+
+    def close(self) -> None:
+        for provider in self._providers.values():
+            close = getattr(provider, "close", None)
+            if callable(close):
+                close()
