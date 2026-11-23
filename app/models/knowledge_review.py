@@ -36,6 +36,7 @@ class KnowledgeReviewEvent(Base):
     __tablename__ = "knowledge_review_events"
     __table_args__ = (
         CheckConstraint("decision IN ('submitted', 'approved', 'rejected', 'published', 'superseded')", name="ck_knowledge_review_event_decision"),
+        Index("ix_knowledge_review_events_staged_document_id", "staged_document_id"),
         Index("ix_knowledge_review_event_document_time", "staged_document_id", "occurred_at"),
     )
 
