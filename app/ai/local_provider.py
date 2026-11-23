@@ -21,6 +21,7 @@ class LocalOpenAICompatibleProvider:
         base_url: str,
         model_name: str,
         model_version: str,
+        model_digest: str | None = None,
         timeout_seconds: float = 45.0,
         max_tokens: int = 1200,
         api_key: str | None = None,
@@ -28,7 +29,10 @@ class LocalOpenAICompatibleProvider:
     ) -> None:
         self.base_url = base_url.rstrip("/")
         self.model_name = model_name
-        self.model_version = model_version
+        self.model_version = (
+            f"{model_version}+sha256:{model_digest[:12]}"
+            if model_digest else model_version
+        )
         self.max_tokens = max_tokens
         self._client = client or httpx.Client(timeout=httpx.Timeout(timeout_seconds))
         self._owns_client = client is None
