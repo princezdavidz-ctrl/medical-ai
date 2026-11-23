@@ -99,7 +99,6 @@ class OPDTriageAssessment(Base):
             "red_flag_present = false OR (red_flag_note IS NOT NULL AND length(trim(red_flag_note)) >= 3)",
             name="ck_opd_triage_red_flag_note",
         ),
-        Index("ix_opd_triage_hospital_visit", "hospital_id", "visit_id"),
     )
 
     id: Mapped[uuid.UUID] = mapped_column(Uuid(as_uuid=True), primary_key=True, default=uuid.uuid4)
@@ -134,7 +133,6 @@ class OPDConsultationNote(Base):
         UniqueConstraint("hospital_id", "visit_id", name="uq_opd_consultation_visit"),
         CheckConstraint("length(trim(assessment)) >= 3", name="ck_opd_consultation_assessment"),
         CheckConstraint("length(trim(plan)) >= 3", name="ck_opd_consultation_plan"),
-        Index("ix_opd_consultation_hospital_visit", "hospital_id", "visit_id"),
     )
 
     id: Mapped[uuid.UUID] = mapped_column(Uuid(as_uuid=True), primary_key=True, default=uuid.uuid4)
