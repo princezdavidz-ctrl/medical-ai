@@ -81,7 +81,8 @@ def load_authorized_patient_context(
         raise PatientContextDenied("active_hospital_membership_required")
 
     role = db.get(Role, membership.role_id)
-    if role is None or role.name.strip().casefold() not in ALLOWED_CLINICAL_ROLES:
+    role_name = role.name.strip().casefold().replace(" ", "_").replace("-", "_") if role else ""
+    if role_name not in ALLOWED_CLINICAL_ROLES:
         raise PatientContextDenied("clinical_role_not_authorized")
 
     patient = db.scalar(
@@ -138,8 +139,9 @@ def load_authorized_patient_context(
             PatientConsent.status == "granted",
             PatientConsent.granted_at.is_not(None),
             PatientConsent.granted_at <= current,
+            PatientConsent.expires_at.is_not(None),
+            PatientConsent.expires_at > current,
             PatientConsent.withdrawn_at.is_(None),
-            or_(PatientConsent.expires_at.is_(None), PatientConsent.expires_at > current),
         )
     ).all()
     required_categories = {"demographics", "encounter"}
