@@ -36,7 +36,7 @@ These corrections are included in the current development branch; they have not 
 - [ ] Master execution gate and empty-by-default capability allow-list.
 - [ ] Hosted/local provider routing, strict no-cross-class fallback and outage behavior.
 - [ ] Hosted HTTPS-only endpoint, hostname allow-list, secret handling, model identity and timeout limits.
-- [ ] Hosted transfer approval, public classification, identifier checks, and proof that patient context is never sent to hosted.
+- [ ] Hosted transfer approval, public classification, identifier checks, and proof that patient context is never sent to hosted.\n- [ ] Public/sensitive input classification enforcement for local and hosted providers, plus direct-identifier rejection across all request paths.
 - [ ] Offline/degraded provider routing never invokes hosted, even during local runtime failure.
 - [ ] Offline and degraded mode: no network dependency, no accidental hosted calls.
 - [ ] Model identity/version/digest pinning and artifact attestation.
