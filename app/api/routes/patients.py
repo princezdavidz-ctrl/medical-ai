@@ -745,14 +745,19 @@ def decide_patient_consent(
         if consent.expires_at is not None and consent.expires_at <= now:
             raise HTTPException(status_code=409, detail={"code": "patient_consent_request_expired"})
         if payload.decision == "grant":
-            expected_method = {
+            expected_methods_by_basis = {
                 "patient_consent": {"written", "electronic", "verbal"},
                 "guardian_consent": {"guardian"},
                 "healthcare_provision": {"not_applicable"},
                 "vital_interests": {"not_applicable"},
                 "legal_requirement": {"not_applicable"},
                 "other_lawful_basis": {"not_applicable"},
-            }[consent.basis_code]
+            }
+            expected_method = expected_methods_by_basis.get(consent.basis_code)
+            if expected_method is None:
+                raise HTTPException(status_code=409, detail={
+                    "code": "patient_consent_lawful_basis_missing"
+                })
             if payload.consent_method not in expected_method:
                 raise HTTPException(status_code=422, detail={
                     "code": "consent_method_does_not_match_declared_basis"
@@ -775,9 +780,14 @@ def decide_patient_consent(
         consent.withdrawn_at = now
         consent.decision_reason_code = payload.reason_code
 
+    consent_action = {
+        "grant": "patient.consent.granted",
+        "reject": "patient.consent.rejected",
+        "withdraw": "patient.consent.withdrawn",
+    }[payload.decision]
     write_audit_event(
         db, hospital_id=hospital_id, actor_user_id=user.id,
-        action=f"patient.consent.{payload.decision}d",
+        action=consent_action,
         resource_type="patient_consent", resource_id=str(consent.id),
         metadata={
             "purpose": consent.purpose,
