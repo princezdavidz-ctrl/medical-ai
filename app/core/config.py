@@ -31,6 +31,15 @@ class Settings(BaseSettings):
     ai_local_model_timeout_seconds: float = 45.0
     ai_local_model_max_tokens: int = 1200
     ai_local_model_allowed_hosts: list[str] = ["localhost", "127.0.0.1", "::1", "ollama"]
+    ai_hosted_model_enabled: bool = False
+    ai_hosted_data_transfer_approved: bool = False
+    ai_hosted_model_base_url: str | None = None
+    ai_hosted_model_name: str | None = None
+    ai_hosted_model_version: str = "unverified"
+    ai_hosted_model_api_key: SecretStr | None = None
+    ai_hosted_model_timeout_seconds: float = 45.0
+    ai_hosted_model_max_tokens: int = 1200
+    ai_hosted_model_allowed_hosts: list[str] = []
 
     @model_validator(mode="after")
     def validate_security_settings(self):
@@ -64,6 +73,37 @@ class Settings(BaseSettings):
                 or any(ch not in "0123456789abcdefABCDEF" for ch in self.ai_local_model_digest)
             ):
                 raise ValueError("AI_LOCAL_MODEL_DIGEST must be a SHA-256 hex digest")
+        if self.ai_hosted_model_enabled:
+            if not self.ai_hosted_data_transfer_approved:
+                raise ValueError("Hosted model requires explicit data-transfer approval")
+            if (
+                not self.ai_hosted_model_base_url
+                or not self.ai_hosted_model_name
+                or not self.ai_hosted_model_api_key
+                or not self.ai_hosted_model_api_key.get_secret_value()
+            ):
+                raise ValueError("Hosted model requires endpoint, model name and API key")
+            parsed_hosted = urlsplit(self.ai_hosted_model_base_url)
+            if (
+                parsed_hosted.scheme != "https"
+                or not parsed_hosted.hostname
+                or parsed_hosted.username
+                or parsed_hosted.password
+                or parsed_hosted.query
+                or parsed_hosted.fragment
+                or parsed_hosted.path not in {"", "/"}
+            ):
+                raise ValueError("Hosted model endpoint must be a clean HTTPS origin")
+            if parsed_hosted.hostname.lower() not in {
+                host.lower() for host in self.ai_hosted_model_allowed_hosts
+            }:
+                raise ValueError("Hosted model host must be explicitly allow-listed")
+            if not 0 < self.ai_hosted_model_timeout_seconds <= 180:
+                raise ValueError("AI_HOSTED_MODEL_TIMEOUT_SECONDS must be in (0, 180]")
+            if not 1 <= self.ai_hosted_model_max_tokens <= 8192:
+                raise ValueError("AI_HOSTED_MODEL_MAX_TOKENS must be between 1 and 8192")
+            if self.environment.lower() == "production" and self.ai_hosted_model_version == "unverified":
+                raise ValueError("Production hosted AI requires a pinned provider model version")
         return self
 
 
