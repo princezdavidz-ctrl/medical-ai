@@ -168,7 +168,7 @@ def submit_ai_request(
             })
         session_cipher = _session_cipher(settings)
         try:
-            _, previous_messages = read_owned_ai_session(
+            session_record, previous_messages = read_owned_ai_session(
                 db,
                 hospital_id=hospital_id,
                 owner_user_id=user.id,
@@ -181,6 +181,14 @@ def submit_ai_request(
                 {"role": item["role"], "content": item["content"]}
                 for item in previous_messages
             ]
+            if (
+                session_record.message_count > len(previous_messages)
+                or any(item.get("content_truncated", False) for item in previous_messages)
+            ):
+                conversation_history.insert(0, {
+                    "role": "context_notice",
+                    "content": "Earlier conversation history was truncated; do not assume omitted details.",
+                })
         except AISessionUnavailable as exc:
             raise HTTPException(status_code=404, detail={"code": str(exc)}) from exc
         except SessionEncryptionError as exc:
