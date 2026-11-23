@@ -46,6 +46,63 @@ def upgrade() -> None:
         "'withdrawn_by_patient', 'lawful_basis_ended', 'other')",
     )
     op.create_check_constraint(
+        "ck_patient_consent_method_basis",
+        "patient_consents",
+        "consent_method IS NULL OR "
+        "(basis_code = 'patient_consent' AND consent_method IN ('written', 'electronic', 'verbal')) OR "
+        "(basis_code = 'guardian_consent' AND consent_method = 'guardian') OR "
+        "(basis_code IN ('healthcare_provision', 'vital_interests', 'legal_requirement', 'other_lawful_basis') "
+        "AND consent_method = 'not_applicable')",
+    )
+    op.create_check_constraint(
+        "ck_patient_consent_evidence_reference",
+        "patient_consents",
+        "evidence_reference IS NULL OR evidence_reference ~ '^vault://[0-9a-fA-F-]{36}
+    op.create_check_constraint(
+        "ck_patient_consent_decision_state",
+        "patient_consents",
+        "basis_code IS NULL OR "
+        "(status = 'pending' AND requested_by_user_id IS NOT NULL AND recorded_by_user_id IS NULL "
+        "AND evidence_reference IS NULL AND consent_method IS NULL AND granted_at IS NULL "
+        "AND withdrawn_at IS NULL AND withdrawn_by_user_id IS NULL AND decision_reason_code IS NULL) OR "
+        "(status = 'granted' AND requested_by_user_id IS NOT NULL AND recorded_by_user_id IS NOT NULL "
+        "AND evidence_reference IS NOT NULL AND consent_method IS NOT NULL AND granted_at IS NOT NULL "
+        "AND withdrawn_at IS NULL AND withdrawn_by_user_id IS NULL AND decision_reason_code = 'evidence_confirmed') OR "
+        "(status = 'rejected' AND requested_by_user_id IS NOT NULL AND recorded_by_user_id IS NOT NULL "
+        "AND decision_reason_code IN ('patient_declined', 'guardian_declined', 'other') "
+        "AND consent_method IS NULL AND evidence_reference IS NULL AND granted_at IS NULL "
+        "AND withdrawn_at IS NULL AND withdrawn_by_user_id IS NULL) OR "
+        "(status = 'withdrawn' AND requested_by_user_id IS NOT NULL AND recorded_by_user_id IS NOT NULL "
+        "AND evidence_reference IS NOT NULL AND consent_method IS NOT NULL AND granted_at IS NOT NULL "
+        "AND withdrawn_by_user_id IS NOT NULL AND withdrawn_at IS NOT NULL "
+        "AND decision_reason_code IN ('withdrawn_by_patient', 'lawful_basis_ended', 'other'))",
+    )
+    op.create_index(
+        "ix_patient_consent_basis_scope",
+        "patient_consents",
+        ["hospital_id", "patient_id", "basis_code", "status"],
+    )
+
+
+def downgrade() -> None:
+    op.drop_index("ix_patient_consent_basis_scope", table_name="patient_consents")
+    op.drop_constraint("ck_patient_consent_decision_state", "patient_consents", type_="check")
+    op.drop_constraint("ck_patient_consent_evidence_reference", "patient_consents", type_="check")
+    op.drop_constraint("ck_patient_consent_method_basis", "patient_consents", type_="check")
+    op.drop_constraint("ck_patient_consent_reason", "patient_consents", type_="check")
+    op.drop_constraint("ck_patient_consent_method", "patient_consents", type_="check")
+    op.drop_constraint("ck_patient_consent_basis_code", "patient_consents", type_="check")
+    op.drop_constraint("fk_patient_consent_patient_tenant", "patient_consents", type_="foreignkey")
+    op.drop_column("patient_consents", "decision_reason_code")
+    op.drop_column("patient_consents", "withdrawn_by_user_id")
+    op.drop_column("patient_consents", "recorded_by_user_id")
+    op.drop_column("patient_consents", "requested_by_user_id")
+    op.drop_column("patient_consents", "evidence_reference")
+    op.drop_column("patient_consents", "consent_method")
+    op.drop_column("patient_consents", "basis_code")
+",
+    )
+    op.create_check_constraint(
         "ck_patient_consent_decision_state",
         "patient_consents",
         "basis_code IS NULL OR "
