@@ -15,6 +15,10 @@ class Settings(BaseSettings):
     database_url: str = "postgresql+psycopg://medical:medical_dev_only@localhost:5432/medical_ai"
     redis_url: str = "redis://localhost:6379/0"
     cors_origins: list[str] = ["http://localhost:3000", "http://localhost:5173"]
+    ai_operating_mode: str = "hybrid"
+    ai_enabled_capabilities: list[str] = []
+    ai_allow_hosted: bool = False
+    ai_local_model_enabled: bool = False
 
     @model_validator(mode="after")
     def validate_security_settings(self):
