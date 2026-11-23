@@ -3,7 +3,7 @@ from datetime import datetime
 from typing import Any
 
 from sqlalchemy import (
-    CheckConstraint, DateTime, ForeignKey, Index, JSON, String, Text,
+    BigInteger, CheckConstraint, DateTime, ForeignKey, Index, JSON, String, Text,
     UniqueConstraint, Uuid, func,
 )
 from sqlalchemy.orm import Mapped, mapped_column
@@ -57,7 +57,7 @@ class OfflineSyncCursor(TimestampMixin, Base):
     hospital_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("hospitals.id"), nullable=False)
     source_node_id: Mapped[str] = mapped_column(String(160), nullable=False)
     stream_name: Mapped[str] = mapped_column(String(100), nullable=False)
-    last_sequence: Mapped[int] = mapped_column(default=0, nullable=False)
+    last_sequence: Mapped[int] = mapped_column(BigInteger, default=0, nullable=False)
     last_event_id: Mapped[str | None] = mapped_column(String(160))
 
 
@@ -88,7 +88,7 @@ class OfflineSyncEvent(Base):
     source_node_id: Mapped[str] = mapped_column(String(160), nullable=False)
     stream_name: Mapped[str] = mapped_column(String(100), nullable=False)
     event_id: Mapped[str] = mapped_column(String(160), nullable=False)
-    sequence_number: Mapped[int] = mapped_column(nullable=False)
+    sequence_number: Mapped[int] = mapped_column(BigInteger, nullable=False)
     event_type: Mapped[str] = mapped_column(String(120), nullable=False)
     payload_sha256: Mapped[str] = mapped_column(String(64), nullable=False)
     encrypted_storage_ref: Mapped[str | None] = mapped_column(Text)
