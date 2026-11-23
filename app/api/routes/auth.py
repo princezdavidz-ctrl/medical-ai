@@ -9,6 +9,7 @@ from app.models import Hospital, HospitalMembership, User
 
 router = APIRouter(prefix="/auth", tags=["authentication"])
 
+
 @router.post("/token", summary="Exchange staff credentials and hospital selection for an access token")
 def issue_token(
     form: OAuth2PasswordRequestForm = Depends(),
@@ -18,6 +19,16 @@ def issue_token(
     user = db.scalar(select(User).where(User.email == form.username.lower().strip()))
     if user is None or not user.is_active or not verify_password(form.password, user.password_hash):
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid email or password")
+
+    # Fail closed: an MFA-enabled account must never receive a bearer token from
+    # the password-only flow. A dedicated MFA challenge/verification endpoint
+    # is a remaining Phase 1 task; until then, administrators must not enable
+    # MFA on accounts that need interactive access.
+    if user.mfa_enabled:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Multi-factor authentication is enabled but the verification flow is not yet available",
+        )
 
     # RLS protects memberships, so establish the requested tenant scope before lookup.
     db.execute(
