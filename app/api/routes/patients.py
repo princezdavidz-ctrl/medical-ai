@@ -12,6 +12,7 @@ from app.db.session import get_db
 from app.models import (
     HospitalMembership,
     Patient,
+    PatientCareAssignment,
     PatientDuplicateCase,
     PatientIdentityDocument,
     PatientNextOfKin,
@@ -58,6 +59,51 @@ def _require_patient_role(
     if role_name not in allowed_roles:
         raise HTTPException(status_code=403, detail={"code": "patient_registration_role_required"})
     return role_name
+
+
+_CLINICAL_PATIENT_ROLES = {
+    "doctor", "physician", "medical_officer", "clinician", "nurse",
+    "triage_nurse", "emergency_nurse", "lab_technician", "radiologist",
+    "pharmacist", "midwife", "pediatrician", "surgeon", "anesthetist",
+    "dentist", "therapist",
+}
+
+
+def _patient_read_scope(db: Session, *, user, hospital_id: UUID) -> str:
+    membership = db.scalar(
+        select(HospitalMembership)
+        .join(Role, Role.id == HospitalMembership.role_id)
+        .where(
+            HospitalMembership.hospital_id == hospital_id,
+            HospitalMembership.user_id == user.id,
+            HospitalMembership.status == "active",
+        )
+    )
+    role = db.get(Role, membership.role_id) if membership else None
+    role_name = role.name.strip().casefold().replace(" ", "_") if role else ""
+    if role_name in _REGISTRATION_ROLES:
+        return "hospital"
+    if role_name in _CLINICAL_PATIENT_ROLES:
+        return "assigned"
+    raise HTTPException(status_code=403, detail={"code": "patient_read_role_required"})
+
+
+def _has_active_patient_assignment(
+    db: Session, *, user_id: UUID, hospital_id: UUID, patient_id: UUID
+) -> bool:
+    now = datetime.now(timezone.utc)
+    assignment = db.scalar(select(PatientCareAssignment.id).where(
+        PatientCareAssignment.hospital_id == hospital_id,
+        PatientCareAssignment.patient_id == patient_id,
+        PatientCareAssignment.staff_user_id == user_id,
+        PatientCareAssignment.status == "active",
+        PatientCareAssignment.valid_from <= now,
+        or_(
+            PatientCareAssignment.valid_until.is_(None),
+            PatientCareAssignment.valid_until > now,
+        ),
+    ).limit(1))
+    return assignment is not None
 
 
 def _duplicate_candidates(
@@ -206,13 +252,23 @@ def list_patients(
     offset: int = Query(default=0, ge=0),
 ) -> list[Patient]:
     user, hospital_id = context
+    scope = _patient_read_scope(db, user=user, hospital_id=hospital_id)
+    query = select(Patient).where(Patient.hospital_id == hospital_id)
+    if scope == "assigned":
+        assigned_patient_ids = select(PatientCareAssignment.patient_id).where(
+            PatientCareAssignment.hospital_id == hospital_id,
+            PatientCareAssignment.staff_user_id == user.id,
+            PatientCareAssignment.status == "active",
+            PatientCareAssignment.valid_from <= datetime.now(timezone.utc),
+            or_(
+                PatientCareAssignment.valid_until.is_(None),
+                PatientCareAssignment.valid_until > datetime.now(timezone.utc),
+            ),
+        )
+        query = query.where(Patient.id.in_(assigned_patient_ids))
     patients = list(
         db.scalars(
-            select(Patient)
-            .where(Patient.hospital_id == hospital_id)
-            .order_by(Patient.created_at.desc())
-            .limit(limit)
-            .offset(offset)
+            query.order_by(Patient.created_at.desc()).limit(limit).offset(offset)
         ).all()
     )
     write_audit_event(
@@ -463,13 +519,18 @@ def get_patient(
     db: Session = Depends(get_db),
 ) -> Patient:
     user, hospital_id = context
+    scope = _patient_read_scope(db, user=user, hospital_id=hospital_id)
     patient = db.scalar(
         select(Patient).where(
             Patient.id == patient_id,
             Patient.hospital_id == hospital_id,
         )
     )
-    if patient is None:
+    if patient is None or (
+        scope == "assigned" and not _has_active_patient_assignment(
+            db, user_id=user.id, hospital_id=hospital_id, patient_id=patient_id
+        )
+    ):
         raise HTTPException(status_code=404, detail="Patient not found")
     write_audit_event(
         db,
