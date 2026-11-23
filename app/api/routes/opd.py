@@ -403,12 +403,12 @@ def mark_opd_arrival(
 ) -> OPDVisit:
     user, hospital_id = context
     visit = _get_visit(db, visit_id=visit_id, hospital_id=hospital_id, lock=True)
-    _require_role(
+    membership, role_name = _require_role(
         db, user_id=user.id, hospital_id=hospital_id,
         allowed=_REGISTRATION_ROLES | _TRIAGE_ROLES,
     )
-    if role_name if False else False:
-        pass
+    if role_name in _TRIAGE_ROLES and membership.department_id != visit.department_id:
+        raise HTTPException(status_code=403, detail={"code": "opd_department_scope_required"})
     if visit.status != "registered":
         raise HTTPException(status_code=409, detail={"code": "opd_visit_not_registered"})
     visit.status = "arrived"
@@ -643,13 +643,17 @@ def close_opd_visit(
     if payload.disposition == "left_without_being_seen":
         if visit.status not in {"arrived", "waiting"}:
             raise HTTPException(status_code=409, detail={"code": "opd_visit_cannot_leave_unseen"})
-        if role_allowed and _role_name(db, _membership(db, user_id=user.id, hospital_id=hospital_id)) not in _TRIAGE_ROLES | _CLINICIAN_ROLES:
-            raise HTTPException(status_code=403, detail={"code": "opd_disposition_role_required"})
         visit.status = "left_without_being_seen"
     else:
         if visit.status != "completed":
             raise HTTPException(status_code=409, detail={"code": "opd_consultation_must_be_completed_before_disposition"})
-        if visit.assigned_clinician_user_id != user.id:
+        if (
+            visit.assigned_clinician_user_id != user.id
+            or not _has_active_assignment(
+                db, user_id=user.id, hospital_id=hospital_id, visit=visit,
+                department_id=visit.department_id,
+            )
+        ):
             raise HTTPException(status_code=403, detail={"code": "opd_disposition_requires_assigned_clinician"})
         visit.status = "closed"
 
@@ -700,7 +704,7 @@ def cancel_opd_visit(
     visit = _get_visit(db, visit_id=visit_id, hospital_id=hospital_id, lock=True)
     _require_role(
         db, user_id=user.id, hospital_id=hospital_id,
-        allowed=_REGISTRATION_ROLES, department_id=visit.department_id,
+        allowed=_REGISTRATION_ROLES,
     )
     if visit.status != "registered":
         raise HTTPException(status_code=409, detail={"code": "only_registered_opd_visit_can_be_cancelled"})
@@ -715,6 +719,14 @@ def cancel_opd_visit(
     if encounter is not None:
         encounter.status = "cancelled"
         encounter.ended_at = now
+    assignments = db.scalars(select(PatientCareAssignment).where(
+        PatientCareAssignment.hospital_id == hospital_id,
+        PatientCareAssignment.encounter_id == visit.encounter_id,
+        PatientCareAssignment.status == "active",
+    ).with_for_update()).all()
+    for assignment in assignments:
+        assignment.status = "expired"
+        assignment.valid_until = max(now, assignment.valid_from + timedelta(seconds=1))
     write_audit_event(
         db, hospital_id=hospital_id, actor_user_id=user.id,
         action="opd.visit.cancelled", resource_type="opd_visit",
