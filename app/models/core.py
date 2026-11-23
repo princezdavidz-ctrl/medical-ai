@@ -131,7 +131,9 @@ class PatientConsent(TimestampMixin, Base):
             name="ck_patient_consent_method_basis",
         ),
         CheckConstraint(
-            "evidence_reference IS NULL OR evidence_reference ~ '^vault://[0-9a-fA-F-]{36}
+            "evidence_reference IS NULL OR evidence_reference ~ '^vault://[0-9a-fA-F-]{36}$'",
+            name="ck_patient_consent_evidence_reference",
+        ),
         CheckConstraint(
             "basis_code IS NULL OR "
             "(status = 'pending' AND requested_by_user_id IS NOT NULL AND recorded_by_user_id IS NULL "
@@ -151,6 +153,7 @@ class PatientConsent(TimestampMixin, Base):
             name="ck_patient_consent_decision_state",
         ),
     )
+
     id: Mapped[uuid.UUID] = mapped_column(Uuid(as_uuid=True), primary_key=True, default=uuid.uuid4)
     hospital_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("hospitals.id"), nullable=False, index=True)
     patient_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("patients.id"), nullable=False, index=True)
