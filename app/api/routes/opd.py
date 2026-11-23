@@ -673,13 +673,21 @@ def close_opd_visit(
     user, hospital_id = context
     visit = _get_visit(db, visit_id=visit_id, hospital_id=hospital_id, lock=True)
     role_allowed = _CLINICIAN_ROLES | _TRIAGE_ROLES
-    _require_role(
+    _, actor_role = _require_role(
         db, user_id=user.id, hospital_id=hospital_id,
         allowed=role_allowed, department_id=visit.department_id, allow_admin=False,
     )
     if payload.disposition == "left_without_being_seen":
         if visit.status not in {"arrived", "waiting"}:
             raise HTTPException(status_code=409, detail={"code": "opd_visit_cannot_leave_unseen"})
+        if actor_role in _CLINICIAN_ROLES and (
+            visit.assigned_clinician_user_id != user.id
+            or not _has_active_assignment(
+                db, user_id=user.id, hospital_id=hospital_id, visit=visit,
+                department_id=visit.department_id,
+            )
+        ):
+            raise HTTPException(status_code=403, detail={"code": "opd_disposition_requires_assignment"})
         visit.status = "left_without_being_seen"
     else:
         if visit.status != "completed":
