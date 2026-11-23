@@ -34,6 +34,9 @@ These corrections are included in the current development branch; they have not 
 ## Central AI runtime
 
 - [ ] Master execution gate and empty-by-default capability allow-list.
+- [ ] Hospital AI emergency pause/resume, race handling, fail-closed behavior and audit attribution.
+- [ ] Operations dashboard RBAC, tenant isolation, provider health timeout/failure handling and secret non-disclosure.
+- [ ] Offline knowledge freshness calculations, inbound/outbound queue counts, open conflict visibility and dashboard audit events.
 - [ ] Hosted/local provider routing, strict no-cross-class fallback and outage behavior.
 - [ ] Hosted HTTPS-only endpoint, hostname allow-list, secret handling, model identity and timeout limits.
 - [ ] Hosted transfer approval, public classification, identifier checks, and proof that patient context is never sent to hosted.

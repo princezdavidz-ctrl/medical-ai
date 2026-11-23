@@ -47,3 +47,10 @@ class AIResponseRead(BaseModel):
     citations: list[AICitationResponse]
     clinical_use_enabled: Literal[False]
     requires_clinician_review: Literal[True]
+
+
+class AIOperationsControlUpdate(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    paused: bool
+    reason: str = Field(min_length=3, max_length=500)

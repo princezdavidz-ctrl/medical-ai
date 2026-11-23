@@ -1,7 +1,8 @@
+from datetime import datetime, timezone
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Request
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from app.ai.contracts import AICapability
@@ -25,8 +26,11 @@ from app.api.deps import get_current_context
 from app.core.config import get_settings
 from app.db.session import get_db
 from app.knowledge.retriever import SQLAlchemyKnowledgeRetriever
-from app.models import AIUsageEvent, AuditEvent, HospitalMembership, Role
-from app.schemas.ai import AIRequestCreate, AIResponseRead
+from app.models import (
+    AIHospitalControl, AIUsageEvent, AuditEvent, HospitalMembership, Role,
+    OfflineDeliveryOutbox, OfflineKnowledgeInstallation, OfflineSyncConflict, OfflineSyncEvent,
+)
+from app.schemas.ai import AIRequestCreate, AIResponseRead, AIOperationsControlUpdate
 
 router = APIRouter(prefix="/ai", tags=["central-medical-ai"])
 
@@ -122,6 +126,20 @@ def submit_ai_request(
                outcome="denied", reason=reason, metadata=metadata)
         raise HTTPException(status_code=503, detail={
             "code": reason, "message": "AI request execution is disabled. No clinical output was generated."
+        })
+
+
+    control = db.get(AIHospitalControl, hospital_id)
+    if control is not None and control.ai_paused:
+        reason = "hospital_ai_execution_paused"
+        _audit(
+            db, user_id=user.id, hospital_id=hospital_id,
+            action="ai.request.blocked", outcome="denied",
+            reason=reason, metadata=metadata,
+        )
+        raise HTTPException(status_code=503, detail={
+            "code": reason,
+            "message": "AI execution is paused by this hospital's administrator."
         })
 
     if payload.encounter_id is not None and payload.patient_context_id is None:
@@ -544,6 +562,175 @@ def delete_session(
         resource_type="ai_session", resource_id=str(session_id),
     )
     return {"id": str(session_id), "status": "deleted"}
+
+
+def _require_ai_operations_admin(db: Session, *, user, hospital_id: UUID) -> str:
+    membership = db.scalar(
+        select(HospitalMembership)
+        .join(Role, Role.id == HospitalMembership.role_id)
+        .where(
+            HospitalMembership.hospital_id == hospital_id,
+            HospitalMembership.user_id == user.id,
+            HospitalMembership.status == "active",
+        )
+    )
+    role = db.get(Role, membership.role_id) if membership else None
+    role_name = role.name.strip().casefold().replace(" ", "_") if role else ""
+    if role_name not in {"hospital_admin", "hospital_director", "system_admin"}:
+        raise HTTPException(status_code=403, detail={"code": "ai_operations_admin_role_required"})
+    return role_name
+
+
+@router.get("/operations", summary="Read central AI operational status")
+def get_ai_operations(
+    request: Request,
+    context=Depends(get_current_context),
+    db: Session = Depends(get_db),
+) -> dict:
+    user, hospital_id = context
+    _require_ai_operations_admin(db, user=user, hospital_id=hospital_id)
+    settings = get_settings()
+    gateway: ModelGateway | None = getattr(request.app.state, "ai_gateway", None)
+    providers = []
+    for provider_class in ("local", "hosted"):
+        provider = gateway.get_provider(provider_class) if gateway else None
+        if provider is None:
+            providers.append({
+                "provider_class": provider_class,
+                "configured": False,
+                "health": "not_configured",
+            })
+            continue
+        try:
+            healthy = bool(provider.health_check())
+        except Exception:
+            healthy = False
+        providers.append({
+            "provider_class": provider_class,
+            "provider_id": provider.provider_id,
+            "model": getattr(provider, "model_name", None),
+            "model_version": getattr(provider, "model_version", None),
+            "configured": True,
+            "health": "healthy" if healthy else "unavailable",
+        })
+
+    now = datetime.now(timezone.utc)
+    installations = db.scalars(
+        select(OfflineKnowledgeInstallation)
+        .where(OfflineKnowledgeInstallation.hospital_id == hospital_id)
+        .order_by(OfflineKnowledgeInstallation.verified_at.desc())
+        .limit(50)
+    ).all()
+    installation_summary = {
+        "total_recent": len(installations),
+        "installed_current": sum(
+            item.status == "installed" and item.expires_at > now for item in installations
+        ),
+        "stale_or_expired": sum(
+            item.status == "stale" or item.expires_at <= now for item in installations
+        ),
+        "revoked": sum(item.status == "revoked" for item in installations),
+        "failed": sum(item.status == "failed" for item in installations),
+        "latest_verified_at": installations[0].verified_at if installations else None,
+        "latest_expiry": max((item.expires_at for item in installations), default=None),
+    }
+
+    inbound = {
+        status: db.scalar(
+            select(func.count(OfflineSyncEvent.id)).where(
+                OfflineSyncEvent.hospital_id == hospital_id,
+                OfflineSyncEvent.status == status,
+            )
+        ) or 0
+        for status in ("queued", "conflict", "applied", "acknowledged", "rejected")
+    }
+    outbound = {
+        status: db.scalar(
+            select(func.count(OfflineDeliveryOutbox.id)).where(
+                OfflineDeliveryOutbox.hospital_id == hospital_id,
+                OfflineDeliveryOutbox.status == status,
+            )
+        ) or 0
+        for status in ("queued", "sending", "delivered", "failed", "cancelled")
+    }
+    open_conflicts = db.scalar(
+        select(func.count(OfflineSyncConflict.id)).where(
+            OfflineSyncConflict.hospital_id == hospital_id,
+            OfflineSyncConflict.status == "open",
+        )
+    ) or 0
+    control = db.get(AIHospitalControl, hospital_id)
+    paused = bool(control and control.ai_paused)
+
+    _audit(
+        db, user_id=user.id, hospital_id=hospital_id,
+        action="ai.operations.viewed", outcome="success",
+        reason="Central AI operational status viewed",
+        metadata={
+            "provider_count": len(providers),
+            "offline_installation_count": len(installations),
+            "open_sync_conflicts": open_conflicts,
+        },
+        resource_type="ai_operations", resource_id=str(hospital_id),
+    )
+    return {
+        "hospital_id": str(hospital_id),
+        "ai_paused": paused,
+        "pause_reason": control.pause_reason if control and paused else None,
+        "global_execution_gate_enabled": settings.ai_requests_enabled,
+        "approved_capabilities": list(settings.ai_enabled_capabilities),
+        "providers": providers,
+        "offline_knowledge": installation_summary,
+        "offline_sync": {
+            "inbound_events": inbound,
+            "outbound_deliveries": outbound,
+            "open_conflicts": open_conflicts,
+        },
+        "clinical_use_enabled": False,
+    }
+
+
+@router.put("/operations/control", summary="Pause or resume this hospital's AI execution")
+def update_ai_operations_control(
+    payload: AIOperationsControlUpdate,
+    context=Depends(get_current_context),
+    db: Session = Depends(get_db),
+) -> dict:
+    user, hospital_id = context
+    _require_ai_operations_admin(db, user=user, hospital_id=hospital_id)
+    control = db.get(AIHospitalControl, hospital_id)
+    now = datetime.now(timezone.utc)
+    if control is None:
+        control = AIHospitalControl(
+            hospital_id=hospital_id,
+            ai_paused=payload.paused,
+            pause_reason=payload.reason.strip() if payload.paused else None,
+            changed_by_user_id=user.id,
+            changed_at=now,
+        )
+        db.add(control)
+    else:
+        control.ai_paused = payload.paused
+        control.pause_reason = payload.reason.strip() if payload.paused else None
+        control.changed_by_user_id = user.id
+        control.changed_at = now
+    db.commit()
+    db.refresh(control)
+    action = "ai.operations.paused" if payload.paused else "ai.operations.resumed"
+    _audit(
+        db, user_id=user.id, hospital_id=hospital_id,
+        action=action, outcome="success",
+        reason=payload.reason.strip(),
+        metadata={"paused": payload.paused},
+        resource_type="ai_operations", resource_id=str(hospital_id),
+    )
+    return {
+        "hospital_id": str(hospital_id),
+        "ai_paused": control.ai_paused,
+        "pause_reason": control.pause_reason,
+        "changed_at": control.changed_at,
+        "clinical_use_enabled": False,
+    }
 
 
 @router.get("/usage", summary="View this hospital's AI subscription usage")

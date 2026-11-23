@@ -22,7 +22,7 @@ Phase 2 is complete only when the central platform's engineering components are 
 5. [IMPLEMENTED] **2B.15 — AI conversation sessions.** Add hospital-scoped sessions, message persistence, retention controls, safe context reconstruction, user ownership checks, deletion/export and privacy-preserving audit events.
 6. [IMPLEMENTED] **2B.16 — AI usage and subscription enforcement.** Meter tokens, requests, model/provider, capability, mode, latency and estimated cost by hospital/tenant; enforce quotas and subscription limits without exposing another tenant's usage.
 7. [IMPLEMENTED] **2B.17 — Capability prompt and workflow registry.** Version system prompts, tool permissions, output schemas and clinical workflow contracts independently for each capability; pin all versions to evaluation runs.
-8. **2B.18 — Central AI operational controls.** Add health/readiness, provider availability, offline package freshness, queue status, usage dashboards and administrator controls with strict RBAC and audit.
+8. [IMPLEMENTED] **2B.18 — Central AI operational controls.** Add health/readiness, provider availability, offline package freshness, queue status, usage dashboards and administrator controls with strict RBAC and audit.
 9. **2B.19 — Phase 2 integration and documentation closeout.** Wire the components together, publish API contracts and operator runbooks, record remaining external deployment prerequisites, and verify all Phase 2 deliverables are represented in the Phase 5 Test Register.
 
 ## Non-negotiable architecture rules
