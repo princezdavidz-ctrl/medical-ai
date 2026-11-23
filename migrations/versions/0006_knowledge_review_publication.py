@@ -34,6 +34,7 @@ def upgrade() -> None:
         sa.Column("updated_at", sa.DateTime(timezone=True), server_default=sa.func.now(), nullable=False),
         sa.CheckConstraint("status IN ('pending', 'active', 'suspended', 'revoked')", name="ck_knowledge_reviewer_auth_status"),
         sa.CheckConstraint("(scope = 'global' AND hospital_id IS NULL) OR (scope = 'hospital' AND hospital_id IS NOT NULL)", name="ck_knowledge_reviewer_auth_scope"),
+        sa.CheckConstraint("verified_by_user_id <> user_id", name="ck_knowledge_reviewer_verified_by_other"),
     )
     op.create_index("ix_knowledge_reviewer_auth_user_scope", "clinical_knowledge_reviewer_authorizations", ["user_id", "scope", "hospital_id"])
 
