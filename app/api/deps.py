@@ -35,6 +35,10 @@ def get_current_context(
         text("SELECT set_config('app.current_hospital_id', :hospital_id, true)"),
         {"hospital_id": str(token_hospital_id)},
     )
+    db.execute(
+        text("SELECT set_config('app.current_user_id', :user_id, true)"),
+        {"user_id": str(user_id)},
+    )
 
     user = db.scalar(select(User).where(User.id == user_id, User.is_active.is_(True)))
     if user is None:
