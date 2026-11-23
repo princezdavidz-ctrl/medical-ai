@@ -156,7 +156,10 @@ class PatientIdentityDocumentVerification(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     verification_status: Literal["verified", "rejected"]
-    review_note: str = Field(min_length=3, max_length=1000)
+    reason_code: Literal[
+        "verified_document", "expired_document", "unreadable_document",
+        "identity_mismatch", "unsupported_document",
+    ]
 
 
 class PatientRegistrationProfileUpdate(BaseModel):
