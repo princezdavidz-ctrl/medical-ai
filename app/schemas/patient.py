@@ -110,6 +110,7 @@ class PatientIdentityDocumentRead(BaseModel):
     document_type: str
     issuing_country: str
     verification_status: str
+    verification_reason_code: str | None
     expires_at: datetime | None
     verified_at: datetime | None
 
