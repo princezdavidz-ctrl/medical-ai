@@ -10,7 +10,7 @@ from app.ai.contracts import (
     OperatingMode,
 )
 from app.ai.evidence import CitationValidationError, format_evidence_context, validate_response_citations
-from app.ai.gateway import ModelGateway
+from app.ai.gateway import ModelGateway, ModelUnavailable
 from app.ai.policy import AIPolicyEngine
 from app.ai.token_usage import estimate_tokens
 from app.ai.usage import AIUsageMeter
