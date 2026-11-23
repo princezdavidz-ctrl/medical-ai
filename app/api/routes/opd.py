@@ -31,6 +31,7 @@ from app.schemas.opd import (
     OPDDiagnosisCreate,
     OPDVisitCreate,
     OPDVisitDetailRead,
+    OPDQueueItemRead,
     OPDVisitRead,
     OPDTriageCreate,
 )
@@ -76,10 +77,13 @@ def _require_role(
     hospital_id: UUID,
     allowed: set[str],
     department_id: UUID | None = None,
+    allow_admin: bool = True,
 ) -> tuple[HospitalMembership, str]:
     membership = _membership(db, user_id=user_id, hospital_id=hospital_id)
     role_name = _role_name(db, membership)
-    if membership is None or role_name not in allowed | _ADMIN_ROLES:
+    if membership is None or (
+        role_name not in allowed and not (allow_admin and role_name in _ADMIN_ROLES)
+    ):
         raise HTTPException(status_code=403, detail={"code": "opd_role_not_authorized"})
     if role_name not in _ADMIN_ROLES and department_id is not None:
         if membership.department_id != department_id:
@@ -161,6 +165,10 @@ def _require_visit_read(
     role_name = _role_name(db, membership)
     if role_name in _REGISTRATION_ROLES | _ADMIN_ROLES:
         return role_name
+    if role_name in _TRIAGE_ROLES and membership.department_id == visit.department_id and visit.status in {
+        "registered", "arrived", "waiting"
+    }:
+        return role_name
     if role_name not in _TRIAGE_ROLES | _CLINICIAN_ROLES:
         raise HTTPException(status_code=403, detail={"code": "opd_read_role_required"})
     if membership.department_id != visit.department_id or not _has_active_assignment(
@@ -184,8 +192,20 @@ def _visit_detail(db: Session, visit: OPDVisit) -> dict:
         OPDDiagnosis.hospital_id == visit.hospital_id,
         OPDDiagnosis.visit_id == visit.id,
     ).order_by(OPDDiagnosis.recorded_at)).all()
+    patient = db.scalar(select(Patient).where(
+        Patient.id == visit.patient_id, Patient.hospital_id == visit.hospital_id
+    ))
     return {
         "visit": visit,
+        "patient": {
+            "id": patient.id,
+            "medical_record_number": patient.medical_record_number,
+            "given_name": patient.given_name,
+            "preferred_name": patient.preferred_name,
+            "family_name": patient.family_name,
+            "date_of_birth": patient.date_of_birth,
+            "administrative_sex": patient.administrative_sex,
+        } if patient is not None else None,
         "triage": triage,
         "consultation": consultation,
         "diagnoses": diagnoses,
@@ -286,7 +306,7 @@ def create_opd_visit(
     return visit
 
 
-@router.get("/visits", response_model=list[OPDVisitRead])
+@router.get("/visits", response_model=list[OPDQueueItemRead])
 def list_opd_visits(
     context: tuple = Depends(get_current_context),
     db: Session = Depends(get_db),
@@ -309,32 +329,51 @@ def list_opd_visits(
         if membership.department_id is None:
             raise HTTPException(status_code=403, detail={"code": "opd_department_scope_required"})
         now = datetime.now(timezone.utc)
-        assigned_encounters = select(PatientCareAssignment.encounter_id).where(
-            PatientCareAssignment.hospital_id == hospital_id,
-            PatientCareAssignment.staff_user_id == user.id,
-            PatientCareAssignment.department_id == membership.department_id,
-            PatientCareAssignment.status == "active",
-            PatientCareAssignment.valid_from <= now,
-            or_(
-                PatientCareAssignment.valid_until.is_(None),
-                PatientCareAssignment.valid_until > now,
-            ),
-        )
-        query = query.where(
-            OPDVisit.department_id == membership.department_id,
-            OPDVisit.encounter_id.in_(assigned_encounters),
-        )
+        query = query.where(OPDVisit.department_id == membership.department_id)
+        if role_name in _CLINICIAN_ROLES:
+            assigned_encounters = select(PatientCareAssignment.encounter_id).where(
+                PatientCareAssignment.hospital_id == hospital_id,
+                PatientCareAssignment.staff_user_id == user.id,
+                PatientCareAssignment.department_id == membership.department_id,
+                PatientCareAssignment.status == "active",
+                PatientCareAssignment.valid_from <= now,
+                or_(
+                    PatientCareAssignment.valid_until.is_(None),
+                    PatientCareAssignment.valid_until > now,
+                ),
+            )
+            query = query.where(OPDVisit.encounter_id.in_(assigned_encounters))
+        else:
+            query = query.where(OPDVisit.status.in_(("registered", "arrived", "waiting")))
     visits = list(db.scalars(
         query.order_by(OPDVisit.visit_date.desc(), OPDVisit.created_at.desc())
         .limit(limit).offset(offset)
     ).all())
+    queue_items = []
+    for visit in visits:
+        patient = db.scalar(select(Patient).where(
+            Patient.id == visit.patient_id, Patient.hospital_id == hospital_id
+        ))
+        if patient is not None:
+            queue_items.append({
+                "visit": visit,
+                "patient": {
+                    "id": patient.id,
+                    "medical_record_number": patient.medical_record_number,
+                    "given_name": patient.given_name,
+                    "preferred_name": patient.preferred_name,
+                    "family_name": patient.family_name,
+                    "date_of_birth": patient.date_of_birth,
+                    "administrative_sex": patient.administrative_sex,
+                },
+            })
     write_audit_event(
         db, hospital_id=hospital_id, actor_user_id=user.id,
         action="opd.queue.viewed", resource_type="opd_queue",
-        metadata={"returned_count": len(visits), "status_filter": visit_status},
+        metadata={"returned_count": len(queue_items), "status_filter": visit_status},
     )
     db.commit()
-    return visits
+    return queue_items
 
 
 @router.get("/visits/{visit_id}", response_model=OPDVisitDetailRead)
@@ -367,8 +406,9 @@ def mark_opd_arrival(
     _require_role(
         db, user_id=user.id, hospital_id=hospital_id,
         allowed=_REGISTRATION_ROLES | _TRIAGE_ROLES,
-        department_id=visit.department_id,
     )
+    if role_name if False else False:
+        pass
     if visit.status != "registered":
         raise HTTPException(status_code=409, detail={"code": "opd_visit_not_registered"})
     visit.status = "arrived"
@@ -393,7 +433,7 @@ def record_opd_triage(
     visit = _get_visit(db, visit_id=visit_id, hospital_id=hospital_id, lock=True)
     _require_role(
         db, user_id=user.id, hospital_id=hospital_id,
-        allowed=_TRIAGE_ROLES, department_id=visit.department_id,
+        allowed=_TRIAGE_ROLES, department_id=visit.department_id, allow_admin=False,
     )
     if visit.status != "arrived":
         raise HTTPException(status_code=409, detail={"code": "opd_visit_must_be_arrived_for_triage"})
@@ -437,7 +477,7 @@ def start_opd_consultation(
     visit = _get_visit(db, visit_id=visit_id, hospital_id=hospital_id, lock=True)
     _require_role(
         db, user_id=user.id, hospital_id=hospital_id,
-        allowed=_CLINICIAN_ROLES, department_id=visit.department_id,
+        allowed=_CLINICIAN_ROLES, department_id=visit.department_id, allow_admin=False,
     )
     if visit.status != "waiting":
         raise HTTPException(status_code=409, detail={"code": "opd_visit_not_waiting"})
@@ -476,9 +516,16 @@ def complete_opd_consultation(
     visit = _get_visit(db, visit_id=visit_id, hospital_id=hospital_id, lock=True)
     _require_role(
         db, user_id=user.id, hospital_id=hospital_id,
-        allowed=_CLINICIAN_ROLES, department_id=visit.department_id,
+        allowed=_CLINICIAN_ROLES, department_id=visit.department_id, allow_admin=False,
     )
-    if visit.status != "in_consultation" or visit.assigned_clinician_user_id != user.id:
+    if (
+        visit.status != "in_consultation"
+        or visit.assigned_clinician_user_id != user.id
+        or not _has_active_assignment(
+            db, user_id=user.id, hospital_id=hospital_id, visit=visit,
+            department_id=visit.department_id,
+        )
+    ):
         raise HTTPException(status_code=409, detail={"code": "opd_consultation_not_owned_or_started"})
     existing = db.scalar(select(OPDConsultationNote.id).where(
         OPDConsultationNote.hospital_id == hospital_id,
@@ -517,9 +564,16 @@ def add_opd_diagnosis(
     visit = _get_visit(db, visit_id=visit_id, hospital_id=hospital_id, lock=True)
     _require_role(
         db, user_id=user.id, hospital_id=hospital_id,
-        allowed=_CLINICIAN_ROLES, department_id=visit.department_id,
+        allowed=_CLINICIAN_ROLES, department_id=visit.department_id, allow_admin=False,
     )
-    if visit.status != "in_consultation" or visit.assigned_clinician_user_id != user.id:
+    if (
+        visit.status != "in_consultation"
+        or visit.assigned_clinician_user_id != user.id
+        or not _has_active_assignment(
+            db, user_id=user.id, hospital_id=hospital_id, visit=visit,
+            department_id=visit.department_id,
+        )
+    ):
         raise HTTPException(status_code=409, detail={"code": "opd_diagnosis_requires_active_consultation"})
     if payload.concept_id is not None:
         now = datetime.now(timezone.utc)
@@ -584,7 +638,7 @@ def close_opd_visit(
     role_allowed = _CLINICIAN_ROLES | _TRIAGE_ROLES
     _require_role(
         db, user_id=user.id, hospital_id=hospital_id,
-        allowed=role_allowed, department_id=visit.department_id,
+        allowed=role_allowed, department_id=visit.department_id, allow_admin=False,
     )
     if payload.disposition == "left_without_being_seen":
         if visit.status not in {"arrived", "waiting"}:
@@ -623,8 +677,7 @@ def close_opd_visit(
         PatientCareAssignment.status == "active",
     ).with_for_update()).all()
     for assignment in assignments:
-        assignment.status = "expired"
-        assignment.valid_until = max(now, assignment.valid_from + timedelta(seconds=1))
+        assignment.valid_until = now + timedelta(hours=24)
 
     write_audit_event(
         db, hospital_id=hospital_id, actor_user_id=user.id,
@@ -653,7 +706,6 @@ def cancel_opd_visit(
         raise HTTPException(status_code=409, detail={"code": "only_registered_opd_visit_can_be_cancelled"})
     now = datetime.now(timezone.utc)
     visit.status = "cancelled"
-    visit.disposition = "left_without_being_seen"
     visit.disposition_note = "Cancelled before arrival"
     visit.closed_by_user_id = user.id
     visit.closed_at = now
