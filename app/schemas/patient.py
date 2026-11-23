@@ -372,6 +372,7 @@ class PatientConsentRead(BaseModel):
     consent_method: str | None
     requested_by_user_id: UUID | None
     recorded_by_user_id: UUID | None
+    withdrawn_by_user_id: UUID | None
     decision_reason_code: str | None
     granted_at: datetime | None
     expires_at: datetime | None
