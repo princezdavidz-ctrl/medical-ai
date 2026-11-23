@@ -105,6 +105,10 @@ class PatientNextOfKin(Base):
             ondelete="CASCADE",
         ),
         Index("ix_patient_next_of_kin_hospital_patient", "hospital_id", "patient_id"),
+        CheckConstraint(
+            "permission_basis IS NULL OR permission_basis IN ('patient_consent', 'legal_guardian_consent', 'other_lawful_basis')",
+            name="ck_patient_next_of_kin_permission_basis",
+        ),
     )
 
     id: Mapped[uuid.UUID] = mapped_column(Uuid(as_uuid=True), primary_key=True, default=uuid.uuid4)
@@ -117,6 +121,7 @@ class PatientNextOfKin(Base):
     phone_number: Mapped[str] = mapped_column(String(40), nullable=False)
     email: Mapped[str | None] = mapped_column(String(320))
     can_be_contacted: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    permission_basis: Mapped[str | None] = mapped_column(String(32))
     permission_recorded_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), nullable=False
