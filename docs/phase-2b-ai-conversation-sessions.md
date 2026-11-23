@@ -21,7 +21,8 @@ No encryption key is seeded in the repository. Key generation, secure secret sto
 - `GET /api/v1/ai/sessions`: list the current user's active sessions.
 - `GET /api/v1/ai/sessions/{session_id}`: decrypt and read an owned session.
 - `DELETE /api/v1/ai/sessions/{session_id}`: delete encrypted messages and mark the session deleted.
-- `POST /api/v1/ai/requests` accepts optional `session_id`; successful request/response turns are encrypted and appended atomically with the completion audit event.\n- Follow-up requests reconstruct at most the latest 40 messages / 20,000 characters as untrusted conversation context, and session-based requests require local inference.
+- `POST /api/v1/ai/requests` accepts optional `session_id`; successful request/response turns are encrypted and appended atomically with the completion audit event.
+- Follow-up requests reconstruct at most the latest 40 messages / 20,000 characters as untrusted conversation context, and session-based requests require local inference.
 
 Session persistence is disabled by default. It requires `AI_SESSIONS_ENABLED=true`, a valid keyring and an active key version. Session expiry is configured by `AI_SESSION_RETENTION_DAYS`.
 
