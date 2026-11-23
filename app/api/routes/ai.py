@@ -1,5 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy.orm import Session
+from uuid import UUID
 
 from app.ai.contracts import AICapability
 from app.ai.data_safety import contains_obvious_personal_identifiers
@@ -116,6 +117,22 @@ def submit_ai_request(
         raise HTTPException(status_code=422, detail={
             "code": "patient_id_required_for_encounter_context"
         })
+
+    session_cipher = None
+    if payload.session_id is not None:
+        if not settings.ai_sessions_enabled:
+            raise HTTPException(status_code=503, detail={"code": "ai_session_storage_disabled"})
+        session_cipher = _session_cipher(settings)
+        try:
+            get_owned_ai_session(
+                db,
+                hospital_id=hospital_id,
+                owner_user_id=user.id,
+                session_id=payload.session_id,
+            )
+        except AISessionUnavailable as exc:
+            raise HTTPException(status_code=404, detail={"code": str(exc)}) from exc
+        metadata = {**metadata, "session_id": str(payload.session_id)}
 
     patient_context = None
     if payload.patient_context_id is None:
@@ -242,6 +259,31 @@ def submit_ai_request(
         raise HTTPException(status_code=503, detail={
             "code": reason, "message": "The approved model runtime is unavailable. No fallback was attempted."
         }) from exc
+
+    if payload.session_id is not None and session_cipher is not None:
+        try:
+            append_ai_session_turn(
+                db,
+                hospital_id=hospital_id,
+                owner_user_id=user.id,
+                session_id=payload.session_id,
+                user_prompt=payload.prompt,
+                assistant_response=response.content,
+                cipher=session_cipher,
+                assistant_metadata={
+                    "provider": response.provider,
+                    "model": response.model,
+                    "model_version": response.model_version,
+                    "citation_ids": [item.citation_id for item in response.citations],
+                    "requires_clinician_review": True,
+                },
+            )
+        except (AISessionUnavailable, SessionEncryptionError) as exc:
+            db.rollback()
+            raise HTTPException(status_code=503, detail={
+                "code": "ai_session_persistence_failed",
+                "message": "The response could not be securely persisted to the requested session."
+            }) from exc
 
     _audit(
         db, user_id=user.id, hospital_id=hospital_id,
