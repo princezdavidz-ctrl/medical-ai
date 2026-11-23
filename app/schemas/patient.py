@@ -1,4 +1,4 @@
-from datetime import date, datetime
+from datetime import date, datetime, timezone
 from typing import Literal
 from uuid import UUID
 
@@ -281,3 +281,103 @@ class PatientDemographicsUpdate(BaseModel):
         if value is not None and value > date.today():
             raise ValueError("date_of_birth_cannot_be_in_the_future")
         return value
+
+
+class PatientConsentCreate(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    purpose: Literal[
+        "care_delivery", "care_coordination", "referral", "billing",
+        "insurance_claim", "patient_portal", "other",
+    ]
+    data_categories: list[Literal[
+        "demographics", "contact_details", "clinical_records", "lab_results",
+        "imaging", "medications", "billing", "insurance", "other",
+    ]] = Field(min_length=1, max_length=20)
+    permitted_uses: list[Literal[
+        "care_delivery", "care_coordination", "referral", "billing",
+        "insurance_claim", "patient_portal", "other_lawful_use",
+    ]] = Field(min_length=1, max_length=20)
+    basis_code: Literal[
+        "patient_consent", "guardian_consent", "healthcare_provision",
+        "vital_interests", "legal_requirement", "other_lawful_basis",
+    ]
+    expires_at: datetime | None = None
+
+    @field_validator("expires_at")
+    @classmethod
+    def require_future_expiry(cls, value):
+        if value is not None:
+            if value.tzinfo is None:
+                raise ValueError("consent_expiry_must_include_timezone")
+            if value <= datetime.now(timezone.utc):
+                raise ValueError("consent_expiry_must_be_in_future")
+        return value
+
+    @model_validator(mode="after")
+    def require_unique_scope_values(self):
+        if len(set(self.data_categories)) != len(self.data_categories):
+            raise ValueError("duplicate_data_category")
+        if len(set(self.permitted_uses)) != len(self.permitted_uses):
+            raise ValueError("duplicate_permitted_use")
+        required_use = "other_lawful_use" if self.purpose == "other" else self.purpose
+        if required_use not in self.permitted_uses:
+            raise ValueError("consent_scope_must_include_declared_purpose")
+        return self
+
+
+class PatientConsentDecision(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    decision: Literal["grant", "reject", "withdraw"]
+    consent_method: Literal[
+        "written", "electronic", "verbal", "guardian", "not_applicable",
+    ] | None = None
+    evidence_reference: str | None = Field(
+        default=None,
+        min_length=44,
+        max_length=44,
+        pattern="^vault://[0-9a-fA-F-]{36}$",
+    )
+    reason_code: Literal[
+        "evidence_confirmed", "patient_declined", "guardian_declined",
+        "withdrawn_by_patient", "lawful_basis_ended", "other",
+    ]
+
+    @model_validator(mode="after")
+    def validate_decision_fields(self):
+        if self.decision == "grant":
+            if self.evidence_reference is None or self.consent_method is None:
+                raise ValueError("grant_requires_evidence_and_consent_method")
+            if self.reason_code != "evidence_confirmed":
+                raise ValueError("grant_requires_evidence_confirmed_reason")
+        elif self.decision == "reject":
+            if self.reason_code not in {"patient_declined", "guardian_declined", "other"}:
+                raise ValueError("invalid_rejection_reason")
+            if self.consent_method is not None or self.evidence_reference is not None:
+                raise ValueError("rejection_must_not_include_grant_evidence")
+        elif self.decision == "withdraw":
+            if self.reason_code not in {"withdrawn_by_patient", "lawful_basis_ended", "other"}:
+                raise ValueError("invalid_withdrawal_reason")
+            if self.consent_method is not None or self.evidence_reference is not None:
+                raise ValueError("withdrawal_must_not_include_grant_evidence")
+        return self
+
+
+class PatientConsentRead(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: UUID
+    purpose: str
+    scope: dict
+    status: str
+    basis_code: str | None
+    consent_method: str | None
+    requested_by_user_id: UUID | None
+    recorded_by_user_id: UUID | None
+    withdrawn_by_user_id: UUID | None
+    decision_reason_code: str | None
+    granted_at: datetime | None
+    expires_at: datetime | None
+    withdrawn_at: datetime | None
+    effective_status: str

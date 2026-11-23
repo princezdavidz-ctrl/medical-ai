@@ -12,6 +12,7 @@ from app.db.session import get_db
 from app.models import (
     HospitalMembership,
     Patient,
+    PatientConsent,
     PatientCareAssignment,
     PatientDuplicateCase,
     PatientIdentityDocument,
@@ -21,6 +22,9 @@ from app.models import (
 )
 from app.schemas.patient import (
     PatientCreate,
+    PatientConsentCreate,
+    PatientConsentDecision,
+    PatientConsentRead,
     PatientDuplicateCandidateRead,
     PatientDuplicateCaseRead,
     PatientDuplicateCaseReview,
@@ -175,6 +179,33 @@ def _duplicate_candidates(
         score = 95 if same_name and same_dob else 90 if same_name and same_phone else 80
         matches.append((candidate, score, signals))
     return matches
+
+
+def _patient_consent_response(consent: PatientConsent) -> dict:
+    now = datetime.now(timezone.utc)
+    effective_status = consent.status
+    if (
+        consent.status == "granted"
+        and consent.expires_at is not None
+        and consent.expires_at <= now
+    ):
+        effective_status = "expired"
+    return {
+        "id": consent.id,
+        "purpose": consent.purpose,
+        "scope": consent.scope,
+        "status": consent.status,
+        "basis_code": consent.basis_code,
+        "consent_method": consent.consent_method,
+        "requested_by_user_id": consent.requested_by_user_id,
+        "recorded_by_user_id": consent.recorded_by_user_id,
+        "withdrawn_by_user_id": consent.withdrawn_by_user_id,
+        "decision_reason_code": consent.decision_reason_code,
+        "granted_at": consent.granted_at,
+        "expires_at": consent.expires_at,
+        "withdrawn_at": consent.withdrawn_at,
+        "effective_status": effective_status,
+    }
 
 
 @router.post("", response_model=PatientRead, status_code=status.HTTP_201_CREATED)
@@ -603,6 +634,173 @@ def verify_patient_identity_document(
     )
     db.commit()
     return {"document_id": str(document.id), "verification_status": document.verification_status}
+
+
+@router.post(
+    "/{patient_id}/consents",
+    response_model=PatientConsentRead,
+    status_code=status.HTTP_201_CREATED,
+)
+def create_patient_consent(
+    patient_id: UUID,
+    payload: PatientConsentCreate,
+    context: tuple = Depends(get_current_context),
+    db: Session = Depends(get_db),
+) -> dict:
+    user, hospital_id = context
+    _require_patient_role(
+        db, user=user, hospital_id=hospital_id, allowed_roles=_RECORDS_VERIFIER_ROLES
+    )
+    patient = db.scalar(select(Patient).where(
+        Patient.id == patient_id, Patient.hospital_id == hospital_id
+    ))
+    if patient is None:
+        raise HTTPException(status_code=404, detail={"code": "patient_not_found"})
+    consent = PatientConsent(
+        hospital_id=hospital_id,
+        patient_id=patient_id,
+        purpose=payload.purpose,
+        scope={
+            "data_categories": sorted(payload.data_categories),
+            "permitted_uses": sorted(payload.permitted_uses),
+        },
+        status="pending",
+        basis_code=payload.basis_code,
+        expires_at=payload.expires_at,
+        requested_by_user_id=user.id,
+    )
+    db.add(consent)
+    db.flush()
+    write_audit_event(
+        db, hospital_id=hospital_id, actor_user_id=user.id,
+        action="patient.consent.requested", resource_type="patient_consent",
+        resource_id=str(consent.id),
+        metadata={
+            "purpose": consent.purpose,
+            "basis_code": consent.basis_code,
+            "data_category_count": len(payload.data_categories),
+            "permitted_use_count": len(payload.permitted_uses),
+        },
+    )
+    db.commit()
+    db.refresh(consent)
+    return _patient_consent_response(consent)
+
+
+@router.get("/{patient_id}/consents", response_model=list[PatientConsentRead])
+def list_patient_consents(
+    patient_id: UUID,
+    context: tuple = Depends(get_current_context),
+    db: Session = Depends(get_db),
+) -> list[dict]:
+    user, hospital_id = context
+    _require_patient_role(
+        db, user=user, hospital_id=hospital_id, allowed_roles=_RECORDS_VERIFIER_ROLES
+    )
+    patient = db.scalar(select(Patient).where(
+        Patient.id == patient_id, Patient.hospital_id == hospital_id
+    ))
+    if patient is None:
+        raise HTTPException(status_code=404, detail={"code": "patient_not_found"})
+    consents = db.scalars(select(PatientConsent).where(
+        PatientConsent.hospital_id == hospital_id,
+        PatientConsent.patient_id == patient_id,
+    ).order_by(PatientConsent.created_at.desc())).all()
+    write_audit_event(
+        db, hospital_id=hospital_id, actor_user_id=user.id,
+        action="patient.consent.listed", resource_type="patient",
+        resource_id=str(patient_id),
+        metadata={"consent_count": len(consents)},
+    )
+    db.commit()
+    return [_patient_consent_response(item) for item in consents]
+
+
+@router.patch(
+    "/{patient_id}/consents/{consent_id}/decision",
+    response_model=PatientConsentRead,
+)
+def decide_patient_consent(
+    patient_id: UUID,
+    consent_id: UUID,
+    payload: PatientConsentDecision,
+    context: tuple = Depends(get_current_context),
+    db: Session = Depends(get_db),
+) -> dict:
+    user, hospital_id = context
+    _require_patient_role(
+        db, user=user, hospital_id=hospital_id, allowed_roles=_RECORDS_VERIFIER_ROLES
+    )
+    consent = db.scalar(select(PatientConsent).where(
+        PatientConsent.id == consent_id,
+        PatientConsent.patient_id == patient_id,
+        PatientConsent.hospital_id == hospital_id,
+    ).with_for_update())
+    if consent is None:
+        raise HTTPException(status_code=404, detail={"code": "patient_consent_not_found"})
+    now = datetime.now(timezone.utc)
+
+    if payload.decision in {"grant", "reject"}:
+        if consent.status != "pending":
+            raise HTTPException(status_code=409, detail={"code": "patient_consent_not_pending"})
+        if consent.expires_at is not None and consent.expires_at <= now:
+            raise HTTPException(status_code=409, detail={"code": "patient_consent_request_expired"})
+        if payload.decision == "grant":
+            expected_methods_by_basis = {
+                "patient_consent": {"written", "electronic", "verbal"},
+                "guardian_consent": {"guardian"},
+                "healthcare_provision": {"not_applicable"},
+                "vital_interests": {"not_applicable"},
+                "legal_requirement": {"not_applicable"},
+                "other_lawful_basis": {"not_applicable"},
+            }
+            expected_method = expected_methods_by_basis.get(consent.basis_code)
+            if expected_method is None:
+                raise HTTPException(status_code=409, detail={
+                    "code": "patient_consent_lawful_basis_missing"
+                })
+            if payload.consent_method not in expected_method:
+                raise HTTPException(status_code=422, detail={
+                    "code": "consent_method_does_not_match_declared_basis"
+                })
+            consent.status = "granted"
+            consent.consent_method = payload.consent_method
+            consent.evidence_reference = payload.evidence_reference
+            consent.recorded_by_user_id = user.id
+            consent.granted_at = now
+            consent.decision_reason_code = "evidence_confirmed"
+        else:
+            consent.status = "rejected"
+            consent.recorded_by_user_id = user.id
+            consent.decision_reason_code = payload.reason_code
+    elif payload.decision == "withdraw":
+        if consent.status != "granted":
+            raise HTTPException(status_code=409, detail={"code": "only_granted_consent_can_be_withdrawn"})
+        consent.status = "withdrawn"
+        consent.withdrawn_by_user_id = user.id
+        consent.withdrawn_at = now
+        consent.decision_reason_code = payload.reason_code
+
+    consent_action = {
+        "grant": "patient.consent.granted",
+        "reject": "patient.consent.rejected",
+        "withdraw": "patient.consent.withdrawn",
+    }[payload.decision]
+    write_audit_event(
+        db, hospital_id=hospital_id, actor_user_id=user.id,
+        action=consent_action,
+        resource_type="patient_consent", resource_id=str(consent.id),
+        metadata={
+            "purpose": consent.purpose,
+            "basis_code": consent.basis_code,
+            "decision": payload.decision,
+            "consent_method": consent.consent_method,
+            "reason_code": consent.decision_reason_code,
+        },
+    )
+    db.commit()
+    db.refresh(consent)
+    return _patient_consent_response(consent)
 
 
 @router.patch("/{patient_id}/status")
