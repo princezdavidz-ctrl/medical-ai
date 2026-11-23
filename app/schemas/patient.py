@@ -227,3 +227,43 @@ class PatientStatusUpdate(BaseModel):
 class PatientDuplicateCandidateRead(BaseModel):
     case: PatientDuplicateCaseRead
     candidate: PatientRead
+
+
+class PatientDemographicsUpdate(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    given_name: str | None = Field(default=None, min_length=1, max_length=120)
+    middle_name: str | None = Field(default=None, max_length=120)
+    preferred_name: str | None = Field(default=None, max_length=120)
+    family_name: str | None = Field(default=None, min_length=1, max_length=120)
+    date_of_birth: date | None = None
+    administrative_sex: str | None = Field(default=None, max_length=24)
+    nationality: str | None = Field(default=None, pattern="^[A-Z]{2}$")
+    phone_number: str | None = Field(default=None, max_length=40)
+
+    @model_validator(mode="after")
+    def require_at_least_one_field(self):
+        if not self.model_fields_set:
+            raise ValueError("at_least_one_demographic_field_required")
+        return self
+
+    @field_validator("given_name", "family_name", mode="before")
+    @classmethod
+    def trim_required_names(cls, value):
+        if isinstance(value, str):
+            return value.strip()
+        return value
+
+    @field_validator("middle_name", "preferred_name", "phone_number", mode="before")
+    @classmethod
+    def trim_optional_names(cls, value):
+        if isinstance(value, str):
+            return value.strip() or None
+        return value
+
+    @field_validator("date_of_birth")
+    @classmethod
+    def reject_future_birth_dates(cls, value):
+        if value is not None and value > date.today():
+            raise ValueError("date_of_birth_cannot_be_in_the_future")
+        return value
