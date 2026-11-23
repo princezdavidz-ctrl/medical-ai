@@ -2,7 +2,7 @@ from datetime import date, datetime
 from typing import Literal
 from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict, Field, model_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 
 class PatientRegistrationProfileCreate(BaseModel):
@@ -70,6 +70,27 @@ class PatientCreate(BaseModel):
     profile: PatientRegistrationProfileCreate | None = None
     identity_documents: list[PatientIdentityDocumentCreate] = Field(default_factory=list, max_length=5)
     next_of_kin: list[PatientNextOfKinCreate] = Field(default_factory=list, max_length=5)
+
+    @field_validator("medical_record_number", "given_name", "family_name", mode="before")
+    @classmethod
+    def trim_required_identity_fields(cls, value):
+        if isinstance(value, str):
+            return value.strip()
+        return value
+
+    @field_validator("middle_name", "preferred_name", "phone_number", mode="before")
+    @classmethod
+    def trim_optional_identity_fields(cls, value):
+        if isinstance(value, str):
+            return value.strip() or None
+        return value
+
+    @field_validator("date_of_birth")
+    @classmethod
+    def reject_future_birth_dates(cls, value):
+        if value is not None and value > date.today():
+            raise ValueError("date_of_birth_cannot_be_in_the_future")
+        return value
 
 
 class PatientRead(BaseModel):
