@@ -449,6 +449,10 @@ def read_session(
     session_id_value = str(session.id)
     session_message_count = session.message_count
     session_expires_at = session.expires_at
+    history_truncated = (
+        session_message_count > len(messages)
+        or any(item.get("content_truncated", False) for item in messages)
+    )
     _audit(
         db, user_id=user.id, hospital_id=hospital_id,
         action="ai.session.read", outcome="success",
@@ -460,6 +464,7 @@ def read_session(
         "id": session_id_value,
         "message_count": session_message_count,
         "expires_at": session_expires_at,
+        "history_truncated": history_truncated,
         "messages": messages,
     }
 
