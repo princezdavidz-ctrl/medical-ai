@@ -7,11 +7,18 @@ from app.models.clinical_taxonomy import (
     LaboratoryReferenceInterval,
     MedicationSafetyRule,
 )
+from app.models.knowledge_ingestion import (
+    KnowledgeImportBatch,
+    LaboratoryUnitMapping,
+    StagedKnowledgeDocument,
+    TerminologyMapping,
+)
 
 __all__ = [
     "AuditEvent", "ClinicalConcept", "ClinicalConceptRelation", "Department",
     "EmergencyEscalationRule", "Encounter", "Hospital", "HospitalMembership",
-    "LaboratoryReferenceInterval", "MedicalKnowledgeChunk", "MedicalKnowledgeDocument",
-    "MedicalKnowledgeSource", "MedicationSafetyRule", "Organization", "Patient",
-    "PatientConsent", "Role", "User",
+    "KnowledgeImportBatch", "LaboratoryReferenceInterval", "LaboratoryUnitMapping",
+    "MedicalKnowledgeChunk", "MedicalKnowledgeDocument", "MedicalKnowledgeSource",
+    "MedicationSafetyRule", "Organization", "Patient", "PatientConsent", "Role",
+    "StagedKnowledgeDocument", "TerminologyMapping", "User",
 ]
