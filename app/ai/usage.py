@@ -327,8 +327,11 @@ class AIUsageMeter:
         )
         counter.requests_used += 1
         counter.input_tokens_used += reservation.reserved_input_tokens
-        if reservation.pricing_snapshot_json is not None:
-            counter.cost_micros_used += reservation.estimated_cost_micros
+        failure_cost = self._cost(
+            reservation.reserved_input_tokens, 0, reservation.pricing_snapshot_json
+        )
+        if failure_cost is not None:
+            counter.cost_micros_used += failure_cost
 
         reservation.status = "released"
         reservation.settled_at = current
@@ -343,10 +346,7 @@ class AIUsageMeter:
             model_version=reservation.model_version,
             input_tokens=reservation.reserved_input_tokens,
             output_tokens=0,
-            cost_micros=(
-                reservation.estimated_cost_micros
-                if reservation.pricing_snapshot_json is not None else None
-            ),
+            cost_micros=failure_cost,
             currency=reservation.currency,
             latency_ms=latency_ms,
             usage_is_estimated=True,
@@ -455,8 +455,11 @@ class AIUsageMeter:
             )
             counter.requests_used += 1
             counter.input_tokens_used += reservation.reserved_input_tokens
-            if reservation.pricing_snapshot_json is not None:
-                counter.cost_micros_used += reservation.estimated_cost_micros
+            failure_cost = self._cost(
+                reservation.reserved_input_tokens, 0, reservation.pricing_snapshot_json
+            )
+            if failure_cost is not None:
+                counter.cost_micros_used += failure_cost
             reservation.status = "released"
             reservation.settled_at = current
             self.db.add(AIUsageEvent(
@@ -470,10 +473,7 @@ class AIUsageMeter:
                 model_version=reservation.model_version,
                 input_tokens=reservation.reserved_input_tokens,
                 output_tokens=0,
-                cost_micros=(
-                    reservation.estimated_cost_micros
-                    if reservation.pricing_snapshot_json is not None else None
-                ),
+                cost_micros=failure_cost,
                 currency=reservation.currency,
                 latency_ms=0,
                 usage_is_estimated=True,
