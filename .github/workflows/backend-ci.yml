@@ -44,8 +44,10 @@ jobs:
       - name: Apply database migrations
         run: alembic upgrade head
       - name: Create least-privileged application test role
+        env:
+          PGPASSWORD: medical_test_password
         run: |
-          psql "$DATABASE_URL" -v ON_ERROR_STOP=1 <<'SQL'
+          psql -h localhost -U medical -d medical_ai -v ON_ERROR_STOP=1 <<'SQL'
           CREATE ROLE medical_app LOGIN PASSWORD 'medical_app_test_password' NOSUPERUSER NOBYPASSRLS;
           GRANT CONNECT ON DATABASE medical_ai TO medical_app;
           GRANT USAGE ON SCHEMA public TO medical_app;
