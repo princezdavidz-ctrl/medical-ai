@@ -571,6 +571,7 @@ def get_ai_usage(
             "operating_mode": item.operating_mode,
             "provider": item.provider_id,
             "model": item.model_id,
+            "model_version": item.model_version,
             "input_tokens": item.input_tokens,
             "output_tokens": item.output_tokens,
             "cost_micros": item.cost_micros,
