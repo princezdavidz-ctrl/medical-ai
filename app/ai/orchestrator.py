@@ -91,7 +91,7 @@ class AIOrchestrator:
             provider_id=provider.provider_id,
             model_id=getattr(provider, "model_name", provider.provider_id),
             model_version=getattr(provider, "model_version", "unverified"),
-            estimated_input_tokens=estimate_tokens(prompt + evidence_context),
+            estimated_input_tokens=estimate_tokens(prompt + evidence_context) + 256,
             provider_max_output_tokens=getattr(provider, "max_tokens", 1200),
         )
         request = AIModelRequest(
