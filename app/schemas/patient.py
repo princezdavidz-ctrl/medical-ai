@@ -367,6 +367,7 @@ class PatientConsentRead(BaseModel):
     status: str
     basis_code: str | None
     consent_method: str | None
+    requested_by_user_id: UUID | None
     recorded_by_user_id: UUID | None
     decision_reason_code: str | None
     granted_at: datetime | None
