@@ -45,10 +45,10 @@ class Settings(BaseSettings):
                 raise ValueError("Local model base URL must be an absolute HTTP(S) URL")
             if parsed.username or parsed.password or parsed.query or parsed.fragment or parsed.path not in {"", "/"}:
                 raise ValueError("Local model URL must not contain credentials, path, query or fragment")
-            if parsed.scheme == "http" and parsed.hostname.lower() not in {
+            if parsed.hostname.lower() not in {
                 host.lower() for host in self.ai_local_model_allowed_hosts
             }:
-                raise ValueError("Plain HTTP local model URLs must use an explicitly allowed host")
+                raise ValueError("Local model host must be explicitly allow-listed")
             if self.ai_local_model_timeout_seconds <= 0 or self.ai_local_model_timeout_seconds > 180:
                 raise ValueError("AI_LOCAL_MODEL_TIMEOUT_SECONDS must be in (0, 180]")
             if not 1 <= self.ai_local_model_max_tokens <= 8192:
