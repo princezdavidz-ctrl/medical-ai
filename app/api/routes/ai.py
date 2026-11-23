@@ -632,7 +632,7 @@ def get_ai_operations(
         "revoked": sum(item.status == "revoked" for item in installations),
         "failed": sum(item.status == "failed" for item in installations),
         "latest_verified_at": installations[0].verified_at if installations else None,
-        "latest_expiry": installations[0].expires_at if installations else None,
+        "latest_expiry": max((item.expires_at for item in installations), default=None),
     }
 
     inbound = {
