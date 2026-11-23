@@ -318,9 +318,14 @@ def create_opd_visit(
     )
     try:
         db.commit()
-    except IntegrityError:
+    except IntegrityError as exc:
         db.rollback()
-        raise HTTPException(status_code=409, detail={"code": "opd_queue_token_collision_retry"}) from None
+        constraint_name = getattr(getattr(exc.orig, "diag", None), "constraint_name", None)
+        if constraint_name == "uq_opd_visit_queue_token":
+            code = "opd_queue_token_collision_retry"
+        else:
+            code = "opd_visit_integrity_conflict"
+        raise HTTPException(status_code=409, detail={"code": code}) from None
     _restore_tenant_context(db, user_id=user.id, hospital_id=hospital_id)
     db.refresh(visit)
     return visit
