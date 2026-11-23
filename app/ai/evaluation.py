@@ -5,7 +5,7 @@ from dataclasses import dataclass
 from datetime import datetime, timezone
 from enum import StrEnum
 import re
-from typing import Mapping
+from collections.abc import Mapping
 
 from app.ai.contracts import AICapability, OperatingMode
 

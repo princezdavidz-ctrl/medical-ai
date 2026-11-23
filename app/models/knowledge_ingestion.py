@@ -4,7 +4,7 @@ from typing import Any
 
 from sqlalchemy import (
     CheckConstraint, DateTime, ForeignKey, Index, JSON, Numeric, String, Text,
-    UniqueConstraint, Uuid, func,
+    UniqueConstraint, Uuid,
 )
 from sqlalchemy.orm import Mapped, mapped_column
 
