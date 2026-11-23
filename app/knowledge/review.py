@@ -106,6 +106,14 @@ def publish_approved_document(
         raise PermissionError("independent_clinical_approval_required")
     if approval.reviewer_authorization_id is None:
         raise PermissionError("approval_requires_verified_reviewer")
+    approval_auth = session.get(
+        ClinicalKnowledgeReviewerAuthorization, approval.reviewer_authorization_id
+    )
+    if (approval_auth is None or approval_auth.user_id != approval.actor_user_id
+        or approval_auth.status != "active"
+        or (approval_auth.expires_at is not None
+            and approval_auth.expires_at <= datetime.now(timezone.utc))):
+        raise PermissionError("approving_clinician_authorization_not_current")
     source = session.get(MedicalKnowledgeSource, batch.source_id) if batch.source_id else None
     if (source is None or source.status != "active" or not source.license_name
         or not source.license_reference or source.scope != batch.scope
@@ -116,13 +124,16 @@ def publish_approved_document(
     if sha256(staged.payload_text.encode("utf-8")).hexdigest() != staged.content_sha256:
         raise ValueError("staged_content_integrity_check_failed")
 
-    previous = None
-    if supersedes_document_id:
-        previous = session.scalar(select(MedicalKnowledgeDocument).where(
-            MedicalKnowledgeDocument.id == supersedes_document_id
-        ).with_for_update())
-        if previous is None or previous.source_id != source.id or previous.status != "approved":
-            raise ValueError("superseded_document_must_be_approved_version_of_same_source")
+    active_versions = session.scalars(select(MedicalKnowledgeDocument).where(
+        MedicalKnowledgeDocument.source_id == source.id,
+        MedicalKnowledgeDocument.status == "approved",
+    ).with_for_update()).all()
+    if active_versions:
+        if len(active_versions) != 1 or supersedes_document_id != active_versions[0].id:
+            raise ValueError("exactly_one_current_version_must_be_superseded")
+    elif supersedes_document_id is not None:
+        raise ValueError("no_current_approved_version_to_supersede")
+    previous = active_versions[0] if active_versions else None
 
     now = datetime.now(timezone.utc)
     doc = MedicalKnowledgeDocument(
