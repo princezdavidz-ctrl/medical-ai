@@ -95,6 +95,7 @@ def append_ai_session_turn(
         ("user", user_prompt, {"kind": "request"}),
         ("assistant", assistant_response, assistant_metadata),
     )
+    encrypted_entries = []
     for offset, (role, content, metadata) in enumerate(entries, start=1):
         sequence = session.message_count + offset
         key_version = cipher.active_key_version
@@ -106,6 +107,8 @@ def append_ai_session_turn(
             key_version=key_version,
         )
         ciphertext, nonce, key_version = cipher.encrypt(content, associated_data=aad)
+        encrypted_entries.append((sequence, role, ciphertext, nonce, key_version, metadata))
+    for sequence, role, ciphertext, nonce, key_version, metadata in encrypted_entries:
         db.add(AISessionMessage(
             hospital_id=hospital_id,
             session_id=session.id,
