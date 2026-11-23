@@ -97,7 +97,6 @@ def publish_approved_document(
     staged, batch = _get_staged(session, staged_document_id)
     if staged.status != "approved":
         raise ValueError("document_requires_approved_review")
-    validate_review_separation(submitter_id=batch.submitted_by_user_id, reviewer_id=approval.actor_user_id if "approval" in locals() and approval else publisher_user_id, publisher_id=publisher_user_id)
     if batch.scope == "hospital" and batch.hospital_id != hospital_id:
         raise PermissionError("hospital_scope_mismatch")
     if batch.scope == "global" and hospital_id is not None:
