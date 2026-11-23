@@ -28,8 +28,8 @@ class PatientIdentityDocumentCreate(BaseModel):
     ]
     issuing_country: str = Field(default="KE", pattern="^[A-Z]{2}$")
     encrypted_identifier_ref: str = Field(
-        min_length=1, max_length=500,
-        description="Opaque encrypted-vault reference only; never a raw identity number or image.",
+        min_length=10, max_length=500, pattern="^vault://[A-Za-z0-9/_-]{1,480}$",
+        description="Opaque vault:// reference only; never a raw identity number or image.",
     )
     expires_at: datetime | None = None
 
