@@ -1,3 +1,4 @@
+from dataclasses import replace
 from uuid import UUID
 from app.ai.contracts import (
     AICapability,
@@ -12,6 +13,10 @@ from app.ai.policy import AIPolicyEngine
 
 
 class KnowledgeUnavailable(RuntimeError):
+    pass
+
+
+class UnsafeModelOutput(RuntimeError):
     pass
 
 
@@ -60,7 +65,9 @@ class AIOrchestrator:
             request=request,
         )
         try:
-            validate_response_citations(response.content, evidence)
+            citation_ids = validate_response_citations(response.content, evidence)
         except CitationValidationError as exc:
-            raise PermissionError("model_response_failed_evidence_citation_validation") from exc
-        return response
+            raise UnsafeModelOutput("model_response_failed_evidence_citation_validation") from exc
+        evidence_by_id = {item.citation_id: item for item in evidence}
+        citations = tuple(evidence_by_id[item] for item in citation_ids)
+        return replace(response, citations=citations)
