@@ -89,7 +89,7 @@ class AIOrchestrator:
             operating_mode=mode.value,
             provider_class=decision.provider_class,
             provider_id=provider.provider_id,
-            model_id=provider.model_name,
+            model_id=getattr(provider, "model_name", provider.provider_id),
             estimated_input_tokens=estimate_tokens(prompt + evidence_context),
             provider_max_output_tokens=getattr(provider, "max_tokens", 1200),
         )
@@ -118,6 +118,13 @@ class AIOrchestrator:
             )
             raise
         latency_ms = max(0, int((monotonic() - started) * 1000))
+        input_tokens = response.prompt_tokens or estimate_tokens(prompt + evidence_context)
+        output_tokens = response.completion_tokens or estimate_tokens(response.content)
+        usage_is_estimated = (
+            response.usage_is_estimated
+            or response.prompt_tokens == 0
+            or response.completion_tokens == 0
+        )
         try:
             citation_ids = validate_response_citations(response.content, evidence)
         except CitationValidationError as exc:
@@ -125,10 +132,10 @@ class AIOrchestrator:
                 reservation,
                 hospital_id=hospital_id,
                 actor_user_id=actor_user_id,
-                input_tokens=response.prompt_tokens,
-                output_tokens=response.completion_tokens,
+                input_tokens=input_tokens,
+                output_tokens=output_tokens,
                 latency_ms=latency_ms,
-                usage_is_estimated=response.usage_is_estimated,
+                usage_is_estimated=usage_is_estimated,
                 outcome="withheld",
             )
             raise UnsafeModelOutput("model_response_failed_evidence_citation_validation") from exc
