@@ -45,6 +45,7 @@ class AIModelRequest:
     capability: AICapability
     prompt: str
     evidence: tuple[KnowledgeEvidence, ...]
+    evidence_context: str
     hospital_id: UUID
     actor_user_id: UUID
     operating_mode: OperatingMode
