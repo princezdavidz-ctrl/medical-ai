@@ -14,9 +14,20 @@ from app.models.knowledge_ingestion import (
     StagedKnowledgeDocument,
     TerminologyMapping,
 )
+from app.models.ai_evaluation import (
+    AIEvaluationDataset,
+    AIEvaluationRunRecord,
+    AIEvaluationThresholdSet,
+    AIModelRelease,
+    AIReleaseApproval,
+    AIGovernanceEvent,
+)
 
 __all__ = [
-    "AuditEvent", "ClinicalKnowledgeReviewerAuthorization", "KnowledgeReviewEvent", "ClinicalConcept", "ClinicalConceptRelation", "Department",
+    "AIEvaluationDataset", "AIEvaluationRunRecord", "AIEvaluationThresholdSet",
+    "AIModelRelease", "AIReleaseApproval", "AIGovernanceEvent",
+    "AuditEvent", "ClinicalKnowledgeReviewerAuthorization", "KnowledgeReviewEvent",
+    "ClinicalConcept", "ClinicalConceptRelation", "Department",
     "EmergencyEscalationRule", "Encounter", "Hospital", "HospitalMembership",
     "KnowledgeImportBatch", "LaboratoryReferenceInterval", "LaboratoryUnitMapping",
     "MedicalKnowledgeChunk", "MedicalKnowledgeDocument", "MedicalKnowledgeSource",
