@@ -3,7 +3,7 @@ from datetime import date, datetime, timedelta, timezone
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
-from sqlalchemy import and_, or_, select
+from sqlalchemy import and_, case, or_, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
@@ -227,11 +227,18 @@ def create_opd_visit(
     )
     patient = db.scalar(select(Patient).where(
         Patient.id == payload.patient_id, Patient.hospital_id == hospital_id
-    ))
+    ).with_for_update())
     if patient is None:
         raise HTTPException(status_code=404, detail={"code": "patient_not_found"})
     if patient.status != "active":
         raise HTTPException(status_code=409, detail={"code": "patient_not_active"})
+    open_visit = db.scalar(select(OPDVisit.id).where(
+        OPDVisit.hospital_id == hospital_id,
+        OPDVisit.patient_id == patient.id,
+        OPDVisit.status.in_(("registered", "arrived", "waiting", "in_consultation", "completed")),
+    ).limit(1))
+    if open_visit is not None:
+        raise HTTPException(status_code=409, detail={"code": "patient_already_has_open_opd_visit"})
     department = db.scalar(select(Department).where(
         Department.id == payload.department_id,
         Department.hospital_id == hospital_id,
@@ -346,8 +353,18 @@ def list_opd_visits(
         else:
             query = query.where(OPDVisit.status.in_(("registered", "arrived", "waiting")))
     visits = list(db.scalars(
-        query.order_by(OPDVisit.visit_date.desc(), OPDVisit.created_at.desc())
-        .limit(limit).offset(offset)
+        query.order_by(
+            OPDVisit.visit_date.desc(),
+            case(
+                (OPDVisit.priority == "emergency", 0),
+                (OPDVisit.priority == "very_urgent", 1),
+                (OPDVisit.priority == "urgent", 2),
+                (OPDVisit.priority == "standard", 3),
+                else_=4,
+            ),
+            OPDVisit.arrival_at.asc().nulls_first(),
+            OPDVisit.created_at.asc(),
+        ).limit(limit).offset(offset)
     ).all())
     queue_items = []
     for visit in visits:
