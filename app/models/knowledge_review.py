@@ -14,6 +14,7 @@ class ClinicalKnowledgeReviewerAuthorization(TimestampMixin, Base):
         CheckConstraint("status IN ('pending', 'active', 'suspended', 'revoked')", name="ck_knowledge_reviewer_auth_status"),
         Index("ix_knowledge_reviewer_auth_user_scope", "user_id", "scope", "hospital_id"),
         CheckConstraint("(scope = 'global' AND hospital_id IS NULL) OR (scope = 'hospital' AND hospital_id IS NOT NULL)", name="ck_knowledge_reviewer_auth_scope"),
+        CheckConstraint("verified_by_user_id <> user_id", name="ck_knowledge_reviewer_verified_by_other"),
     )
 
     id: Mapped[uuid.UUID] = mapped_column(Uuid(as_uuid=True), primary_key=True, default=uuid.uuid4)
