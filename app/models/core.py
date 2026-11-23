@@ -123,6 +123,69 @@ class PatientConsent(TimestampMixin, Base):
             name="ck_patient_consent_reason",
         ),
         CheckConstraint(
+            "consent_method IS NULL OR "
+            "(basis_code = 'patient_consent' AND consent_method IN ('written', 'electronic', 'verbal')) OR "
+            "(basis_code = 'guardian_consent' AND consent_method = 'guardian') OR "
+            "(basis_code IN ('healthcare_provision', 'vital_interests', 'legal_requirement', 'other_lawful_basis') "
+            "AND consent_method = 'not_applicable')",
+            name="ck_patient_consent_method_basis",
+        ),
+        CheckConstraint(
+            "evidence_reference IS NULL OR evidence_reference ~ '^vault://[0-9a-fA-F-]{36}
+        CheckConstraint(
+            "basis_code IS NULL OR "
+            "(status = 'pending' AND requested_by_user_id IS NOT NULL AND recorded_by_user_id IS NULL "
+            "AND evidence_reference IS NULL AND consent_method IS NULL AND granted_at IS NULL "
+            "AND withdrawn_at IS NULL AND withdrawn_by_user_id IS NULL AND decision_reason_code IS NULL) OR "
+            "(status = 'granted' AND requested_by_user_id IS NOT NULL AND recorded_by_user_id IS NOT NULL "
+            "AND evidence_reference IS NOT NULL AND consent_method IS NOT NULL AND granted_at IS NOT NULL "
+            "AND withdrawn_at IS NULL AND withdrawn_by_user_id IS NULL AND decision_reason_code = 'evidence_confirmed') OR "
+            "(status = 'rejected' AND requested_by_user_id IS NOT NULL AND recorded_by_user_id IS NOT NULL "
+            "AND decision_reason_code IN ('patient_declined', 'guardian_declined', 'other') "
+            "AND consent_method IS NULL AND evidence_reference IS NULL AND granted_at IS NULL "
+            "AND withdrawn_at IS NULL AND withdrawn_by_user_id IS NULL) OR "
+            "(status = 'withdrawn' AND requested_by_user_id IS NOT NULL AND recorded_by_user_id IS NOT NULL "
+            "AND evidence_reference IS NOT NULL AND consent_method IS NOT NULL AND granted_at IS NOT NULL "
+            "AND withdrawn_by_user_id IS NOT NULL AND withdrawn_at IS NOT NULL "
+            "AND decision_reason_code IN ('withdrawn_by_patient', 'lawful_basis_ended', 'other'))",
+            name="ck_patient_consent_decision_state",
+        ),
+    )
+    id: Mapped[uuid.UUID] = mapped_column(Uuid(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    hospital_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("hospitals.id"), nullable=False, index=True)
+    patient_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("patients.id"), nullable=False, index=True)
+    purpose: Mapped[str] = mapped_column(String(240), nullable=False)
+    scope: Mapped[dict[str, Any]] = mapped_column(JSON, nullable=False)
+    status: Mapped[str] = mapped_column(String(24), default="pending", nullable=False)
+    basis_code: Mapped[str | None] = mapped_column(String(32))
+    consent_method: Mapped[str | None] = mapped_column(String(24))
+    evidence_reference: Mapped[str | None] = mapped_column(String(80))
+    requested_by_user_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("users.id"))
+    recorded_by_user_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("users.id"))
+    withdrawn_by_user_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("users.id"))
+    decision_reason_code: Mapped[str | None] = mapped_column(String(40))
+    granted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    expires_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    withdrawn_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+
+class AuditEvent(Base):
+    __tablename__ = "audit_events"
+    __table_args__ = (Index("ix_audit_hospital_time", "hospital_id", "occurred_at"),)
+    id: Mapped[uuid.UUID] = mapped_column(Uuid(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    hospital_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("hospitals.id"), nullable=False, index=True)
+    actor_user_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("users.id"))
+    action: Mapped[str] = mapped_column(String(100), nullable=False)
+    resource_type: Mapped[str] = mapped_column(String(100), nullable=False)
+    resource_id: Mapped[str | None] = mapped_column(String(80))
+    outcome: Mapped[str] = mapped_column(String(24), nullable=False)
+    reason: Mapped[str | None] = mapped_column(Text)
+    metadata_json: Mapped[dict[str, Any]] = mapped_column(JSON, default=dict, nullable=False)
+    occurred_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+",
+            name="ck_patient_consent_evidence_reference",
+        ),
+        CheckConstraint(
             "basis_code IS NULL OR "
             "(status = 'pending' AND requested_by_user_id IS NOT NULL AND recorded_by_user_id IS NULL "
             "AND evidence_reference IS NULL AND consent_method IS NULL AND granted_at IS NULL "
