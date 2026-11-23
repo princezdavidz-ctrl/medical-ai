@@ -511,7 +511,7 @@ def update_patient_status(
         db, hospital_id=hospital_id, actor_user_id=user.id,
         action="patient.status.changed", resource_type="patient",
         resource_id=str(patient_id),
-        metadata={"status": payload.status, "reason": payload.reason.strip()},
+        metadata={"status": payload.status, "reason_code": payload.reason_code},
     )
     db.commit()
     return {"patient_id": str(patient_id), "status": patient.status}
