@@ -19,7 +19,8 @@ Credentials are never written to logs. The provider does not retry through a loc
 - Hosted routing remains disabled by default (`AI_ALLOW_HOSTED=false` and `AI_HOSTED_MODEL_ENABLED=false`).
 - A separate `AI_HOSTED_DATA_TRANSFER_APPROVED` switch is required before the hosted provider can be registered.
 - Patient-context requests are local-only and never route to hosted providers.
-- Requests without an authorized patient-context ID must be explicitly classified `input_classification=public`; the default is `sensitive` and is rejected without authorized patient context, regardless of provider. Obvious direct identifiers are rejected from all free-text prompts.\n- Hosted requests additionally require hybrid mode, public classification and no matches from the common email, Kenyan phone or labeled patient identifier checks.
+- Requests without an authorized patient-context ID must be explicitly classified `input_classification=public`; the default is `sensitive` and is rejected without authorized patient context, regardless of provider. Obvious direct identifiers are rejected from all free-text prompts.
+- Hosted requests additionally require hybrid mode, public classification and no matches from the common email, Kenyan phone or labeled patient identifier checks.
 - Requests default to `input_classification=sensitive`; hosted use requires an explicit public declaration.
 - The identifier checks are deliberately conservative but are not a complete PHI detector and cannot recognize all names or sensitive narratives. They do not make hosted transfer safe for patient data. Do not submit patient information, clinical records, identifiable case narratives or confidential hospital data to the hosted provider.
 - The configured data-transfer approval must be backed by an organization's privacy, legal, security and jurisdictional review before enabling the provider.
