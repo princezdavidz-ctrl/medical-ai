@@ -245,6 +245,10 @@ class PatientDemographicsUpdate(BaseModel):
     def require_at_least_one_field(self):
         if not self.model_fields_set:
             raise ValueError("at_least_one_demographic_field_required")
+        if "given_name" in self.model_fields_set and self.given_name is None:
+            raise ValueError("given_name_cannot_be_null")
+        if "family_name" in self.model_fields_set and self.family_name is None:
+            raise ValueError("family_name_cannot_be_null")
         return self
 
     @field_validator("given_name", "family_name", mode="before")
