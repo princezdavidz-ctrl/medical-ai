@@ -50,6 +50,12 @@ class AIModelRequest:
     actor_user_id: UUID
     operating_mode: OperatingMode
     max_output_tokens: int = 1200
+    prompt_version: str = "unregistered"
+    prompt_digest: str = "unregistered"
+    system_prompt: str = ""
+    output_schema: dict[str, object] | None = None
+    workflow_contract: dict[str, object] | None = None
+    tool_permissions: tuple[str, ...] = ()
 
 
 @dataclass(frozen=True, slots=True)
@@ -63,6 +69,8 @@ class AIModelResponse:
     total_tokens: int = 0
     usage_is_estimated: bool = True
     citations: tuple[KnowledgeEvidence, ...] = ()
+    prompt_version: str = "unregistered"
+    prompt_digest: str = "unregistered"
 
 
 class AIProvider(Protocol):

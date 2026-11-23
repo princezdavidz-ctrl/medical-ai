@@ -37,6 +37,7 @@ class EvaluationManifest:
     model_version: str
     model_digest: str
     prompt_version: str
+    prompt_digest: str
     dataset_id: str
     dataset_version: str
     dataset_digest: str
@@ -69,7 +70,10 @@ class EvaluationRun:
             raise ValueError("Evaluation run must report every required evaluation metric")
         if any(not 0.0 <= value <= 1.0 for value in self.metrics.values()):
             raise ValueError("Evaluation metric values must be between 0 and 1")
-        for value in (self.manifest.model_digest, self.manifest.dataset_digest, self.evaluator_digest):
+        for value in (
+            self.manifest.model_digest, self.manifest.prompt_digest,
+            self.manifest.dataset_digest, self.evaluator_digest,
+        ):
             if not _SHA256.fullmatch(value):
                 raise ValueError("Model, dataset and evaluator digests must be SHA-256 hex")
 

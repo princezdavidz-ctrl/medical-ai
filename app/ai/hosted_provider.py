@@ -6,6 +6,7 @@ offline or degraded requests. Cross-provider fallback is handled by no component
 from __future__ import annotations
 
 from typing import Any
+import json
 
 import httpx
 
@@ -81,11 +82,23 @@ class HostedOpenAICompatibleProvider:
         if len(request.evidence_context) > 50000:
             raise HostedModelUnavailable("evidence_context_exceeds_limit")
 
+        registry_contract = (
+            "\n\nCAPABILITY-SPECIFIC SYSTEM INSTRUCTIONS:\n"
+            + request.system_prompt
+            + "\n\nOUTPUT CONTRACT (metadata for the response envelope):\n"
+            + json.dumps(request.output_schema or {}, sort_keys=True)
+            + "\n\nWORKFLOW SAFETY CONTRACT:\n"
+            + json.dumps(request.workflow_contract or {}, sort_keys=True)
+            + "\n\nPERMITTED TOOLS: "
+            + json.dumps(request.tool_permissions)
+            + ". No tools are enabled unless explicitly listed.\n\n"
+        )
         system_message = (
-            "You are a medical information assistant using approved public medical evidence. "
-            "You are not a doctor and must not issue autonomous diagnoses, prescriptions, "
-            "orders or treatment decisions. Cite exact citation tokens, state uncertainty, "
-            "and identify evidence gaps. Do not infer patient identity or personal details.\n\n"
+            "You are a medical information and clinical decision-support assistant. "
+            "Do not issue autonomous diagnoses, prescriptions, orders or treatment decisions. "
+            "Follow the capability-specific system instructions and workflow safety contract. "
+            "Cite exact supplied evidence tokens and state uncertainty.\n\n"
+            + registry_contract
             + request.evidence_context
         )
         payload = {

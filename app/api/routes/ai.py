@@ -10,6 +10,7 @@ from app.ai.gateway import ModelGateway, ModelUnavailable
 from app.ai.orchestrator import AIOrchestrator, KnowledgeUnavailable, UnsafeModelOutput
 from app.ai.patient_context import PatientContextDenied, load_authorized_patient_context
 from app.ai.policy import AIPolicyEngine
+from app.ai.prompt_registry import get_capability_prompt
 from app.ai.session_crypto import SessionCipher, SessionEncryptionError
 from app.ai.usage import AIUsageMeter, AIUsageQuotaExceeded
 from app.ai.sessions import (
@@ -25,7 +26,7 @@ from app.core.config import get_settings
 from app.db.session import get_db
 from app.knowledge.retriever import SQLAlchemyKnowledgeRetriever
 from app.models import AIUsageEvent, AuditEvent, HospitalMembership, Role
-from app.schemas.ai import AIRequestCreate
+from app.schemas.ai import AIRequestCreate, AIResponseRead
 
 router = APIRouter(prefix="/ai", tags=["central-medical-ai"])
 
@@ -85,6 +86,9 @@ def list_capabilities(
             runtime_status = "configured_not_clinically_validated"
         statuses.append({
             "capability": capability.value,
+            "prompt_version": get_capability_prompt(capability).version,
+            "prompt_digest": get_capability_prompt(capability).digest,
+            "tool_permissions": list(get_capability_prompt(capability).tool_permissions),
             "approved": capability.value in settings.ai_enabled_capabilities,
             "operating_mode": settings.ai_operating_mode.lower(),
             "provider_configured": provider_configured,
@@ -97,7 +101,11 @@ def list_capabilities(
     }
 
 
-@router.post("/requests", summary="Submit a request to the central Medical AI platform")
+@router.post(
+    "/requests",
+    summary="Submit a request to the central Medical AI platform",
+    response_model=AIResponseRead,
+)
 def submit_ai_request(
     payload: AIRequestCreate,
     context=Depends(get_current_context),
@@ -343,6 +351,8 @@ def submit_ai_request(
                     "provider": response.provider,
                     "model": response.model,
                     "model_version": response.model_version,
+                    "prompt_version": response.prompt_version,
+                    "prompt_digest": response.prompt_digest,
                     "citation_ids": [item.citation_id for item in response.citations],
                     "requires_clinician_review": True,
                 },
@@ -363,6 +373,8 @@ def submit_ai_request(
             "provider": response.provider,
             "model": response.model,
             "model_version": response.model_version,
+            "prompt_version": response.prompt_version,
+            "prompt_digest": response.prompt_digest,
             "citation_count": len(response.citations),
         },
     )
@@ -371,6 +383,8 @@ def submit_ai_request(
         "provider": response.provider,
         "model": response.model,
         "model_version": response.model_version,
+        "prompt_version": response.prompt_version,
+        "prompt_digest": response.prompt_digest,
         "citations": [{
             "citation_id": item.citation_id,
             "source_id": item.source_id,

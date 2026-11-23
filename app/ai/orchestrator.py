@@ -12,6 +12,7 @@ from app.ai.contracts import (
 from app.ai.evidence import CitationValidationError, format_evidence_context, validate_response_citations
 from app.ai.gateway import ModelGateway, ModelUnavailable
 from app.ai.policy import AIPolicyEngine
+from app.ai.prompt_registry import get_capability_prompt
 from app.ai.token_usage import estimate_tokens
 from app.ai.usage import AIUsageMeter
 
@@ -60,6 +61,7 @@ class AIOrchestrator:
         except ValueError:
             raise PermissionError("invalid_operating_mode") from None
 
+        prompt_contract = get_capability_prompt(capability)
         evidence_context = format_evidence_context(evidence)
         if patient_context is not None:
             patient_context_json = json.dumps(
@@ -103,6 +105,12 @@ class AIOrchestrator:
             actor_user_id=actor_user_id,
             operating_mode=mode,
             max_output_tokens=reservation.max_output_tokens,
+            prompt_version=prompt_contract.version,
+            prompt_digest=prompt_contract.digest,
+            system_prompt=prompt_contract.system_prompt,
+            output_schema=prompt_contract.output_schema,
+            workflow_contract=prompt_contract.workflow_contract,
+            tool_permissions=prompt_contract.tool_permissions,
         )
         started = monotonic()
         try:
@@ -152,4 +160,7 @@ class AIOrchestrator:
         )
         evidence_by_id = {item.citation_id: item for item in evidence}
         citations = tuple(evidence_by_id[item] for item in citation_ids)
-        return replace(response, citations=citations)
+        return replace(
+            response, citations=citations, prompt_version=prompt_contract.version,
+            prompt_digest=prompt_contract.digest
+        )

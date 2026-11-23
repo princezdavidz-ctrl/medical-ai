@@ -94,6 +94,7 @@ class AIEvaluationRunRecord(Base):
     model_version: Mapped[str] = mapped_column(String(120), nullable=False)
     model_sha256: Mapped[str] = mapped_column(String(64), nullable=False)
     prompt_version: Mapped[str] = mapped_column(String(120), nullable=False)
+    prompt_sha256: Mapped[str | None] = mapped_column(String(64))
     evaluator_version: Mapped[str] = mapped_column(String(120), nullable=False)
     evaluator_sha256: Mapped[str] = mapped_column(String(64), nullable=False)
     dataset_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("ai_evaluation_datasets.id"), nullable=False)
