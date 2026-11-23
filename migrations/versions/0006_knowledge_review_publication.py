@@ -35,7 +35,6 @@ def upgrade() -> None:
         sa.CheckConstraint("status IN ('pending', 'active', 'suspended', 'revoked')", name="ck_knowledge_reviewer_auth_status"),
         sa.CheckConstraint("(scope = 'global' AND hospital_id IS NULL) OR (scope = 'hospital' AND hospital_id IS NOT NULL)", name="ck_knowledge_reviewer_auth_scope"),
     )
-    op.create_index("ix_clinical_knowledge_reviewer_authorizations_user_id", "clinical_knowledge_reviewer_authorizations", ["user_id"])
     op.create_index("ix_knowledge_reviewer_auth_user_scope", "clinical_knowledge_reviewer_authorizations", ["user_id", "scope", "hospital_id"])
 
     op.create_table(
@@ -101,7 +100,6 @@ def downgrade() -> None:
     op.drop_index("ix_knowledge_review_events_staged_document_id", table_name="knowledge_review_events")
     op.drop_table("knowledge_review_events")
     op.drop_index("ix_knowledge_reviewer_auth_user_scope", table_name="clinical_knowledge_reviewer_authorizations")
-    op.drop_index("ix_clinical_knowledge_reviewer_authorizations_user_id", table_name="clinical_knowledge_reviewer_authorizations")
     op.drop_table("clinical_knowledge_reviewer_authorizations")
     op.drop_constraint("ck_staged_knowledge_status", "staged_knowledge_documents", type_="check")
     op.create_check_constraint(
