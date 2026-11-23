@@ -1,3 +1,5 @@
+import base64
+import json
 from functools import lru_cache
 from urllib.parse import urlsplit
 
@@ -40,6 +42,10 @@ class Settings(BaseSettings):
     ai_hosted_model_timeout_seconds: float = 45.0
     ai_hosted_model_max_tokens: int = 1200
     ai_hosted_model_allowed_hosts: list[str] = []
+    ai_sessions_enabled: bool = False
+    ai_session_encryption_keys: SecretStr | None = None
+    ai_session_active_key_version: str = "unset"
+    ai_session_retention_days: int = 30
 
     @model_validator(mode="after")
     def validate_security_settings(self):
@@ -106,6 +112,26 @@ class Settings(BaseSettings):
                 raise ValueError("AI_HOSTED_MODEL_MAX_TOKENS must be between 1 and 8192")
             if self.environment.lower() == "production" and self.ai_hosted_model_version == "unverified":
                 raise ValueError("Production hosted AI requires a pinned provider model version")
+        if self.ai_sessions_enabled:
+            if self.ai_session_encryption_keys is None:
+                raise ValueError("AI sessions require an encryption keyring")
+            if not 1 <= self.ai_session_retention_days <= 3650:
+                raise ValueError("AI_SESSION_RETENTION_DAYS must be between 1 and 3650")
+            try:
+                keyring = json.loads(self.ai_session_encryption_keys.get_secret_value())
+            except (TypeError, ValueError):
+                raise ValueError("AI session encryption keyring must be valid JSON") from None
+            if not isinstance(keyring, dict) or self.ai_session_active_key_version not in keyring:
+                raise ValueError("AI session active key version must exist in the keyring")
+            for version, encoded_key in keyring.items():
+                if not isinstance(version, str) or not isinstance(encoded_key, str):
+                    raise ValueError("AI session keyring entries must be string versions and base64 keys")
+                try:
+                    raw_key = base64.b64decode(encoded_key, validate=True)
+                except ValueError:
+                    raise ValueError("AI session keys must be valid base64") from None
+                if len(raw_key) != 32:
+                    raise ValueError("AI session keys must decode to exactly 32 bytes")
         return self
 
 
