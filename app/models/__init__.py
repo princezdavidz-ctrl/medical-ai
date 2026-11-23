@@ -22,6 +22,13 @@ from app.models.ai_evaluation import (
     AIReleaseApproval,
     AIGovernanceEvent,
 )
+from app.models.offline_sync import (
+    OfflineDeliveryOutbox,
+    OfflineKnowledgeInstallation,
+    OfflineSyncConflict,
+    OfflineSyncCursor,
+    OfflineSyncEvent,
+)
 
 __all__ = [
     "AIEvaluationDataset",
@@ -47,6 +54,11 @@ __all__ = [
     "MedicalKnowledgeDocument",
     "MedicalKnowledgeSource",
     "MedicationSafetyRule",
+    "OfflineDeliveryOutbox",
+    "OfflineKnowledgeInstallation",
+    "OfflineSyncConflict",
+    "OfflineSyncCursor",
+    "OfflineSyncEvent",
     "Organization",
     "Patient",
     "PatientConsent",
