@@ -106,6 +106,7 @@ class AIOrchestrator:
             operating_mode=mode,
             max_output_tokens=reservation.max_output_tokens,
             prompt_version=prompt_contract.version,
+            prompt_digest=prompt_contract.digest,
             system_prompt=prompt_contract.system_prompt,
             output_schema=prompt_contract.output_schema,
             workflow_contract=prompt_contract.workflow_contract,
@@ -160,5 +161,6 @@ class AIOrchestrator:
         evidence_by_id = {item.citation_id: item for item in evidence}
         citations = tuple(evidence_by_id[item] for item in citation_ids)
         return replace(
-            response, citations=citations, prompt_version=prompt_contract.version
+            response, citations=citations, prompt_version=prompt_contract.version,
+            prompt_digest=prompt_contract.digest
         )
