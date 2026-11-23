@@ -163,6 +163,14 @@ class PatientIdentityDocumentVerification(BaseModel):
         "identity_mismatch", "unsupported_document",
     ]
 
+    @model_validator(mode="after")
+    def validate_verification_reason(self):
+        if self.verification_status == "verified" and self.reason_code != "verified_document":
+            raise ValueError("verified_document_reason_required")
+        if self.verification_status == "rejected" and self.reason_code == "verified_document":
+            raise ValueError("rejected_document_requires_rejection_reason")
+        return self
+
 
 class PatientRegistrationProfileUpdate(BaseModel):
     model_config = ConfigDict(extra="forbid")
@@ -185,6 +193,14 @@ class PatientStatusUpdate(BaseModel):
     reason_code: Literal[
         "administrative_correction", "patient_request", "deceased_confirmation", "other",
     ]
+
+    @model_validator(mode="after")
+    def validate_status_reason(self):
+        if self.status == "deceased" and self.reason_code != "deceased_confirmation":
+            raise ValueError("deceased_status_requires_deceased_confirmation")
+        if self.status != "deceased" and self.reason_code == "deceased_confirmation":
+            raise ValueError("deceased_confirmation_only_valid_for_deceased_status")
+        return self
 
 
 class PatientDuplicateCandidateRead(BaseModel):
