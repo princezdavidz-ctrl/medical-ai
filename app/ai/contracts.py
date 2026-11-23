@@ -20,11 +20,24 @@ class OperatingMode(StrEnum):
 
 @dataclass(frozen=True, slots=True)
 class KnowledgeEvidence:
+    citation_id: str
+    document_id: str
+    chunk_id: str
     source_id: str
+    source_title: str
+    publisher: str
+    canonical_url: str | None
     title: str
     excerpt: str
     version: str
     jurisdiction: str
+    evidence_grade: str | None
+    reviewed_at: str
+    next_review_at: str
+
+    @property
+    def citation_label(self) -> str:
+        return f"[{self.citation_id}]"
 
 
 @dataclass(frozen=True, slots=True)
