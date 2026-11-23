@@ -17,7 +17,7 @@
 
 ### Identity documents
 - Supports Kenyan national ID, passport, birth certificate, alien ID, refugee document and other.
-- API accepts only an opaque `vault://` reference to an encrypted-vault object, not raw identity numbers or document images.
+- API accepts only a `vault://` UUID reference to an encrypted-vault object, not raw identity numbers or document images.
 - Optional identifier fingerprint field is reserved for a future trusted keyed-HMAC adapter; it is not accepted from the API.
 - Verification is pending until a records verifier marks it verified/rejected using a controlled reason code; the database requires reviewer identity and timestamp for completed reviews.
 - API responses never expose the encrypted vault reference or fingerprint.
