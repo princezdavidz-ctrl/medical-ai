@@ -73,6 +73,11 @@ class PatientIdentityDocument(Base):
             name="ck_patient_identity_document_reason",
         ),
         CheckConstraint(
+            "verification_status = 'pending' OR "
+            "(verified_by_user_id IS NOT NULL AND verified_at IS NOT NULL AND verification_reason_code IS NOT NULL)",
+            name="ck_patient_identity_document_reviewed",
+        ),
+        CheckConstraint(
             "identifier_fingerprint_hmac IS NULL OR length(identifier_fingerprint_hmac) = 64",
             name="ck_patient_identity_fingerprint_length",
         ),
@@ -161,6 +166,10 @@ class PatientDuplicateCase(Base):
         CheckConstraint(
             "status IN ('pending', 'not_duplicate', 'confirmed_duplicate', 'closed')",
             name="ck_patient_duplicate_status",
+        ),
+        CheckConstraint(
+            "status = 'pending' OR (reviewed_by_user_id IS NOT NULL AND reviewed_at IS NOT NULL)",
+            name="ck_patient_duplicate_reviewed",
         ),
         Index("ix_patient_duplicate_review_queue", "hospital_id", "status", "created_at"),
     )
