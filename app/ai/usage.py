@@ -4,7 +4,6 @@ from __future__ import annotations
 from dataclasses import dataclass
 from datetime import date, datetime, timedelta, timezone
 import json
-from math import ceil
 from uuid import UUID, uuid4
 
 from sqlalchemy import select, text
