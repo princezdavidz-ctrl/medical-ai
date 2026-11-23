@@ -159,6 +159,14 @@ class PatientDuplicateCaseReview(BaseModel):
     status: Literal["not_duplicate", "confirmed_duplicate", "closed"]
     review_note: str = Field(min_length=3, max_length=1000)
 
+    @field_validator("review_note")
+    @classmethod
+    def trim_review_note(cls, value):
+        value = value.strip()
+        if len(value) < 3:
+            raise ValueError("duplicate_review_note_too_short")
+        return value
+
 
 class PatientDuplicateCaseRead(BaseModel):
     model_config = ConfigDict(from_attributes=True)
