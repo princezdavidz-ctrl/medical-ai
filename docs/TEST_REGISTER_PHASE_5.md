@@ -37,6 +37,7 @@ These corrections are included in the current development branch; they have not 
 - [ ] Hosted/local provider routing, strict no-cross-class fallback and outage behavior.
 - [ ] Hosted HTTPS-only endpoint, hostname allow-list, secret handling, model identity and timeout limits.
 - [ ] Hosted transfer approval, public classification, identifier checks, and proof that patient context is never sent to hosted.
+- [ ] Public/sensitive input classification enforcement for local and hosted providers, plus direct-identifier rejection across all request paths.
 - [ ] Offline/degraded provider routing never invokes hosted, even during local runtime failure.
 - [ ] Offline and degraded mode: no network dependency, no accidental hosted calls.
 - [ ] Model identity/version/digest pinning and artifact attestation.
@@ -56,6 +57,10 @@ These corrections are included in the current development branch; they have not 
 - [ ] Offline cursor concurrency, atomic apply/cursor commit, first-cursor race retry and RLS isolation.
 - [ ] Outbox idempotency, SKIP LOCKED worker concurrency, bounded retries and verified partner acknowledgement.
 - [ ] AI session retention, access controls, deletion/export and audit privacy.
+- [ ] AES-GCM round trip, ciphertext tampering, AAD binding, key rotation and missing-key behavior.
+- [ ] Database RLS owner isolation, composite session/message ownership, cross-hospital access and deletion.
+- [ ] Session expiry, scheduled purge, append-turn atomicity and no plaintext prompt/response persistence.
+- [ ] Bounded history reconstruction, truncation signaling, prompt-injection isolation and local-only session routing.
 - [ ] Usage metering accuracy, tenant quotas, billing aggregation and fail-safe behavior.
 
 ## Clinical safety and interoperability

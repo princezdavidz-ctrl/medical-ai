@@ -12,6 +12,7 @@ class AIRequestCreate(BaseModel):
     patient_context_id: UUID | None = None
     encounter_id: UUID | None = None
     input_classification: Literal["public", "sensitive"] = "sensitive"
+    session_id: UUID | None = None
 
 
 class AICapabilityStatus(BaseModel):

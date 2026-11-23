@@ -22,6 +22,7 @@ from app.models.ai_evaluation import (
     AIReleaseApproval,
     AIGovernanceEvent,
 )
+from app.models.ai_sessions import AISession, AISessionMessage
 from app.models.patient_context import PatientCareAssignment
 from app.models.offline_sync import (
     OfflineDeliveryOutbox,
@@ -36,6 +37,8 @@ __all__ = [
     "AIEvaluationRunRecord",
     "AIEvaluationThresholdSet",
     "AIGovernanceEvent",
+    "AISession",
+    "AISessionMessage",
     "AIModelRelease",
     "AIReleaseApproval",
     "AuditEvent",
