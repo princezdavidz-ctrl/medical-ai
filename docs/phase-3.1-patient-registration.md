@@ -17,7 +17,7 @@
 
 ### Identity documents
 - Supports Kenyan national ID, passport, birth certificate, alien ID, refugee document and other.
-- Database stores only an opaque encrypted-vault reference, not raw identity numbers or document images.
+- API accepts only an opaque `vault://` reference to an encrypted-vault object, not raw identity numbers or document images.
 - Optional identifier fingerprint field is reserved for a future trusted keyed-HMAC adapter; it is not accepted from the API.
 - Verification is pending until a records verifier marks it verified/rejected using a controlled reason code; the database requires reviewer identity and timestamp for completed reviews.
 - API responses never expose the encrypted vault reference or fingerprint.
@@ -37,7 +37,7 @@
 
 ### Patient access
 - Registration and medical-records roles may access hospital registration lists.
-- Clinical roles may read only patients with a current active patient-care assignment.
+- Clinical roles may read only patients with a current active patient-care assignment that matches their hospital department when the assignment is department-scoped.
 - Patient list/detail access is audited. Clinical staff can read only patients with an active, in-date care assignment; registration roles can access the hospital registration list.\n- Patient status changes use controlled reason codes; deceased is a terminal state in this workflow.
 - Duplicate review, identity verification and status changes are restricted to records-verifier/admin roles.
 
@@ -51,7 +51,7 @@ Base prefix: `/api/v1`.
 | GET | `/patients` | List patients within registration role scope or active care assignments |
 | GET | `/patients/{patient_id}` | Read patient within role/assignment scope |
 | GET | `/patients/{patient_id}/registration` | Read registration profile and safe document/contact metadata |
-| PATCH | `/patients/{patient_id}/registration` | Update registration contact/address/language profile |
+| PATCH | `/patients/{patient_id}` | Update patient demographics and re-run duplicate candidate detection |\n| PATCH | `/patients/{patient_id}/registration` | Update registration contact/address/language profile |
 | GET | `/patients/{patient_id}/duplicate-cases` | List possible duplicate candidates for human review |
 | PATCH | `/patients/duplicate-cases/{case_id}` | Record a human duplicate review decision; does not merge |
 | PATCH | `/patients/{patient_id}/identity-documents/{document_id}/verification` | Verify/reject a pending identity document |
