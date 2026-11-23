@@ -10,6 +10,7 @@ from app.ai.gateway import ModelGateway, ModelUnavailable
 from app.ai.orchestrator import AIOrchestrator, KnowledgeUnavailable, UnsafeModelOutput
 from app.ai.patient_context import PatientContextDenied, load_authorized_patient_context
 from app.ai.policy import AIPolicyEngine
+from app.ai.prompt_registry import get_capability_prompt
 from app.ai.session_crypto import SessionCipher, SessionEncryptionError
 from app.ai.usage import AIUsageMeter, AIUsageQuotaExceeded
 from app.ai.sessions import (
@@ -85,6 +86,9 @@ def list_capabilities(
             runtime_status = "configured_not_clinically_validated"
         statuses.append({
             "capability": capability.value,
+            "prompt_version": get_capability_prompt(capability).version,
+            "prompt_digest": get_capability_prompt(capability).digest,
+            "tool_permissions": list(get_capability_prompt(capability).tool_permissions),
             "approved": capability.value in settings.ai_enabled_capabilities,
             "operating_mode": settings.ai_operating_mode.lower(),
             "provider_configured": provider_configured,
