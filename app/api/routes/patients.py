@@ -336,6 +336,73 @@ def list_patients(
     return patients
 
 
+@router.patch("/{patient_id}", response_model=PatientRead)
+def update_patient_demographics(
+    patient_id: UUID,
+    payload: PatientDemographicsUpdate,
+    context: tuple = Depends(get_current_context),
+    db: Session = Depends(get_db),
+) -> Patient:
+    user, hospital_id = context
+    _require_patient_role(
+        db, user=user, hospital_id=hospital_id, allowed_roles=_REGISTRATION_ROLES
+    )
+    patient = db.scalar(select(Patient).where(
+        Patient.id == patient_id, Patient.hospital_id == hospital_id
+    ).with_for_update())
+    if patient is None:
+        raise HTTPException(status_code=404, detail={"code": "patient_not_found"})
+
+    updated_fields = payload.model_dump(exclude_unset=True)
+    for key, value in updated_fields.items():
+        setattr(patient, key, value)
+
+    candidates = _duplicate_candidates(
+        db,
+        hospital_id=hospital_id,
+        given_name=patient.given_name,
+        family_name=patient.family_name,
+        date_of_birth=patient.date_of_birth,
+        phone_number=patient.phone_number,
+        exclude_patient_id=patient.id,
+    )
+    new_cases = 0
+    for candidate, score, signals in candidates:
+        existing_case = db.scalar(select(PatientDuplicateCase.id).where(
+            PatientDuplicateCase.hospital_id == hospital_id,
+            or_(
+                and_(
+                    PatientDuplicateCase.patient_id == patient.id,
+                    PatientDuplicateCase.candidate_patient_id == candidate.id,
+                ),
+                and_(
+                    PatientDuplicateCase.patient_id == candidate.id,
+                    PatientDuplicateCase.candidate_patient_id == patient.id,
+                ),
+            ),
+        ).limit(1))
+        if existing_case is None:
+            db.add(PatientDuplicateCase(
+                hospital_id=hospital_id,
+                patient_id=patient.id,
+                candidate_patient_id=candidate.id,
+                match_score=score,
+                matching_signals_json=signals,
+                status="pending",
+            ))
+            new_cases += 1
+
+    write_audit_event(
+        db, hospital_id=hospital_id, actor_user_id=user.id,
+        action="patient.demographics.updated", resource_type="patient",
+        resource_id=str(patient.id),
+        metadata={"updated_fields": sorted(updated_fields), "new_duplicate_cases": new_cases},
+    )
+    db.commit()
+    db.refresh(patient)
+    return patient
+
+
 @router.get("/{patient_id}/registration", response_model=PatientRegistrationRead)
 def get_patient_registration(
     patient_id: UUID,
