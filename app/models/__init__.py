@@ -24,6 +24,7 @@ from app.models.ai_evaluation import (
 )
 from app.models.ai_sessions import AISession, AISessionMessage
 from app.models.ai_usage import AIUsageCounter, AIUsageEvent, AIUsagePolicy, AIUsageReservation
+from app.models.ai_operations import AIHospitalControl
 from app.models.patient_context import PatientCareAssignment
 from app.models.offline_sync import (
     OfflineDeliveryOutbox,
@@ -44,6 +45,7 @@ __all__ = [
     "AIUsageEvent",
     "AIUsagePolicy",
     "AIUsageReservation",
+    "AIHospitalControl",
     "AIModelRelease",
     "AIReleaseApproval",
     "AuditEvent",
