@@ -89,6 +89,14 @@ These corrections are included in the current development branch; they have not 
 
 - [ ] Each of the 40 modules: permissions, workflow, data integrity, audit, accessibility and usability.
 - [ ] Phase 3.1 patient registration: duplicate candidate detection, human-reviewed identity matching, no automatic merge, consent/lawful basis, next-of-kin access, patient status transitions and audit history.
+- [ ] Patient MRN uniqueness per hospital and composite foreign-key tenant isolation across registration profile, identity documents, next of kin and duplicate cases.
+- [ ] Patient create/list/read/update RBAC: registration-role access, active care-assignment-only clinical reads, assignment expiry/revocation and cross-hospital denial.
+- [ ] Duplicate candidate rules: normalized names, date-of-birth and phone matches; heuristic score interpretation; same-hospital-only matching; concurrent duplicate case creation.
+- [ ] Human duplicate review state transitions, reviewer attribution, no automatic merge/delete, and immutable audit evidence.
+- [ ] Identity document API accepts only opaque encrypted-vault references, never returns vault references/fingerprints, and enforces pending-to-verified/rejected review with controlled reason codes.
+- [ ] Next-of-kin contact permission defaults false; database rejects contact permission without a lawful-basis code and timestamp.
+- [ ] Patient status transitions, deceased terminal status, reason/audit attribution and unauthorized role denial.
+- [ ] Patient registration migration from an empty PostgreSQL database and upgrade from the previous schema head.
 - [ ] Phase 2 closeout: deploy migrations through head, verify operator runbook against deployed configuration, validate API contracts against OpenAPI, and verify all external release prerequisites are tracked.
 - [ ] Module-to-API integration and cross-module workflows.
 - [ ] Kenya SHA and private insurer claims workflows.
