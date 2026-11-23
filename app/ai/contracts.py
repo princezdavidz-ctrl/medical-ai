@@ -49,6 +49,7 @@ class AIModelRequest:
     hospital_id: UUID
     actor_user_id: UUID
     operating_mode: OperatingMode
+    max_output_tokens: int = 1200
 
 
 @dataclass(frozen=True, slots=True)
@@ -57,6 +58,10 @@ class AIModelResponse:
     provider: str
     model: str
     model_version: str
+    prompt_tokens: int = 0
+    completion_tokens: int = 0
+    total_tokens: int = 0
+    usage_is_estimated: bool = True
     citations: tuple[KnowledgeEvidence, ...] = ()
 
 
