@@ -321,6 +321,7 @@ def create_opd_visit(
     except IntegrityError:
         db.rollback()
         raise HTTPException(status_code=409, detail={"code": "opd_queue_token_collision_retry"}) from None
+    _restore_tenant_context(db, user_id=user.id, hospital_id=hospital_id)
     db.refresh(visit)
     return visit
 
@@ -532,6 +533,7 @@ def start_opd_consultation(
         resource_id=str(visit.id),
     )
     db.commit()
+    _restore_tenant_context(db, user_id=user.id, hospital_id=hospital_id)
     db.refresh(visit)
     return visit
 
@@ -580,6 +582,7 @@ def complete_opd_consultation(
         resource_id=str(visit.id),
     )
     db.commit()
+    _restore_tenant_context(db, user_id=user.id, hospital_id=hospital_id)
     db.refresh(visit)
     return _visit_detail(db, visit)
 
