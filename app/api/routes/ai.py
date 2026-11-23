@@ -1,33 +1,83 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Request, status
 from sqlalchemy.orm import Session
+
 from app.ai.contracts import AICapability
+from app.ai.gateway import ModelGateway, ModelUnavailable
+from app.ai.orchestrator import AIOrchestrator, KnowledgeUnavailable
 from app.ai.policy import AIPolicyEngine
 from app.api.deps import get_current_context
 from app.core.config import get_settings
 from app.db.session import get_db
+from app.knowledge.retriever import SQLAlchemyKnowledgeRetriever
 from app.models import AuditEvent
 from app.schemas.ai import AIRequestCreate
 
 router = APIRouter(prefix="/ai", tags=["central-medical-ai"])
 
 
+def get_ai_orchestrator(request: Request, db: Session = Depends(get_db)) -> AIOrchestrator:
+    settings = get_settings()
+    gateway: ModelGateway = request.app.state.ai_gateway
+    return AIOrchestrator(
+        policy=AIPolicyEngine(settings),
+        gateway=gateway,
+        retriever=SQLAlchemyKnowledgeRetriever(db),
+    )
+
+
+def _audit(
+    db: Session, *, user_id, hospital_id, action: str,
+    outcome: str, reason: str, metadata: dict,
+) -> None:
+    db.add(AuditEvent(
+        hospital_id=hospital_id,
+        actor_user_id=user_id,
+        action=action,
+        resource_type="ai_request",
+        resource_id=None,
+        outcome=outcome,
+        reason=reason,
+        metadata_json=metadata,
+    ))
+    db.commit()
+
+
 @router.get("/capabilities", summary="List AI capabilities and their current availability")
 def list_capabilities(
     context=Depends(get_current_context),
+    request: Request = None,
 ) -> dict:
     settings = get_settings()
-    enabled = set(settings.ai_enabled_capabilities)
-    mode = settings.ai_operating_mode.lower()
+    gateway: ModelGateway | None = getattr(request.app.state, "ai_gateway", None) if request else None
     statuses = []
+    policy = AIPolicyEngine(settings)
     for capability in AICapability:
-        approved = capability.value in enabled
+        decision = policy.evaluate(capability=capability, has_patient_context=False)
+        provider_configured = bool(
+            decision.provider_class and gateway and gateway.has_provider(decision.provider_class)
+        )
+        if not settings.ai_requests_enabled:
+            runtime_status = "disabled_by_safety_gate"
+        elif capability.value not in settings.ai_enabled_capabilities:
+            runtime_status = "capability_not_approved"
+        elif not decision.allowed:
+            runtime_status = decision.reason_code
+        elif not provider_configured:
+            runtime_status = "provider_not_configured"
+        else:
+            runtime_status = "configured_not_clinically_validated"
         statuses.append({
             "capability": capability.value,
-            "approved": approved,
-            "operating_mode": mode,
-            "status": "not_configured",
+            "approved": capability.value in settings.ai_enabled_capabilities,
+            "operating_mode": settings.ai_operating_mode.lower(),
+            "provider_configured": provider_configured,
+            "status": runtime_status,
         })
-    return {"capabilities": statuses, "clinical_use_enabled": False}
+    return {
+        "requests_enabled": settings.ai_requests_enabled,
+        "capabilities": statuses,
+        "clinical_use_enabled": False,
+    }
 
 
 @router.post("/requests", summary="Submit a request to the central Medical AI platform")
@@ -35,38 +85,89 @@ def submit_ai_request(
     payload: AIRequestCreate,
     context=Depends(get_current_context),
     db: Session = Depends(get_db),
+    orchestrator: AIOrchestrator = Depends(get_ai_orchestrator),
 ) -> dict:
     user, hospital_id = context
     settings = get_settings()
-    policy = AIPolicyEngine(settings).evaluate(
-        capability=payload.capability,
-        has_patient_context=payload.patient_context_id is not None,
-    )
+    metadata = {"capability": payload.capability.value, "operating_mode": settings.ai_operating_mode.lower()}
 
-    # The patient-context adapter and approved model/knowledge providers are
-    # intentionally not wired yet. Never pass a patient identifier or prompt
-    # to an external provider during this foundation milestone.
+    if not settings.ai_requests_enabled:
+        reason = "ai_requests_disabled_by_safety_gate"
+        _audit(db, user_id=user.id, hospital_id=hospital_id, action="ai.request.blocked",
+               outcome="denied", reason=reason, metadata=metadata)
+        raise HTTPException(status_code=503, detail={
+            "code": reason, "message": "AI request execution is disabled. No clinical output was generated."
+        })
+
     if payload.patient_context_id is not None:
         reason = "patient_context_adapter_not_implemented"
-    elif not policy.allowed:
-        reason = policy.reason_code
-    else:
-        reason = "model_and_knowledge_runtime_not_configured"
+        _audit(db, user_id=user.id, hospital_id=hospital_id, action="ai.request.blocked",
+               outcome="denied", reason=reason, metadata=metadata)
+        raise HTTPException(status_code=503, detail={
+            "code": reason, "message": "Patient-context AI is not available. No patient data was accessed."
+        })
 
-    db.add(AuditEvent(
-        hospital_id=hospital_id,
-        actor_user_id=user.id,
-        action="ai.request.blocked",
-        resource_type="ai_request",
-        resource_id=None,
-        outcome="denied",
-        reason=reason,
-        metadata_json={"capability": payload.capability.value,
-                       "operating_mode": settings.ai_operating_mode.lower()},
-    ))
-    db.commit()
-    raise HTTPException(
-        status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-        detail={"code": reason,
-                "message": "The requested AI capability is not available yet. No clinical output was generated."},
+    try:
+        response = orchestrator.execute(
+            capability=payload.capability,
+            prompt=payload.prompt,
+            hospital_id=hospital_id,
+            actor_user_id=user.id,
+            has_patient_context=False,
+        )
+    except PermissionError as exc:
+        reason = str(exc) or "ai_policy_denied"
+        _audit(db, user_id=user.id, hospital_id=hospital_id, action="ai.request.blocked",
+               outcome="denied", reason=reason, metadata=metadata)
+        raise HTTPException(status_code=403, detail={
+            "code": reason, "message": "The request is not approved by current AI policy."
+        }) from exc
+    except KnowledgeUnavailable as exc:
+        reason = "approved_medical_evidence_unavailable"
+        _audit(db, user_id=user.id, hospital_id=hospital_id, action="ai.request.blocked",
+               outcome="denied", reason=reason, metadata=metadata)
+        raise HTTPException(status_code=503, detail={
+            "code": reason, "message": "No approved, current evidence was found. No AI response was generated."
+        }) from exc
+    except ModelUnavailable as exc:
+        reason = "approved_model_runtime_unavailable"
+        _audit(db, user_id=user.id, hospital_id=hospital_id, action="ai.request.blocked",
+               outcome="denied", reason=reason, metadata=metadata)
+        raise HTTPException(status_code=503, detail={
+            "code": reason, "message": "The approved model runtime is unavailable. No fallback was attempted."
+        }) from exc
+
+    _audit(
+        db, user_id=user.id, hospital_id=hospital_id,
+        action="ai.request.completed", outcome="success",
+        reason="Evidence-grounded response generated",
+        metadata={
+            **metadata,
+            "provider": response.provider,
+            "model": response.model,
+            "model_version": response.model_version,
+            "citation_count": len(response.citations),
+        },
     )
+    return {
+        "content": response.content,
+        "provider": response.provider,
+        "model": response.model,
+        "model_version": response.model_version,
+        "citations": [{
+            "citation_id": item.citation_id,
+            "source_id": item.source_id,
+            "source_title": item.source_title,
+            "publisher": item.publisher,
+            "canonical_url": item.canonical_url,
+            "document_id": item.document_id,
+            "title": item.title,
+            "version": item.version,
+            "jurisdiction": item.jurisdiction,
+            "evidence_grade": item.evidence_grade,
+            "reviewed_at": item.reviewed_at,
+            "next_review_at": item.next_review_at,
+        } for item in response.citations],
+        "clinical_use_enabled": False,
+        "requires_clinician_review": True,
+    }
