@@ -10,6 +10,7 @@ from app.ai.orchestrator import AIOrchestrator, KnowledgeUnavailable, UnsafeMode
 from app.ai.patient_context import PatientContextDenied, load_authorized_patient_context
 from app.ai.policy import AIPolicyEngine
 from app.ai.session_crypto import SessionCipher, SessionEncryptionError
+from app.ai.usage import AIUsageMeter, AIUsageQuotaExceeded
 from app.ai.sessions import (
     AISessionUnavailable,
     append_ai_session_turn,
@@ -22,7 +23,7 @@ from app.api.deps import get_current_context
 from app.core.config import get_settings
 from app.db.session import get_db
 from app.knowledge.retriever import SQLAlchemyKnowledgeRetriever
-from app.models import AuditEvent
+from app.models import AIUsageEvent, AuditEvent
 from app.schemas.ai import AIRequestCreate
 
 router = APIRouter(prefix="/ai", tags=["central-medical-ai"])
@@ -35,6 +36,7 @@ def get_ai_orchestrator(request: Request, db: Session = Depends(get_db)) -> AIOr
         policy=AIPolicyEngine(settings),
         gateway=gateway,
         retriever=SQLAlchemyKnowledgeRetriever(db),
+        usage_meter=AIUsageMeter(db=db, settings=settings),
     )
 
 
@@ -285,6 +287,20 @@ def submit_ai_request(
             patient_context=patient_context,
             conversation_history=conversation_history,
         )
+    except AIUsageQuotaExceeded as exc:
+        reason = str(exc) or "ai_usage_quota_exceeded"
+        _audit(
+            db, user_id=user.id, hospital_id=hospital_id,
+            action="ai.request.quota_blocked", outcome="denied",
+            reason=reason, metadata=metadata,
+        )
+        status_code = 503 if reason in {
+            "ai_usage_policy_not_configured", "ambiguous_ai_usage_policy"
+        } else 429
+        raise HTTPException(status_code=status_code, detail={
+            "code": reason,
+            "message": "The hospital AI subscription quota or usage policy does not permit this request."
+        }) from exc
     except PermissionError as exc:
         reason = str(exc) or "ai_policy_denied"
         _audit(db, user_id=user.id, hospital_id=hospital_id, action="ai.request.blocked",
@@ -515,3 +531,39 @@ def delete_session(
         resource_type="ai_session", resource_id=str(session_id),
     )
     return {"id": str(session_id), "status": "deleted"}
+
+
+@router.get("/usage", summary="View this hospital's AI subscription usage")
+def get_ai_usage(
+    context=Depends(get_current_context),
+    db: Session = Depends(get_db),
+) -> dict:
+    _, hospital_id = context
+    meter = AIUsageMeter(db=db, settings=get_settings())
+    try:
+        snapshot = meter.current_snapshot(hospital_id=hospital_id)
+    except AIUsageQuotaExceeded as exc:
+        raise HTTPException(status_code=503, detail={"code": str(exc)}) from exc
+    events = db.scalars(
+        select(AIUsageEvent)
+        .where(AIUsageEvent.hospital_id == hospital_id)
+        .order_by(AIUsageEvent.created_at.desc())
+        .limit(100)
+    ).all()
+    return {
+        "usage": snapshot,
+        "recent_events": [{
+            "capability": item.capability,
+            "operating_mode": item.operating_mode,
+            "provider": item.provider_id,
+            "model": item.model_id,
+            "input_tokens": item.input_tokens,
+            "output_tokens": item.output_tokens,
+            "cost_micros": item.cost_micros,
+            "currency": item.currency,
+            "latency_ms": item.latency_ms,
+            "usage_is_estimated": item.usage_is_estimated,
+            "outcome": item.outcome,
+            "created_at": item.created_at,
+        } for item in events],
+    }
