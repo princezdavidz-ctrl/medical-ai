@@ -27,8 +27,8 @@ The registry is deliberately source-controlled in this milestone. Changes are ma
 - The workflow contract explicitly prohibits autonomous diagnosis, prescribing and orders, requires evidence citations and uncertainty, and requires clinician review.
 - The API response is validated against a Pydantic response model with clinical-use and clinician-review flags fixed to false/true respectively.
 - Capability discovery reports prompt version, prompt digest and permitted tools.
-- Every generated response and its privacy-minimal audit metadata records the prompt version.
-- AI evaluation manifests now require a prompt SHA-256 digest in addition to prompt version; the evaluation run table stores that digest.
+- Every generated response and its privacy-minimal audit metadata records the prompt version and exact digest.
+- AI evaluation manifests now require a prompt SHA-256 digest in addition to prompt version; the evaluation run table stores that digest. The digest is also returned in each response so a downstream evaluation harness can bind results to the exact registry content.
 
 ## Change governance
 
