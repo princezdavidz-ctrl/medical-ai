@@ -15,7 +15,7 @@ Phase 2 is complete only when the central platform's engineering components are 
 
 ## Remaining development milestones
 
-1. <badge> (Implemented on development branch) **2B.11 — Signed offline knowledge packages.** Verify Ed25519 publisher signatures, SHA-256 payload integrity, schema compatibility, jurisdiction and freshness before a package can enter the offline import pipeline.
+1. [IMPLEMENTED] **2B.11 — Signed offline knowledge packages.** Verify Ed25519 publisher signatures, SHA-256 payload integrity, schema compatibility, jurisdiction and freshness before a package can enter the offline import pipeline.
 2. <badge> (Implemented on development branch) **2B.12 — Durable offline synchronization.** Persist package installation state, monotonic event cursors, idempotency keys, conflict records, retry queues and explicit acknowledgements. Never mark remote delivery complete without partner acknowledgement.
 3. **2B.13 — Authorized patient-context adapter.** Add purpose-bound patient lookup, consent/lawful-basis checks, hospital membership and assignment checks, minimum-necessary context assembly, access audit and emergency-access review. No patient context may be sent to a hosted provider.
 4. **2B.14 — Hosted model provider.** Add an explicit hosted provider implementation, secret-backed credentials, approved endpoint/model allow-list, request minimization, region/data-transfer policy, timeout/cost limits and no cross-class fallback. It remains disabled until configured and approved.
