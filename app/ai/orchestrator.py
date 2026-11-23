@@ -144,10 +144,10 @@ class AIOrchestrator:
             reservation,
             hospital_id=hospital_id,
             actor_user_id=actor_user_id,
-            input_tokens=response.prompt_tokens,
-            output_tokens=response.completion_tokens,
+            input_tokens=input_tokens,
+            output_tokens=output_tokens,
             latency_ms=latency_ms,
-            usage_is_estimated=response.usage_is_estimated,
+            usage_is_estimated=usage_is_estimated,
             outcome="success",
         )
         evidence_by_id = {item.citation_id: item for item in evidence}
