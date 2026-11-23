@@ -3,7 +3,7 @@ from datetime import date, datetime, timedelta, timezone
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
-from sqlalchemy import and_, case, or_, select
+from sqlalchemy import and_, case, or_, select, text
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
@@ -89,6 +89,18 @@ def _require_role(
         if membership.department_id != department_id:
             raise HTTPException(status_code=403, detail={"code": "opd_department_scope_required"})
     return membership, role_name
+
+
+def _restore_tenant_context(db: Session, *, user_id: UUID, hospital_id: UUID) -> None:
+    """Restore transaction-local RLS context after a commit before further reads."""
+    db.execute(
+        text("SELECT set_config('app.current_hospital_id', :hospital_id, true)"),
+        {"hospital_id": str(hospital_id)},
+    )
+    db.execute(
+        text("SELECT set_config('app.current_user_id', :user_id, true)"),
+        {"user_id": str(user_id)},
+    )
 
 
 def _get_visit(db: Session, *, visit_id: UUID, hospital_id: UUID, lock: bool = False) -> OPDVisit:
@@ -435,6 +447,7 @@ def mark_opd_arrival(
         action="opd.visit.arrived", resource_type="opd_visit", resource_id=str(visit.id),
     )
     db.commit()
+    _restore_tenant_context(db, user_id=user.id, hospital_id=hospital_id)
     db.refresh(visit)
     return visit
 
@@ -480,6 +493,7 @@ def record_opd_triage(
         },
     )
     db.commit()
+    _restore_tenant_context(db, user_id=user.id, hospital_id=hospital_id)
     db.refresh(visit)
     return _visit_detail(db, visit)
 
@@ -639,6 +653,7 @@ def add_opd_diagnosis(
         metadata={"certainty": payload.certainty, "is_primary": payload.is_primary, "coded": payload.concept_id is not None},
     )
     db.commit()
+    _restore_tenant_context(db, user_id=user.id, hospital_id=hospital_id)
     db.refresh(diagnosis)
     return diagnosis
 
