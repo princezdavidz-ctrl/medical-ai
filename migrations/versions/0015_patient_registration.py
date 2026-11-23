@@ -63,6 +63,7 @@ def upgrade() -> None:
         sa.Column("identifier_fingerprint_hmac", sa.String(64)),
         sa.Column("expires_at", sa.DateTime(timezone=True)),
         sa.Column("verification_status", sa.String(24), nullable=False, server_default="pending"),
+        sa.Column("verification_reason_code", sa.String(40)),
         sa.Column("verified_by_user_id", sa.Uuid(), sa.ForeignKey("users.id")),
         sa.Column("verified_at", sa.DateTime(timezone=True)),
         sa.Column("created_by_user_id", sa.Uuid(), sa.ForeignKey("users.id"), nullable=False),
@@ -78,6 +79,11 @@ def upgrade() -> None:
         sa.CheckConstraint(
             "verification_status IN ('pending', 'verified', 'rejected')",
             name="ck_patient_identity_document_status",
+        ),
+        sa.CheckConstraint(
+            "verification_reason_code IS NULL OR verification_reason_code IN "
+            "('verified_document', 'expired_document', 'unreadable_document', 'identity_mismatch', 'unsupported_document')",
+            name="ck_patient_identity_document_reason",
         ),
         sa.CheckConstraint(
             "identifier_fingerprint_hmac IS NULL OR length(identifier_fingerprint_hmac) = 64",
