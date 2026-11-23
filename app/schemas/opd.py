@@ -3,7 +3,7 @@ from decimal import Decimal
 from typing import Literal
 from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict, Field, model_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 
 class OPDVisitCreate(BaseModel):
@@ -14,6 +14,14 @@ class OPDVisitCreate(BaseModel):
     visit_type: Literal["walk_in", "appointment", "referral", "transfer"] = "walk_in"
     chief_complaint: str = Field(min_length=3, max_length=4000)
     assigned_clinician_user_id: UUID | None = None
+
+    @field_validator("chief_complaint")
+    @classmethod
+    def trim_visit_complaint(cls, value):
+        value = value.strip()
+        if len(value) < 3:
+            raise ValueError("opd_chief_complaint_too_short")
+        return value
 
 
 class OPDVisitRead(BaseModel):
@@ -57,14 +65,34 @@ class OPDTriageCreate(BaseModel):
     consciousness_level: Literal["alert", "voice", "pain", "unresponsive", "not_assessed"] | None = None
     clinical_notes: str | None = Field(default=None, max_length=8000)
 
+    @field_validator("chief_complaint")
+    @classmethod
+    def trim_triage_complaint(cls, value):
+        value = value.strip()
+        if len(value) < 3:
+            raise ValueError("opd_triage_complaint_too_short")
+        return value
+
+    @field_validator("red_flag_note")
+    @classmethod
+    def trim_red_flag_note(cls, value):
+        if value is not None:
+            value = value.strip() or None
+        return value
+
     @model_validator(mode="after")
     def validate_red_flag_note(self):
         if self.red_flag_present and (
-            self.red_flag_note is None or len(self.red_flag_note.strip()) < 3
+            self.red_flag_note is None or len(self.red_flag_note) < 3
         ):
             raise ValueError("red_flag_requires_escalation_note")
         if self.red_flag_present and self.triage_level in {"standard", "non_urgent"}:
             raise ValueError("red_flag_requires_urgent_triage_level")
+        if (
+            self.systolic_bp is not None and self.diastolic_bp is not None
+            and self.systolic_bp <= self.diastolic_bp
+        ):
+            raise ValueError("systolic_bp_must_exceed_diastolic_bp")
         return self
 
 
@@ -106,6 +134,14 @@ class OPDConsultationComplete(BaseModel):
     plan: str = Field(min_length=3, max_length=12000)
     follow_up: str | None = Field(default=None, max_length=4000)
 
+    @field_validator("assessment", "plan")
+    @classmethod
+    def trim_required_consultation_fields(cls, value):
+        value = value.strip()
+        if len(value) < 3:
+            raise ValueError("consultation_assessment_or_plan_too_short")
+        return value
+
 
 class OPDConsultationRead(BaseModel):
     model_config = ConfigDict(from_attributes=True)
@@ -128,6 +164,14 @@ class OPDDiagnosisCreate(BaseModel):
     certainty: Literal["suspected", "provisional", "confirmed", "ruled_out"] = "provisional"
     is_primary: bool = False
 
+    @field_validator("diagnosis_text")
+    @classmethod
+    def trim_diagnosis_text(cls, value):
+        value = value.strip()
+        if len(value) < 2:
+            raise ValueError("diagnosis_text_too_short")
+        return value
+
 
 class OPDDiagnosisRead(BaseModel):
     model_config = ConfigDict(from_attributes=True)
@@ -149,6 +193,14 @@ class OPDDispositionCreate(BaseModel):
         "transfer_requested", "left_without_being_seen",
     ]
     note: str = Field(min_length=3, max_length=4000)
+
+    @field_validator("note")
+    @classmethod
+    def trim_disposition_note(cls, value):
+        value = value.strip()
+        if len(value) < 3:
+            raise ValueError("opd_disposition_note_too_short")
+        return value
 
 
 class OPDPatientSummary(BaseModel):
