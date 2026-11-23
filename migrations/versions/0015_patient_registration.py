@@ -99,11 +99,16 @@ def upgrade() -> None:
         sa.Column("phone_number", sa.String(40), nullable=False),
         sa.Column("email", sa.String(320)),
         sa.Column("can_be_contacted", sa.Boolean(), nullable=False, server_default=sa.false()),
+        sa.Column("permission_basis", sa.String(32)),
         sa.Column("permission_recorded_at", sa.DateTime(timezone=True)),
         sa.Column("created_at", sa.DateTime(timezone=True), server_default=sa.func.now(), nullable=False),
         sa.ForeignKeyConstraint(
             ["hospital_id", "patient_id"], ["patients.hospital_id", "patients.id"],
             name="fk_patient_next_of_kin_patient", ondelete="CASCADE",
+        ),
+        sa.CheckConstraint(
+            "permission_basis IS NULL OR permission_basis IN ('patient_consent', 'legal_guardian_consent', 'other_lawful_basis')",
+            name="ck_patient_next_of_kin_permission_basis",
         ),
     )
     op.create_index(
