@@ -455,6 +455,7 @@ class AIUsageMeter:
                 operating_mode=reservation.operating_mode,
                 provider_id=reservation.provider_id,
                 model_id=reservation.model_id,
+                model_version=reservation.model_version,
                 input_tokens=reservation.reserved_input_tokens,
                 output_tokens=0,
                 cost_micros=(
