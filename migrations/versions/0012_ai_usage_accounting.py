@@ -87,6 +87,7 @@ def upgrade() -> None:
         sa.Column("pricing_snapshot_json", sa.JSON()),
         sa.Column("status", sa.String(24), nullable=False),
         sa.Column("created_at", sa.DateTime(timezone=True), server_default=sa.func.now(), nullable=False),
+        sa.Column("expires_at", sa.DateTime(timezone=True), nullable=False),
         sa.Column("settled_at", sa.DateTime(timezone=True)),
         sa.UniqueConstraint("hospital_id", "idempotency_key", name="uq_ai_usage_reservation_idempotency"),
         sa.CheckConstraint("status IN ('reserved', 'settled', 'released')", name="ck_ai_usage_reservation_status"),
