@@ -41,6 +41,10 @@ class EmergencyVisit(Base):
             name="ck_emergency_visit_status",
         ),
         CheckConstraint(
+            "priority IN ('untriaged', 'resuscitation', 'emergent', 'urgent', 'less_urgent', 'non_urgent')",
+            name="ck_emergency_visit_priority",
+        ),
+        CheckConstraint(
             "disposition IS NULL OR disposition IN "
             "('discharged', 'admission_requested', 'referred', 'transfer_requested', 'left_without_being_seen')",
             name="ck_emergency_visit_disposition",
@@ -99,7 +103,6 @@ class EmergencyTriageAssessment(Base):
             "red_flag_present = false OR (red_flag_note IS NOT NULL AND length(trim(red_flag_note)) >= 3)",
             name="ck_emergency_triage_red_flag_note",
         ),
-        Index("ix_emergency_triage_visit", "hospital_id", "visit_id", "revision"),
     )
 
     id: Mapped[uuid.UUID] = mapped_column(Uuid(as_uuid=True), primary_key=True, default=uuid.uuid4)
