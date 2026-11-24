@@ -500,6 +500,13 @@ def cancel_pending_admission(
     if encounter is not None:
         encounter.status = "cancelled"
         encounter.ended_at = now
+    if admission.source_encounter_id is not None:
+        source_encounter = db.scalar(select(Encounter).where(
+            Encounter.id == admission.source_encounter_id,
+            Encounter.hospital_id == hospital_id,
+        ).with_for_update())
+        if source_encounter is not None and source_encounter.status == "admission_requested":
+            source_encounter.status = "completed"
     assignments = db.scalars(select(PatientCareAssignment).where(
         PatientCareAssignment.hospital_id == hospital_id,
         PatientCareAssignment.encounter_id == admission.encounter_id,
