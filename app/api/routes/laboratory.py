@@ -37,6 +37,7 @@ from app.schemas.laboratory import (
     LaboratorySpecimenReject,
     LaboratoryTestDefinitionCreate,
     LaboratoryTestDefinitionRead,
+    LaboratoryTestDefinitionRetire,
 )
 
 router = APIRouter(prefix="/laboratory", tags=["laboratory and diagnostics"])
@@ -330,6 +331,7 @@ def approve_laboratory_test_definition(
 @router.post("/test-definitions/{definition_id}/retire", response_model=LaboratoryTestDefinitionRead)
 def retire_laboratory_test_definition(
     definition_id: UUID,
+    payload: LaboratoryTestDefinitionRetire,
     context: tuple = Depends(get_current_context),
     db: Session = Depends(get_db),
 ) -> LaboratoryTestDefinition:
@@ -344,6 +346,9 @@ def retire_laboratory_test_definition(
     if definition.status != "active":
         raise HTTPException(status_code=409, detail={"code": "only_active_laboratory_definition_can_be_retired"})
     definition.status = "retired"
+    definition.retired_by_user_id = user.id
+    definition.retired_at = datetime.now(timezone.utc)
+    definition.retirement_reason = payload.reason
     write_audit_event(
         db, hospital_id=hospital_id, actor_user_id=user.id,
         action="laboratory.test_definition.retired",
