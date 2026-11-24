@@ -28,9 +28,16 @@ def upgrade() -> None:
         "maternity_deliveries",
         ["hospital_id", "surgical_case_id"],
     )
+    op.create_check_constraint(
+        "ck_maternity_delivery_surgical_case",
+        "maternity_deliveries",
+        "(delivery_mode = 'cesarean' AND surgical_case_id IS NOT NULL) OR "
+        "(delivery_mode != 'cesarean' AND surgical_case_id IS NULL)",
+    )
 
 
 def downgrade() -> None:
+    op.drop_constraint("ck_maternity_delivery_surgical_case", "maternity_deliveries", type_="check")
     op.drop_constraint("uq_maternity_delivery_surgical_case", "maternity_deliveries", type_="unique")
     op.drop_constraint("fk_maternity_delivery_surgical_case_mother", "maternity_deliveries", type_="foreignkey")
     op.drop_column("maternity_deliveries", "surgical_case_id")
