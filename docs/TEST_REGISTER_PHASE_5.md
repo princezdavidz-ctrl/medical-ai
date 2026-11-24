@@ -177,6 +177,15 @@ These corrections are included in the current development branch; they have not 
 - [ ] Maternity timestamp chronology: reject future or out-of-order antenatal, labor, delivery, newborn and postpartum events; verify timezone-aware comparisons and audit timestamps.
 - [ ] Maternity privacy/audit: RLS across all maternity tables, cross-hospital UUID substitution, composite mother/delivery/newborn FKs, assignment expiry/revocation and no clinical narrative in audit metadata.
 - [ ] Maternity clinical safety: no automatic gestational age/EDD, partograph scoring, fetal interpretation, obstetric risk score, Apgar calculation, medication dosing, resuscitation device control or clinical AI activation.
+- [ ] Phase 3.9 pediatric record creation: active patient, valid DOB, age under 18 at record opening, in-progress same-patient encounter, active pediatric department, assigned staff member and duplicate encounter prevention.
+- [ ] Pediatric access control: pediatric role allow-list, active hospital membership, department match, exact patient/encounter care assignment, assignment expiry/revocation and cross-hospital UUID substitution denial.
+- [ ] Pediatric growth observations: numeric bounds, at least one measurement, measured/reported provenance, observation chronology, future timestamp rejection and append-only history.
+- [ ] Pediatric developmental screening: instrument name/version, domain/outcome constraints, referral outcome consistency, manual-only entry, no system scoring and immutable screening history.
+- [ ] Pediatric immunization history: status/source combinations, administered timestamp requirement, caregiver-reported provenance, batch reference handling, future timestamp rejection and no vaccine order/administration action.
+- [ ] Pediatric notes: role/assignment enforcement, required note content, signature timestamp, immutable note history and no edit/delete route.
+- [ ] Pediatric record closure: linked encounter must no longer be in progress, assignment required, closure timestamp/audit and denial of all subsequent clinical writes while preserving read access.
+- [ ] Pediatric tenant/privacy: RLS on all pediatric tables, composite patient/encounter/department relationships, minimal audit metadata and no guardian access without separately authorized proxy/consent workflows.
+- [ ] Pediatric clinical safety: no BMI/growth percentile/z-score or growth-trajectory calculation, no developmental instrument scoring/diagnosis, no vaccine schedule/due-date automation, no medication dosing or AI treatment advice.
 - [ ] Patient MRN uniqueness per hospital and composite foreign-key tenant isolation across registration profile, identity documents, next of kin and duplicate cases.
 - [ ] Patient create/list/read/update RBAC: registration-role access, active care-assignment-only clinical reads, assignment expiry/revocation, department matching and cross-hospital denial.
 - [ ] Patient demographic updates: required-name null rejection, immutable MRN, future DOB rejection, duplicate re-detection and no duplicate-case duplication.
