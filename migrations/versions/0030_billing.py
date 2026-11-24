@@ -254,13 +254,15 @@ def upgrade() -> None:
             END IF;
 
             IF TG_OP = 'INSERT' THEN
-                SELECT status, currency INTO invoice_state, invoice_currency
+                SELECT status, currency, subtotal_total, amount_paid_total
+                INTO invoice_state, invoice_currency, invoice_subtotal, invoice_paid
                 FROM invoices
                 WHERE hospital_id = NEW.hospital_id AND id = NEW.invoice_id
                 FOR UPDATE;
                 IF NEW.status != 'pending'
                     OR invoice_state NOT IN ('issued', 'partially_paid')
-                    OR NEW.currency IS DISTINCT FROM invoice_currency THEN
+                    OR NEW.currency IS DISTINCT FROM invoice_currency
+                    OR NEW.amount > invoice_subtotal - invoice_paid THEN
                     RAISE EXCEPTION 'new payment must be pending and match an open invoice currency';
                 END IF;
                 RETURN NEW;
