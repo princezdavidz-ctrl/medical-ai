@@ -32,6 +32,13 @@ class LaboratoryTestDefinitionCreate(BaseModel):
             raise ValueError("laboratory_catalog_text_required")
         return value
 
+    @field_validator("method", "result_unit")
+    @classmethod
+    def trim_optional_catalog_text(cls, value):
+        if value is not None:
+            value = value.strip() or None
+        return value
+
 
 class LaboratoryTestDefinitionRead(BaseModel):
     model_config = ConfigDict(from_attributes=True)
