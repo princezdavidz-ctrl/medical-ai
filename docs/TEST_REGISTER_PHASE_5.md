@@ -143,7 +143,7 @@ These corrections are included in the current development branch; they have not 
 - [ ] ICU detail/list: assigned staff scope, administrator read access, pagination limits, RLS and audit on access.
 - [ ] ICU clinical safety: no automated APACHE/SOFA or GCS score calculation, alarms, diagnosis, prognosis, ventilator control, medication dosing, vasopressor orders or AI activation.
 - [ ] Phase 3.7 Surgery: theatre room create/list permissions, department scope, active department validation, code uniqueness and tenant isolation.
-- [ ] Surgical scheduling: surgeon role/assignment, active encounter, cross-department theatre access, timezone-aware schedule, end-after-start, maximum duration and past-time validation.
+- [ ] Surgical scheduling: surgeon role/assignment, active encounter, cross-department theatre access, timezone-aware schedule, end-after-start, maximum duration, past-time validation and assignment validity through case/recovery.
 - [ ] Lead surgeon assignment: theatre-manager-only assignment to active encounter, valid surgeon membership, cross-department patient assignment, duplicate assignment prevention, 30-day preassignment expiry and extension through scheduled case end plus recovery window.
 - [ ] Theatre conflict prevention: overlapping theatre, surgeon or patient schedules; simultaneous case creation; active case overruns; cancellation freeing schedule; completed case no longer blocking.
 - [ ] Surgical team assignment: lead surgeon/theatre manager authority, same-hospital staff, cross-department assignment, allowed surgeon/anesthesia/theatre nurse roles, active encounter assignment and duplicate prevention.
