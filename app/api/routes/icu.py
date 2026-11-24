@@ -11,6 +11,7 @@ from app.api.deps import get_current_context
 from app.db.session import get_db
 from app.models import (
     BedAssignment,
+    Encounter,
     HospitalBed,
     HospitalMembership,
     ICUCareEvent,
@@ -218,13 +219,19 @@ def start_icu_stay(
         HospitalBed.id == bed_assignment.bed_id,
         HospitalBed.hospital_id == hospital_id,
     ))
-    if bed is None or bed.status != "occupied":
-        raise HTTPException(status_code=409, detail={"code": "occupied_icu_bed_required"})
+    if bed is None or bed.status != "occupied" or bed.ward_id != admission.ward_id:
+        raise HTTPException(status_code=409, detail={"code": "occupied_admission_bed_required"})
     ward = db.scalar(select(Ward).where(
         Ward.id == bed.ward_id, Ward.hospital_id == hospital_id
     ))
     if ward is None or ward.status != "active" or ward.ward_type != "icu":
         raise HTTPException(status_code=422, detail={"code": "admission_bed_is_not_in_active_icu_ward"})
+    encounter = db.scalar(select(Encounter).where(
+        Encounter.id == admission.encounter_id,
+        Encounter.hospital_id == hospital_id,
+    ))
+    if encounter is None or encounter.status != "in_progress" or encounter.department_id != ward.department_id:
+        raise HTTPException(status_code=409, detail={"code": "active_icu_inpatient_encounter_required"})
     _require_role(
         db, user_id=user.id, hospital_id=hospital_id,
         allowed=_ICU_CLINICIAN_ROLES, department_id=ward.department_id,
