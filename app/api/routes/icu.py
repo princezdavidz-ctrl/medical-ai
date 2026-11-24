@@ -130,6 +130,18 @@ def _has_assignment(
     ).limit(1)) is not None
 
 
+def _require_active_inpatient_admission(
+    db: Session, *, hospital_id: UUID, stay: ICUStay
+) -> InpatientAdmission:
+    admission = db.scalar(select(InpatientAdmission).where(
+        InpatientAdmission.id == stay.admission_id,
+        InpatientAdmission.hospital_id == hospital_id,
+    ).with_for_update())
+    if admission is None or admission.status != "admitted":
+        raise HTTPException(status_code=409, detail={"code": "inpatient_admission_not_active"})
+    return admission
+
+
 def _require_stay_access(
     db: Session, *, user_id: UUID, hospital_id: UUID, stay: ICUStay,
     allowed: set[str] | None = None,
@@ -338,8 +350,9 @@ def record_icu_observation(
     db: Session = Depends(get_db),
 ) -> ICUObservation:
     user, hospital_id = context
-    stay = _get_stay(db, hospital_id=hospital_id, stay_id=stay_id)
+    stay = _get_stay(db, hospital_id=hospital_id, stay_id=stay_id, lock=True)
     _require_stay_access(db, user_id=user.id, hospital_id=hospital_id, stay=stay)
+    _require_active_inpatient_admission(db, hospital_id=hospital_id, stay=stay)
     if stay.status == "closed":
         raise HTTPException(status_code=409, detail={"code": "icu_stay_closed"})
     if payload.observed_at < stay.started_at:
@@ -373,8 +386,9 @@ def record_icu_care_event(
     db: Session = Depends(get_db),
 ) -> ICUCareEvent:
     user, hospital_id = context
-    stay = _get_stay(db, hospital_id=hospital_id, stay_id=stay_id)
+    stay = _get_stay(db, hospital_id=hospital_id, stay_id=stay_id, lock=True)
     _require_stay_access(db, user_id=user.id, hospital_id=hospital_id, stay=stay)
+    _require_active_inpatient_admission(db, hospital_id=hospital_id, stay=stay)
     if stay.status == "closed":
         raise HTTPException(status_code=409, detail={"code": "icu_stay_closed"})
     if payload.performed_at < stay.started_at:
@@ -408,8 +422,9 @@ def create_icu_progress_note(
     db: Session = Depends(get_db),
 ) -> ICUProgressNote:
     user, hospital_id = context
-    stay = _get_stay(db, hospital_id=hospital_id, stay_id=stay_id)
+    stay = _get_stay(db, hospital_id=hospital_id, stay_id=stay_id, lock=True)
     _require_stay_access(db, user_id=user.id, hospital_id=hospital_id, stay=stay)
+    _require_active_inpatient_admission(db, hospital_id=hospital_id, stay=stay)
     if stay.status == "closed":
         raise HTTPException(status_code=409, detail={"code": "icu_stay_closed"})
     note = ICUProgressNote(
@@ -439,6 +454,7 @@ def request_icu_stepdown(
     user, hospital_id = context
     stay = _get_stay(db, hospital_id=hospital_id, stay_id=stay_id, lock=True)
     _require_stay_access(
+    _require_active_inpatient_admission(db, hospital_id=hospital_id, stay=stay)
         db, user_id=user.id, hospital_id=hospital_id, stay=stay,
         allowed=_ICU_CLINICIAN_ROLES,
     )
