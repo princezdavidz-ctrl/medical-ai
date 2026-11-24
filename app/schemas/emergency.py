@@ -1,4 +1,4 @@
-from datetime import datetime, timedelta, timezone
+from datetime import date, datetime, timedelta, timezone
 from decimal import Decimal
 from typing import Literal
 from uuid import UUID
@@ -30,7 +30,7 @@ class EmergencyPatientSummary(BaseModel):
     given_name: str
     preferred_name: str | None
     family_name: str
-    date_of_birth: datetime | None = None
+    date_of_birth: date | None
     administrative_sex: str | None
 
 
