@@ -216,7 +216,7 @@ class DeliveryRecordRead(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
     id: UUID
-    labor_record_id: UUID
+    labor_record_id: UUID | None
     episode_id: UUID
     delivered_by_user_id: UUID
     delivery_mode: str
