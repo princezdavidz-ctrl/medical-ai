@@ -246,6 +246,35 @@ def create_pediatric_record(
     return record
 
 
+
+@router.post("/records/{record_id}/close", response_model=PediatricCareRecordRead)
+def close_pediatric_record(
+    record_id: UUID,
+    context: tuple = Depends(get_current_context),
+    db: Session = Depends(get_db),
+) -> PediatricCareRecord:
+    user, hospital_id = context
+    record = _get_record(db, hospital_id=hospital_id, record_id=record_id, lock=True)
+    _require_record_access(db, user_id=user.id, hospital_id=hospital_id, record=record)
+    encounter = db.scalar(select(Encounter).where(
+        Encounter.id == record.encounter_id,
+        Encounter.hospital_id == hospital_id,
+    ).with_for_update())
+    if encounter is None or encounter.status == "in_progress":
+        raise HTTPException(status_code=409, detail={"code": "pediatric_encounter_must_be_closed_first"})
+    record.status = "closed"
+    record.closed_at = datetime.now(timezone.utc)
+    write_audit_event(
+        db, hospital_id=hospital_id, actor_user_id=user.id,
+        action="pediatrics.record.closed", resource_type="pediatric_care_record",
+        resource_id=str(record.id),
+    )
+    db.commit()
+    _restore_tenant_context(db, user_id=user.id, hospital_id=hospital_id)
+    db.refresh(record)
+    return record
+
+
 @router.get("/records/{record_id}", response_model=PediatricCareRecordDetailRead)
 def get_pediatric_record(
     record_id: UUID,
