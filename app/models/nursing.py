@@ -30,6 +30,14 @@ class NursingAssessment(Base):
             "pain_score IS NULL OR pain_score BETWEEN 0 AND 10",
             name="ck_nursing_assessment_pain",
         ),
+        CheckConstraint(
+            "fall_risk_level IS NULL OR fall_risk_level IN ('low', 'moderate', 'high', 'not_assessed')",
+            name="ck_nursing_assessment_fall_risk",
+        ),
+        CheckConstraint(
+            "pressure_injury_risk_level IS NULL OR pressure_injury_risk_level IN ('low', 'moderate', 'high', 'not_assessed')",
+            name="ck_nursing_assessment_pressure_risk",
+        ),
         Index("ix_nursing_assessment_encounter", "hospital_id", "encounter_id", "assessed_at"),
     )
 
@@ -70,6 +78,8 @@ class NursingObservation(Base):
         CheckConstraint("spo2_percent IS NULL OR spo2_percent BETWEEN 0 AND 100", name="ck_nursing_obs_spo2"),
         CheckConstraint("pain_score IS NULL OR pain_score BETWEEN 0 AND 10", name="ck_nursing_obs_pain"),
         CheckConstraint("systolic_bp IS NULL OR diastolic_bp IS NULL OR systolic_bp > diastolic_bp", name="ck_nursing_obs_bp_order"),
+        CheckConstraint("intake_ml IS NULL OR intake_ml >= 0", name="ck_nursing_obs_intake"),
+        CheckConstraint("output_ml IS NULL OR output_ml >= 0", name="ck_nursing_obs_output"),
         Index("ix_nursing_observation_encounter", "hospital_id", "encounter_id", "observed_at"),
     )
 
