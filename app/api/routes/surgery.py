@@ -159,24 +159,13 @@ def _require_case_team(
     allowed = allowed or _TEAM_ROLES
     _, role_name = _require_role(
         db, user_id=user_id, hospital_id=hospital_id,
-        allowed=allowed, department_id=case_department_id(db, case),
-        allow_manager=allow_manager,
+        allowed=allowed, allow_manager=allow_manager,
     )
     if role_name not in _THEATRE_MANAGER_ROLES and not _has_assignment(
         db, user_id=user_id, hospital_id=hospital_id, case=case
     ):
         raise HTTPException(status_code=404, detail={"code": "assigned_surgical_case_not_found"})
     return role_name
-
-
-def case_department_id(db: Session, case: SurgicalCase) -> UUID:
-    theatre = db.scalar(select(TheatreRoom).where(
-        TheatreRoom.id == case.theatre_room_id,
-        TheatreRoom.hospital_id == case.hospital_id,
-    ))
-    if theatre is None:
-        raise HTTPException(status_code=409, detail={"code": "surgical_theatre_missing"})
-    return theatre.department_id
 
 
 def _latest_checklist(
@@ -319,17 +308,13 @@ def schedule_surgical_case(
         raise HTTPException(status_code=404, detail={"code": "active_theatre_not_found"})
     _require_role(
         db, user_id=user.id, hospital_id=hospital_id,
-        allowed=_SURGEON_ROLES, department_id=theatre.department_id,
-        allow_manager=False,
+        allowed=_SURGEON_ROLES, allow_manager=False,
     )
-    if encounter.department_id != theatre.department_id:
-        raise HTTPException(status_code=403, detail={"code": "surgical_encounter_must_be_in_theatre_department"})
     surgeon_assignment = db.scalar(select(PatientCareAssignment).where(
         PatientCareAssignment.hospital_id == hospital_id,
         PatientCareAssignment.patient_id == patient.id,
         PatientCareAssignment.encounter_id == encounter.id,
         PatientCareAssignment.staff_user_id == user.id,
-        PatientCareAssignment.department_id == theatre.department_id,
         PatientCareAssignment.status == "active",
         PatientCareAssignment.valid_from <= datetime.now(timezone.utc),
         or_(
@@ -399,7 +384,7 @@ def schedule_surgical_case(
 
 def _has_assignment_for_encounter(
     db: Session, *, user_id: UUID, hospital_id: UUID,
-    patient_id: UUID, encounter_id: UUID, department_id: UUID,
+    patient_id: UUID, encounter_id: UUID,
 ) -> bool:
     now = datetime.now(timezone.utc)
     return db.scalar(select(PatientCareAssignment.id).where(
@@ -407,7 +392,6 @@ def _has_assignment_for_encounter(
         PatientCareAssignment.patient_id == patient_id,
         PatientCareAssignment.encounter_id == encounter_id,
         PatientCareAssignment.staff_user_id == user_id,
-        PatientCareAssignment.department_id == department_id,
         PatientCareAssignment.status == "active",
         PatientCareAssignment.valid_from <= now,
         or_(
@@ -492,7 +476,7 @@ def assign_surgical_team_member(
     ))
     _, actor_role = _require_role(
         db, user_id=user.id, hospital_id=hospital_id,
-        allowed=_SURGEON_ROLES, department_id=theatre.department_id if theatre else None,
+        allowed=_SURGEON_ROLES,
     )
     if actor_role not in _THEATRE_MANAGER_ROLES and surgical_case.surgeon_user_id != user.id:
         raise HTTPException(status_code=403, detail={"code": "lead_surgeon_or_theatre_manager_required"})
@@ -502,14 +486,13 @@ def assign_surgical_team_member(
     staff_role = _role_name(db, staff_membership)
     if (
         theatre is None or staff_membership is None
-        or staff_membership.department_id != theatre.department_id
+        or staff_membership.department_id is None
         or staff_role not in _TEAM_ROLES
     ):
         raise HTTPException(status_code=422, detail={"code": "surgical_team_member_not_valid_for_theatre"})
     if _has_assignment_for_encounter(
         db, user_id=payload.staff_user_id, hospital_id=hospital_id,
         patient_id=surgical_case.patient_id, encounter_id=surgical_case.encounter_id,
-        department_id=theatre.department_id,
     ):
         raise HTTPException(status_code=409, detail={"code": "surgical_team_member_already_assigned"})
     assignment = PatientCareAssignment(
@@ -517,7 +500,7 @@ def assign_surgical_team_member(
         patient_id=surgical_case.patient_id,
         staff_user_id=payload.staff_user_id,
         assigned_by_user_id=user.id,
-        department_id=theatre.department_id,
+        department_id=staff_membership.department_id,
         encounter_id=surgical_case.encounter_id,
         assignment_reason=payload.assignment_reason,
         status="active",
