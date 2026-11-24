@@ -2,7 +2,7 @@ from datetime import datetime, timezone
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
-from sqlalchemy import func, or_, select, text
+from sqlalchemy import or_, select, text
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
@@ -153,12 +153,13 @@ def _has_assignment(
 def _require_case_team(
     db: Session, *, user_id: UUID, hospital_id: UUID, case: SurgicalCase,
     allowed: set[str] | None = None,
+    allow_manager: bool = False,
 ) -> str:
     allowed = allowed or _TEAM_ROLES
     _, role_name = _require_role(
         db, user_id=user_id, hospital_id=hospital_id,
         allowed=allowed, department_id=case_department_id(db, case),
-        allow_manager=False,
+        allow_manager=allow_manager,
     )
     if not _has_assignment(db, user_id=user_id, hospital_id=hospital_id, case=case):
         raise HTTPException(status_code=404, detail={"code": "assigned_surgical_case_not_found"})
@@ -297,7 +298,7 @@ def schedule_surgical_case(
     encounter = db.scalar(select(Encounter).where(
         Encounter.id == payload.encounter_id,
         Encounter.hospital_id == hospital_id,
-    ))
+    ).with_for_update())
     if encounter is None:
         raise HTTPException(status_code=404, detail={"code": "surgical_encounter_not_found"})
     if encounter.status != "in_progress":
@@ -313,11 +314,13 @@ def schedule_surgical_case(
     ).with_for_update())
     if theatre is None or theatre.status != "active":
         raise HTTPException(status_code=404, detail={"code": "active_theatre_not_found"})
-    _, surgeon_role = _require_role(
+    _require_role(
         db, user_id=user.id, hospital_id=hospital_id,
         allowed=_SURGEON_ROLES, department_id=theatre.department_id,
         allow_manager=False,
     )
+    if encounter.department_id != theatre.department_id:
+        raise HTTPException(status_code=403, detail={"code": "surgical_encounter_must_be_in_theatre_department"})
     if not _has_assignment_for_encounter(
         db, user_id=user.id, hospital_id=hospital_id,
         patient_id=patient.id, encounter_id=encounter.id,
@@ -435,7 +438,10 @@ def get_surgical_case(
 ) -> dict:
     user, hospital_id = context
     surgical_case = _get_case(db, hospital_id=hospital_id, case_id=case_id)
-    _require_case_team(db, user_id=user.id, hospital_id=hospital_id, case=surgical_case)
+    _require_case_team(
+        db, user_id=user.id, hospital_id=hospital_id,
+        case=surgical_case, allow_manager=True,
+    )
     result = _case_detail(db, surgical_case)
     _audit(db, hospital_id=hospital_id, user_id=user.id,
            action="surgery.case.viewed", resource_type="surgical_case", resource_id=surgical_case.id)
@@ -560,7 +566,10 @@ def create_anesthesia_record(
     ))
     if existing is not None:
         raise HTTPException(status_code=409, detail={"code": "anesthesia_record_already_exists"})
-    if payload.started_at < surgical_case.scheduled_start_at - timedelta(hours=12):
+    if (
+        payload.started_at < surgical_case.scheduled_start_at - timedelta(hours=12)
+        or payload.started_at > surgical_case.scheduled_end_at
+    ):
         raise HTTPException(status_code=422, detail={"code": "anesthesia_start_time_outside_case_window"})
     record = AnesthesiaRecord(
         hospital_id=hospital_id,
