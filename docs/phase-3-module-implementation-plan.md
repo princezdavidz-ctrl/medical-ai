@@ -80,7 +80,7 @@ Every module milestone must include:
 |---|---|---|---|
 | Patient Registration & Management | Phase 3.1 | Implemented; Phase 5 verification pending | PR #27 (merged) |
 | OPD | Phase 3.2 | Implemented; Phase 5 verification pending | PR #28 (merged) |
-| Nursing | Phase 3.3 | In implementation | Current branch |
+| Nursing | Phase 3.3 | Implemented; Phase 5 verification pending | PR #29 (merged) |\n| Inpatient & Ward Management | Phase 3.4 | In implementation | Current branch |
 
 Patient Registration & Management extends the Phase 1 patient foundation with governed duplicate review, identity/document metadata, contact and next-of-kin details, consent/lawful-basis recording, patient status and audit history. Automatic patient merging is prohibited.
 
