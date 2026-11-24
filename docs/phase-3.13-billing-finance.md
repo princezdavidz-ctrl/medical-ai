@@ -6,7 +6,7 @@ Billing provides a governed hospital service/charge catalog, encounter-linked in
 
 ### Workflow
 
-1. **Service catalog drafting** — billing managers create hospital-specific service definitions with code, description, unit price and ISO-style three-letter currency code. New definitions remain drafts.
+1. **Service catalog drafting** — billing managers create hospital-specific service definitions with code, description, unit price and three-letter uppercase currency code. New definitions remain drafts.
 2. **Independent catalog approval** — a different finance manager/director approves the draft. Active definitions can be retired with a recorded reason.
 3. **Invoice drafting** — billing staff create a draft invoice against an existing hospital encounter. Patient identity is derived from the encounter; the client cannot submit an unrelated patient ID.
 4. **Invoice line entry** — billing staff add approved service definitions and quantities. The server snapshots description and unit price, calculates the line total using two-decimal rounding and updates the invoice subtotal. Lines can only be inserted while the invoice is draft.
