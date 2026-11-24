@@ -4,7 +4,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.ai.runtime import build_model_gateway
-from app.api.routes import ai, auth, emergency, health, icu, inpatient, laboratory, maternity, nursing, opd, patients, pediatrics, radiology, surgery
+from app.api.routes import ai, auth, emergency, health, icu, inpatient, laboratory, maternity, nursing, opd, patients, pediatrics, pharmacy, radiology, surgery
 from app.core.config import get_settings
 
 settings = get_settings()
@@ -48,6 +48,7 @@ app.include_router(maternity.router, prefix=settings.api_v1_prefix)
 app.include_router(pediatrics.router, prefix=settings.api_v1_prefix)
 app.include_router(laboratory.router, prefix=settings.api_v1_prefix)
 app.include_router(radiology.router, prefix=settings.api_v1_prefix)
+app.include_router(pharmacy.router, prefix=settings.api_v1_prefix)
 app.include_router(ai.router, prefix=settings.api_v1_prefix)
 
 
