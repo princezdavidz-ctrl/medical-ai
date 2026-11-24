@@ -10,7 +10,7 @@ The laboratory module provides a governed hospital test catalog and an encounter
 2. **Independent catalog approval** — a different laboratory supervisor, laboratory director or pathologist approves a draft. The approver must have a professional-registration value recorded on the hospital membership. The platform does not independently verify that credential.
 3. **Clinician order** — an authorized clinician with an active care assignment places a test order against an in-progress encounter. Patient identity is derived from the encounter; clients cannot submit an unrelated patient ID.
 4. **Laboratory work queue** — laboratory staff see orders routed to their own laboratory department, with minimum-necessary patient identity.
-5. **Specimen collection and accessioning** — laboratory staff record accession number, catalog-defined specimen type, collector and collection timestamp. A rejected specimen requires a reason; rejected specimens may be recollected. Only one non-rejected specimen may be active per order.
+5. **Specimen collection and accessioning** — laboratory staff or the assigned ordering care team record accession number, catalog-defined specimen type, collector and collection timestamp. A rejected specimen requires a reason; rejected specimens may be recollected. Only one non-rejected specimen may be active per order.
 6. **Specimen receipt and processing** — staff move specimens through collected, received and processing states. Invalid state transitions are rejected.
 7. **Preliminary result** — a laboratory worker enters exactly one text or numeric result. Numeric units must match the approved test definition. Manual abnormality and critical flags are recorded without automated reference-range interpretation.
 8. **Independent verification** — a different laboratory verifier with a recorded professional-registration value changes a preliminary result to final. The final result is immutable through this API.
@@ -43,7 +43,7 @@ The laboratory module provides a governed hospital test catalog and an encounter
 - Test definition approval and final result verification require a different user from the creator/entered-by user.
 - The verifier must have a professional-registration value recorded. This is a data-presence check, not independent professional credential verification.
 - Orders require an active clinician role, an in-progress encounter, active patient status and an active assignment to the exact patient/encounter/ordering department.
-- Laboratory staff access only the queue and orders routed to their own laboratory department.
+- Laboratory staff access only the queue and orders routed to their own laboratory department. Assigned clinicians/nurses in the ordering department may record specimen collection for their assigned encounter; rejection, receipt and processing remain laboratory-team actions.
 - Ordering clinicians can read/acknowledge only orders within their department and active patient-care assignment.
 - Composite foreign keys bind orders to the same hospital, patient, encounter, ordering department, laboratory department and test definition.
 - All laboratory tables enforce hospital row-level security.
