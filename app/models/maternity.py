@@ -228,7 +228,7 @@ class NewbornRecord(Base):
         CheckConstraint("apgar_1_minute IS NULL OR apgar_1_minute BETWEEN 0 AND 10", name="ck_maternity_newborn_apgar1"),
         CheckConstraint("apgar_5_minute IS NULL OR apgar_5_minute BETWEEN 0 AND 10", name="ck_maternity_newborn_apgar5"),
         CheckConstraint("apgar_10_minute IS NULL OR apgar_10_minute BETWEEN 0 AND 10", name="ck_maternity_newborn_apgar10"),
-        CheckConstraint("outcome = 'live_birth' OR newborn_patient_id IS NULL", name="ck_maternity_newborn_patient_only_live"),
+        CheckConstraint("outcome != 'stillbirth' OR newborn_patient_id IS NULL", name="ck_maternity_newborn_patient_only_live"),
         Index("ix_maternity_newborn_mother", "hospital_id", "mother_patient_id", "birth_at"),
     )
 
