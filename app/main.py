@@ -50,6 +50,7 @@ app.include_router(laboratory.router, prefix=settings.api_v1_prefix)
 app.include_router(radiology.router, prefix=settings.api_v1_prefix)
 app.include_router(pharmacy.router, prefix=settings.api_v1_prefix)
 app.include_router(billing.router, prefix=settings.api_v1_prefix)
+app.include_router(insurance.router, prefix=settings.api_v1_prefix)
 app.include_router(ai.router, prefix=settings.api_v1_prefix)
 
 
