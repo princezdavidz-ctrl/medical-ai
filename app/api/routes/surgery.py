@@ -33,6 +33,7 @@ from app.schemas.surgery import (
     SurgicalCaseRead,
     SurgicalEventCreate,
     SurgicalEventRead,
+    SurgicalLeadSurgeonAssignmentCreate,
     SurgicalNoteCreate,
     SurgicalNoteRead,
     SurgicalSafetyChecklistCreate,
@@ -281,6 +282,65 @@ def list_theatres(
            action="surgery.theatres.viewed", resource_type="theatre_room_list", resource_id=None)
     db.commit()
     return rooms
+
+
+@router.post("/encounters/{encounter_id}/lead-surgeon-assignment", status_code=status.HTTP_201_CREATED)
+def assign_lead_surgeon_to_encounter(
+    encounter_id: UUID,
+    payload: SurgicalLeadSurgeonAssignmentCreate,
+    context: tuple = Depends(get_current_context),
+    db: Session = Depends(get_db),
+) -> dict:
+    user, hospital_id = context
+    _require_role(
+        db, user_id=user.id, hospital_id=hospital_id, allowed=set(),
+    )
+    encounter = db.scalar(select(Encounter).where(
+        Encounter.id == encounter_id,
+        Encounter.hospital_id == hospital_id,
+    ).with_for_update())
+    if encounter is None or encounter.status != "in_progress":
+        raise HTTPException(status_code=404, detail={"code": "active_surgical_encounter_not_found"})
+    theatre = db.scalar(select(TheatreRoom).where(
+        TheatreRoom.id == payload.theatre_room_id,
+        TheatreRoom.hospital_id == hospital_id,
+        TheatreRoom.status == "active",
+    ).with_for_update())
+    if theatre is None:
+        raise HTTPException(status_code=404, detail={"code": "active_theatre_not_found"})
+    surgeon_membership = _membership(db, user_id=payload.surgeon_user_id, hospital_id=hospital_id)
+    surgeon_role = _role_name(db, surgeon_membership)
+    if (
+        surgeon_membership is None
+        or surgeon_membership.department_id is None
+        or surgeon_role not in _SURGEON_ROLES
+    ):
+        raise HTTPException(status_code=422, detail={"code": "lead_surgeon_role_required"})
+    if _has_assignment_for_encounter(
+        db, user_id=payload.surgeon_user_id, hospital_id=hospital_id,
+        patient_id=encounter.patient_id, encounter_id=encounter.id,
+    ):
+        raise HTTPException(status_code=409, detail={"code": "lead_surgeon_already_assigned"})
+    assignment = PatientCareAssignment(
+        hospital_id=hospital_id,
+        patient_id=encounter.patient_id,
+        staff_user_id=payload.surgeon_user_id,
+        assigned_by_user_id=user.id,
+        department_id=surgeon_membership.department_id,
+        encounter_id=encounter.id,
+        assignment_reason=payload.assignment_reason,
+        status="active",
+        valid_from=datetime.now(timezone.utc),
+    )
+    db.add(assignment)
+    db.flush()
+    _audit(
+        db, hospital_id=hospital_id, user_id=user.id,
+        action="surgery.lead_surgeon.assigned",
+        resource_type="patient_care_assignment", resource_id=assignment.id,
+    )
+    db.commit()
+    return {"assignment_id": assignment.id, "surgeon_user_id": payload.surgeon_user_id}
 
 
 @router.post("/cases", response_model=SurgicalCaseRead, status_code=status.HTTP_201_CREATED)
