@@ -37,6 +37,7 @@ class MaternityEpisode(Base):
         CheckConstraint("gravida >= 1 AND para >= 0 AND para <= gravida", name="ck_maternity_episode_gravida_para"),
         CheckConstraint("pregnancy_status IN ('antenatal', 'in_labor', 'postpartum', 'ended')", name="ck_maternity_episode_pregnancy_status"),
         CheckConstraint("pregnancy_status != 'ended' OR pregnancy_end_reason IS NOT NULL", name="ck_maternity_episode_end_reason"),
+        CheckConstraint("pregnancy_end_reason IS NULL OR pregnancy_end_reason IN ('miscarriage', 'ectopic', 'termination', 'other')", name="ck_maternity_episode_end_reason_value"),
         CheckConstraint("status IN ('active', 'closed')", name="ck_maternity_episode_status"),
         CheckConstraint("closed_reason IS NULL OR length(trim(closed_reason)) >= 3", name="ck_maternity_episode_closed_reason"),
         Index(
