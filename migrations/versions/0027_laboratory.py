@@ -109,7 +109,8 @@ def upgrade() -> None:
             name="ck_lab_order_cancellation_state",
         ),
         sa.CheckConstraint(
-            "status != 'completed' OR completed_at IS NOT NULL",
+            "(status = 'completed' AND completed_at IS NOT NULL) OR "
+            "(status != 'completed' AND completed_at IS NULL)",
             name="ck_lab_order_completion_timestamp",
         ),
     )
@@ -161,6 +162,14 @@ def upgrade() -> None:
         sa.CheckConstraint(
             "status NOT IN ('processing', 'completed') OR processing_started_at IS NOT NULL",
             name="ck_lab_specimen_processing_state",
+        ),
+        sa.CheckConstraint(
+            "(status = 'collected' AND received_at IS NULL AND processing_started_at IS NULL) OR "
+            "(status = 'received' AND received_at IS NOT NULL AND processing_started_at IS NULL) OR "
+            "(status = 'processing' AND received_at IS NOT NULL AND processing_started_at IS NOT NULL) OR "
+            "(status = 'rejected') OR "
+            "(status = 'completed' AND received_at IS NOT NULL AND processing_started_at IS NOT NULL)",
+            name="ck_lab_specimen_workflow_timestamps",
         ),
     )
     op.create_index(
