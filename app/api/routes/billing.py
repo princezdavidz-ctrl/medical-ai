@@ -292,12 +292,13 @@ def list_billing_service_definitions(
     role_name = _role_name(db, membership)
     if membership is None or role_name not in _BILLING_STAFF_ROLES:
         raise HTTPException(status_code=403, detail={"code": "billing_catalog_access_required"})
+    if department_id is not None and department_id != membership.department_id:
+        raise HTTPException(status_code=403, detail={"code": "billing_department_scope_required"})
     query = select(BillingServiceDefinition).where(
         BillingServiceDefinition.hospital_id == hospital_id,
         BillingServiceDefinition.status == "active",
+        BillingServiceDefinition.department_id == membership.department_id,
     )
-    if department_id is not None:
-        query = query.where(BillingServiceDefinition.department_id == department_id)
     return list(db.scalars(query.order_by(BillingServiceDefinition.name)).all())
 
 
