@@ -30,6 +30,7 @@ from app.models.opd import OPDVisit, OPDTriageAssessment, OPDConsultationNote, O
 from app.models.inpatient import Ward, HospitalBed, InpatientAdmission, BedAssignment
 from app.models.emergency import EmergencyVisit, EmergencyTriageAssessment, EmergencyCareEvent, EmergencyNote
 from app.models.icu import ICUStay, ICUObservation, ICUCareEvent, ICUProgressNote
+from app.models.surgery import TheatreRoom, SurgicalCase, SurgicalSafetyChecklist, AnesthesiaRecord, SurgicalEvent, SurgicalNote
 from app.models.nursing import (
     NursingAssessment,
     NursingObservation,
@@ -103,6 +104,12 @@ __all__ = [
     "ICUObservation",
     "ICUCareEvent",
     "ICUProgressNote",
+    "TheatreRoom",
+    "SurgicalCase",
+    "SurgicalSafetyChecklist",
+    "AnesthesiaRecord",
+    "SurgicalEvent",
+    "SurgicalNote",
     "NursingAssessment",
     "NursingObservation",
     "NursingNote",
