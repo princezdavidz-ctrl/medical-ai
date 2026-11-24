@@ -59,6 +59,12 @@ from app.models.pharmacy import (
     MedicationOrderReviewEvent,
     MedicationDispense,
 )
+from app.models.billing import (
+    BillingServiceDefinition,
+    Invoice,
+    InvoiceLine,
+    InvoicePayment,
+)
 from app.models.nursing import (
     NursingAssessment,
     NursingObservation,
@@ -166,6 +172,10 @@ __all__ = [
     "MedicationOrder",
     "MedicationOrderReviewEvent",
     "MedicationDispense",
+    "BillingServiceDefinition",
+    "Invoice",
+    "InvoiceLine",
+    "InvoicePayment",
     "NursingAssessment",
     "NursingObservation",
     "NursingNote",
