@@ -65,6 +65,7 @@ class SurgicalCase(Base):
             "status IN ('scheduled', 'in_progress', 'recovery', 'completed', 'cancelled')",
             name="ck_surgical_case_status",
         ),
+        CheckConstraint("length(trim(planned_procedure)) >= 3", name="ck_surgical_case_procedure"),
         CheckConstraint("scheduled_end_at > scheduled_start_at", name="ck_surgical_case_schedule"),
         CheckConstraint(
             "status != 'cancelled' OR (cancelled_at IS NOT NULL AND cancellation_reason IS NOT NULL)",
@@ -106,12 +107,6 @@ class SurgicalSafetyChecklist(Base):
         UniqueConstraint("hospital_id", "surgical_case_id", "phase", "revision", name="uq_surgical_checklist_revision"),
         CheckConstraint("phase IN ('sign_in', 'time_out', 'sign_out')", name="ck_surgical_checklist_phase"),
         CheckConstraint("revision >= 1", name="ck_surgical_checklist_revision"),
-        CheckConstraint(
-            "patient_identity_confirmed AND procedure_confirmed AND site_confirmed "
-            "AND consent_verified AND allergies_reviewed AND anesthesia_safety_confirmed "
-            "AND equipment_ready AND counts_confirmed",
-            name="ck_surgical_checklist_all_confirmed",
-        ),
         Index("ix_surgical_checklist_case", "hospital_id", "surgical_case_id", "phase", "revision"),
     )
 
@@ -148,6 +143,7 @@ class AnesthesiaRecord(Base):
         ),
         CheckConstraint("asa_class BETWEEN 1 AND 5", name="ck_anesthesia_record_asa"),
         CheckConstraint("ended_at IS NULL OR ended_at > started_at", name="ck_anesthesia_record_time"),
+        CheckConstraint("length(trim(pre_anesthesia_assessment)) >= 3", name="ck_anesthesia_assessment"),
     )
 
     id: Mapped[uuid.UUID] = mapped_column(Uuid(as_uuid=True), primary_key=True, default=uuid.uuid4)
