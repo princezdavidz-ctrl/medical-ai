@@ -4,7 +4,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.ai.runtime import build_model_gateway
-from app.api.routes import ai, auth, billing, emergency, health, icu, inpatient, laboratory, maternity, nursing, opd, patients, pediatrics, pharmacy, radiology, surgery
+from app.api.routes import ai, auth, billing, emergency, health, icu, inpatient, insurance, laboratory, maternity, nursing, opd, patients, pediatrics, pharmacy, radiology, surgery
 from app.core.config import get_settings
 
 settings = get_settings()
