@@ -193,6 +193,7 @@ class DeliveryRecordCreate(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     delivery_mode: Literal["spontaneous_vaginal", "assisted_vaginal", "cesarean", "breech", "other"]
+    surgical_case_id: UUID | None = None
     delivered_at: datetime
     placenta_delivered_at: datetime | None = None
     estimated_blood_loss_ml: Decimal | None = Field(default=None, ge=0, le=50000)
@@ -218,6 +219,7 @@ class DeliveryRecordRead(BaseModel):
     id: UUID
     labor_record_id: UUID | None
     episode_id: UUID
+    surgical_case_id: UUID | None
     delivered_by_user_id: UUID
     delivery_mode: str
     delivered_at: datetime
