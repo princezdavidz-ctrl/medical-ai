@@ -675,12 +675,22 @@ def reject_laboratory_specimen(
     specimen_ref = _get_specimen(db, hospital_id=hospital_id, specimen_id=specimen_id)
     order = _get_order(db, hospital_id=hospital_id, order_id=specimen_ref.order_id, lock=True)
     specimen = _get_specimen(db, hospital_id=hospital_id, specimen_id=specimen_id, lock=True)
+    allowed_rejectors = (
+        _LAB_VERIFY_ROLES if specimen.status == "processing" else _LAB_WORK_ROLES
+    )
     _require_lab_role(
         db, user_id=user.id, hospital_id=hospital_id,
-        allowed=_LAB_WORK_ROLES, department_id=order.laboratory_department_id,
+        allowed=allowed_rejectors, department_id=order.laboratory_department_id,
     )
-    if specimen.status not in {"collected", "received"}:
+    if specimen.status not in {"collected", "received", "processing"}:
         raise HTTPException(status_code=409, detail={"code": "specimen_not_rejectable_in_current_state"})
+    if specimen.status == "processing":
+        existing_result = db.scalar(select(LaboratoryResult.id).where(
+            LaboratoryResult.hospital_id == hospital_id,
+            LaboratoryResult.specimen_id == specimen.id,
+        ).limit(1))
+        if existing_result is not None:
+            raise HTTPException(status_code=409, detail={"code": "specimen_with_result_cannot_be_rejected"})
     specimen.status = "rejected"
     specimen.rejected_at = datetime.now(timezone.utc)
     specimen.rejection_reason = payload.reason
