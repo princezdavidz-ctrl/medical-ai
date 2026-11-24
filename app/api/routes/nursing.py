@@ -2,7 +2,7 @@ from datetime import datetime, timezone
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy import or_, select, text, text
+from sqlalchemy import or_, select, text
 from sqlalchemy.orm import Session
 
 from app.api.audit import write_audit_event
