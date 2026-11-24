@@ -31,6 +31,7 @@ class MaternityEpisode(Base):
             name="fk_maternity_episode_department",
         ),
         UniqueConstraint("hospital_id", "id", name="uq_maternity_episode_hospital_id_id"),
+        UniqueConstraint("hospital_id", "id", "patient_id", name="uq_maternity_episode_hospital_id_patient"),
         UniqueConstraint("hospital_id", "patient_id", "pregnancy_number", name="uq_maternity_episode_pregnancy_number"),
         CheckConstraint("pregnancy_number >= 1", name="ck_maternity_episode_pregnancy_number"),
         CheckConstraint("gravida >= 1 AND para >= 0 AND para <= gravida", name="ck_maternity_episode_gravida_para"),
@@ -105,6 +106,8 @@ class LaborRecord(Base):
             ["maternity_episodes.hospital_id", "maternity_episodes.id"],
             name="fk_labor_record_episode",
         ),
+        UniqueConstraint("hospital_id", "id", name="uq_labor_record_hospital_id_id"),
+        UniqueConstraint("hospital_id", "id", "episode_id", name="uq_labor_record_hospital_id_episode"),
         UniqueConstraint("hospital_id", "episode_id", name="uq_labor_record_episode"),
         CheckConstraint("status IN ('latent', 'active', 'second_stage', 'delivered', 'ended')", name="ck_labor_record_status"),
         CheckConstraint("onset_type IN ('spontaneous', 'induced', 'augmented', 'other')", name="ck_labor_record_onset"),
@@ -171,15 +174,17 @@ class DeliveryRecord(Base):
     __tablename__ = "maternity_deliveries"
     __table_args__ = (
         ForeignKeyConstraint(
-            ["hospital_id", "labor_record_id"],
-            ["labor_records.hospital_id", "labor_records.id"],
-            name="fk_maternity_delivery_labor",
+            ["hospital_id", "labor_record_id", "episode_id"],
+            ["labor_records.hospital_id", "labor_records.id", "labor_records.episode_id"],
+            name="fk_maternity_delivery_labor_episode",
         ),
         ForeignKeyConstraint(
-            ["hospital_id", "episode_id"],
-            ["maternity_episodes.hospital_id", "maternity_episodes.id"],
-            name="fk_maternity_delivery_episode",
+            ["hospital_id", "episode_id", "mother_patient_id"],
+            ["maternity_episodes.hospital_id", "maternity_episodes.id", "maternity_episodes.patient_id"],
+            name="fk_maternity_delivery_episode_mother",
         ),
+        UniqueConstraint("hospital_id", "id", name="uq_maternity_delivery_hospital_id_id"),
+        UniqueConstraint("hospital_id", "id", "mother_patient_id", name="uq_maternity_delivery_hospital_id_mother"),
         UniqueConstraint("hospital_id", "labor_record_id", name="uq_maternity_delivery_labor"),
         CheckConstraint("delivery_mode IN ('spontaneous_vaginal', 'assisted_vaginal', 'cesarean', 'breech', 'other')", name="ck_maternity_delivery_mode"),
         CheckConstraint("estimated_blood_loss_ml IS NULL OR estimated_blood_loss_ml BETWEEN 0 AND 50000", name="ck_maternity_delivery_blood_loss"),
@@ -190,6 +195,7 @@ class DeliveryRecord(Base):
     hospital_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("hospitals.id"), nullable=False)
     labor_record_id: Mapped[uuid.UUID] = mapped_column(Uuid(as_uuid=True), nullable=False)
     episode_id: Mapped[uuid.UUID] = mapped_column(Uuid(as_uuid=True), nullable=False)
+    mother_patient_id: Mapped[uuid.UUID] = mapped_column(Uuid(as_uuid=True), nullable=False)
     delivered_by_user_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id"), nullable=False)
     delivery_mode: Mapped[str] = mapped_column(String(32), nullable=False)
     delivered_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
@@ -203,9 +209,9 @@ class NewbornRecord(Base):
     __tablename__ = "maternity_newborns"
     __table_args__ = (
         ForeignKeyConstraint(
-            ["hospital_id", "delivery_id"],
-            ["maternity_deliveries.hospital_id", "maternity_deliveries.id"],
-            name="fk_maternity_newborn_delivery",
+            ["hospital_id", "delivery_id", "mother_patient_id"],
+            ["maternity_deliveries.hospital_id", "maternity_deliveries.id", "maternity_deliveries.mother_patient_id"],
+            name="fk_maternity_newborn_delivery_mother",
         ),
         ForeignKeyConstraint(
             ["hospital_id", "mother_patient_id"],
