@@ -53,6 +53,12 @@ from app.models.radiology import (
     ImagingReport,
     ImagingCriticalAcknowledgement,
 )
+from app.models.pharmacy import (
+    MedicationDefinition,
+    MedicationOrder,
+    MedicationOrderReviewEvent,
+    MedicationDispense,
+)
 from app.models.nursing import (
     NursingAssessment,
     NursingObservation,
@@ -156,6 +162,10 @@ __all__ = [
     "ImagingStudy",
     "ImagingReport",
     "ImagingCriticalAcknowledgement",
+    "MedicationDefinition",
+    "MedicationOrder",
+    "MedicationOrderReviewEvent",
+    "MedicationDispense",
     "NursingAssessment",
     "NursingObservation",
     "NursingNote",
