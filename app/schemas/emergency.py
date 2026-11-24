@@ -202,6 +202,11 @@ class EmergencyDispositionCreate(BaseModel):
         return value
 
 
+class EmergencyQueueItemRead(BaseModel):
+    visit: EmergencyVisitRead
+    patient: EmergencyPatientSummary
+
+
 class EmergencyVisitDetailRead(BaseModel):
     visit: EmergencyVisitRead
     patient: EmergencyPatientSummary
