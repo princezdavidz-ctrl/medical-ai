@@ -32,6 +32,9 @@ def upgrade() -> None:
         sa.Column("created_by_user_id", sa.Uuid(), sa.ForeignKey("users.id"), nullable=False),
         sa.Column("approved_by_user_id", sa.Uuid(), sa.ForeignKey("users.id")),
         sa.Column("approved_at", sa.DateTime(timezone=True)),
+        sa.Column("retired_by_user_id", sa.Uuid(), sa.ForeignKey("users.id")),
+        sa.Column("retired_at", sa.DateTime(timezone=True)),
+        sa.Column("retirement_reason", sa.Text()),
         sa.Column("created_at", sa.DateTime(timezone=True), server_default=sa.func.now(), nullable=False),
         sa.ForeignKeyConstraint(
             ["hospital_id", "department_id"],
@@ -43,8 +46,13 @@ def upgrade() -> None:
         sa.CheckConstraint("status IN ('draft', 'active', 'retired')", name="ck_lab_test_definition_status"),
         sa.CheckConstraint("length(trim(code)) >= 2 AND length(trim(name)) >= 2 AND length(trim(specimen_type)) >= 2", name="ck_lab_test_definition_text"),
         sa.CheckConstraint(
-            "(status = 'draft' AND approved_by_user_id IS NULL AND approved_at IS NULL) OR "
-            "(status IN ('active', 'retired') AND approved_by_user_id IS NOT NULL AND approved_at IS NOT NULL)",
+            "(status = 'draft' AND approved_by_user_id IS NULL AND approved_at IS NULL "
+            "AND retired_by_user_id IS NULL AND retired_at IS NULL AND retirement_reason IS NULL) OR "
+            "(status = 'active' AND approved_by_user_id IS NOT NULL AND approved_at IS NOT NULL "
+            "AND retired_by_user_id IS NULL AND retired_at IS NULL AND retirement_reason IS NULL) OR "
+            "(status = 'retired' AND approved_by_user_id IS NOT NULL AND approved_at IS NOT NULL "
+            "AND retired_by_user_id IS NOT NULL AND retired_at IS NOT NULL "
+            "AND retirement_reason IS NOT NULL AND length(trim(retirement_reason)) >= 3)",
             name="ck_lab_test_definition_approval_state",
         ),
         sa.CheckConstraint(
