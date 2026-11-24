@@ -11,7 +11,7 @@ This milestone adds theatre inventory, scheduled surgical cases, team assignment
 3. Scheduling locks the patient, theatre and surgeon resources and rejects overlapping cases for the same patient, surgeon or theatre. An already in-progress/recovery case blocks reuse of those resources regardless of its planned end time.
 4. The lead surgeon or theatre manager assigns the theatre team. Assigned team members include surgeons, anesthesia providers and theatre nurses.
 5. Assigned team members record sign-in and time-out checklist revisions. Failed checks are retained; a later passing revision does not erase the earlier failed record.
-6. An assigned anesthesia provider records anesthesia type, manually entered ASA class, airway method and pre-anesthesia assessment. Medication doses are not captured.
+6. An assigned anesthesia provider records anesthesia type, manually entered ASA physical-status class (I–VI), airway method and pre-anesthesia assessment. Medication doses are not captured.
 7. The lead surgeon can start the case only when the latest sign-in and time-out checklists pass and a valid anesthesia record exists.
 8. Assigned team members append surgical events and signed notes.
 9. The lead surgeon completes the procedure only after a passing sign-out checklist and a signed operative note. The case enters recovery.
