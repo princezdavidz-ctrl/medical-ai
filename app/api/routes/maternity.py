@@ -43,6 +43,7 @@ from app.schemas.maternity import (
     MaternityEpisodeEnd,
     MaternityNoteCreate,
     MaternityNoteRead,
+    MaternityTeamAssignmentCreate,
     NewbornObservationCreate,
     NewbornObservationRead,
     NewbornPatientLink,
@@ -410,6 +411,63 @@ def get_maternity_episode(
     db.commit()
     _restore_tenant_context(db, user_id=user.id, hospital_id=hospital_id)
     return result
+
+
+@router.post("/episodes/{episode_id}/team", status_code=status.HTTP_201_CREATED)
+def assign_maternity_team_member(
+    episode_id: UUID,
+    payload: MaternityTeamAssignmentCreate,
+    context: tuple = Depends(get_current_context),
+    db: Session = Depends(get_db),
+) -> dict:
+    user, hospital_id = context
+    episode = _get_episode(db, hospital_id=hospital_id, episode_id=episode_id, lock=True)
+    _require_episode_access(
+        db, user_id=user.id, hospital_id=hospital_id,
+        episode=episode, allowed=_EPISODE_ROLES,
+    )
+    if episode.status != "active":
+        raise HTTPException(status_code=409, detail={"code": "maternity_episode_closed"})
+    staff_membership = _membership(db, user_id=payload.staff_user_id, hospital_id=hospital_id)
+    staff_role = _role_name(db, staff_membership)
+    if (
+        staff_membership is None
+        or staff_membership.department_id is None
+        or staff_role not in (_EPISODE_ROLES | _VISIT_ROLES | _NEONATAL_ROLES)
+    ):
+        raise HTTPException(status_code=422, detail={"code": "maternity_team_role_required"})
+    now = datetime.now(timezone.utc)
+    existing = db.scalar(select(PatientCareAssignment.id).where(
+        PatientCareAssignment.hospital_id == hospital_id,
+        PatientCareAssignment.patient_id == episode.patient_id,
+        PatientCareAssignment.encounter_id == episode.encounter_id,
+        PatientCareAssignment.staff_user_id == payload.staff_user_id,
+        PatientCareAssignment.status == "active",
+        PatientCareAssignment.valid_from <= now,
+        or_(
+            PatientCareAssignment.valid_until.is_(None),
+            PatientCareAssignment.valid_until > now,
+        ),
+    ).limit(1))
+    if existing is not None:
+        raise HTTPException(status_code=409, detail={"code": "maternity_team_member_already_assigned"})
+    assignment = PatientCareAssignment(
+        hospital_id=hospital_id,
+        patient_id=episode.patient_id,
+        staff_user_id=payload.staff_user_id,
+        assigned_by_user_id=user.id,
+        department_id=staff_membership.department_id,
+        encounter_id=episode.encounter_id,
+        assignment_reason=payload.assignment_reason,
+        status="active",
+        valid_from=now,
+    )
+    db.add(assignment)
+    db.flush()
+    _audit(db, hospital_id=hospital_id, user_id=user.id,
+           action="maternity.team.assigned", resource_type="patient_care_assignment", resource_id=assignment.id)
+    db.commit()
+    return {"assignment_id": assignment.id, "staff_user_id": payload.staff_user_id}
 
 
 @router.post(
