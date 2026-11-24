@@ -323,12 +323,27 @@ def schedule_surgical_case(
     )
     if encounter.department_id != theatre.department_id:
         raise HTTPException(status_code=403, detail={"code": "surgical_encounter_must_be_in_theatre_department"})
-    if not _has_assignment_for_encounter(
-        db, user_id=user.id, hospital_id=hospital_id,
-        patient_id=patient.id, encounter_id=encounter.id,
-        department_id=theatre.department_id,
-    ):
+    surgeon_assignment = db.scalar(select(PatientCareAssignment).where(
+        PatientCareAssignment.hospital_id == hospital_id,
+        PatientCareAssignment.patient_id == patient.id,
+        PatientCareAssignment.encounter_id == encounter.id,
+        PatientCareAssignment.staff_user_id == user.id,
+        PatientCareAssignment.department_id == theatre.department_id,
+        PatientCareAssignment.status == "active",
+        PatientCareAssignment.valid_from <= datetime.now(timezone.utc),
+        or_(
+            PatientCareAssignment.valid_until.is_(None),
+            PatientCareAssignment.valid_until > datetime.now(timezone.utc),
+        ),
+    ).with_for_update())
+    if surgeon_assignment is None:
         raise HTTPException(status_code=403, detail={"code": "assigned_surgeon_required"})
+    minimum_assignment_until = payload.scheduled_end_at + timedelta(hours=24)
+    if (
+        surgeon_assignment.valid_until is not None
+        and surgeon_assignment.valid_until < minimum_assignment_until
+    ):
+        surgeon_assignment.valid_until = minimum_assignment_until
     surgeon_row = db.scalar(select(User).where(User.id == user.id).with_for_update())
     if surgeon_row is None:
         raise HTTPException(status_code=404, detail={"code": "surgeon_user_not_found"})
