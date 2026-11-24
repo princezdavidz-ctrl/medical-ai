@@ -142,6 +142,22 @@ These corrections are included in the current development branch; they have not 
 - [ ] ICU closure: inpatient discharge must be completed first, assigned ICU clinician only, closure timestamp/actor and post-closure write denial.
 - [ ] ICU detail/list: assigned staff scope, administrator read access, pagination limits, RLS and audit on access.
 - [ ] ICU clinical safety: no automated APACHE/SOFA or GCS score calculation, alarms, diagnosis, prognosis, ventilator control, medication dosing, vasopressor orders or AI activation.
+- [ ] Phase 3.7 Surgery: theatre room create/list permissions, department scope, active department validation, code uniqueness and tenant isolation.
+- [ ] Surgical scheduling: surgeon role/assignment, active encounter, cross-department theatre access, timezone-aware schedule, end-after-start, maximum duration, past-time validation and assignment validity through case/recovery.
+- [ ] Lead surgeon assignment: theatre-manager-only assignment to active encounter, valid surgeon membership, cross-department patient assignment, duplicate assignment prevention, 30-day preassignment expiry and extension through scheduled case end plus recovery window.
+- [ ] Theatre conflict prevention: overlapping theatre, surgeon or patient schedules; simultaneous case creation; active case overruns; cancellation freeing schedule; completed case no longer blocking.
+- [ ] Surgical team assignment: lead surgeon/theatre manager authority, same-hospital staff, cross-department assignment, allowed surgeon/anesthesia/theatre nurse roles, active encounter assignment and duplicate prevention.
+- [ ] Surgical detail access: assigned team and hospital administrators can read clinical case detail; theatre managers are department-scoped for operations and cannot read clinical notes without assignment.
+- [ ] Surgical safety checklists: sign-in/time-out/sign-out phase state, revision ordering, failed checks retained, latest revision gates, not-applicable site/count handling and concurrent revisions.
+- [ ] Anesthesia record: assigned anesthetist role, single record per case, ASA class 1–6, timestamp bounds, assessment required, no medication dose fields and end-time validation.
+- [ ] Surgical case start: lead surgeon only, passing latest sign-in and time-out checklists, valid anesthesia record from an active assigned anesthesia provider, correct scheduled state and concurrent start denial.
+- [ ] Surgical events: assigned team only, in-progress case only, event type, timestamp after actual start, append-only history and audit privacy.
+- [ ] Surgical notes: assigned team only, operative note only during surgery, post-op note only during recovery, signing identity/time and no edit/delete path.
+- [ ] Procedure completion: lead surgeon only, passing sign-out checklist, signed operative note, anesthesia end timestamp and transition to recovery.
+- [ ] Recovery completion: lead surgeon only, signed post-op/handover note required, completed-state immutability and no implied bed transfer/discharge.
+- [ ] Surgical cancellation: scheduled-only cancellation, lead surgeon/theatre manager permissions, reason required, no cancellation after procedure start and schedule conflict release.
+- [ ] Surgery tenant/privacy: RLS on all surgery tables, composite patient/encounter/theatre/case FKs, cross-hospital substitution and audit records without clinical narrative.
+- [ ] Surgery clinical safety: no automatic procedure selection, ASA scoring, anesthesia dosing, medication orders, blood product orders, device control or clinical AI activation.
 - [ ] Patient MRN uniqueness per hospital and composite foreign-key tenant isolation across registration profile, identity documents, next of kin and duplicate cases.
 - [ ] Patient create/list/read/update RBAC: registration-role access, active care-assignment-only clinical reads, assignment expiry/revocation, department matching and cross-hospital denial.
 - [ ] Patient demographic updates: required-name null rejection, immutable MRN, future DOB rejection, duplicate re-detection and no duplicate-case duplication.
