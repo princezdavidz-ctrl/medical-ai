@@ -18,6 +18,10 @@ TABLES = (
 
 
 def upgrade() -> None:
+    op.create_unique_constraint(
+        "uq_encounter_hospital_id_patient", "encounters",
+        ["hospital_id", "id", "patient_id"],
+    )
     op.create_table(
         "nursing_assessments",
         sa.Column("id", sa.Uuid(), primary_key=True),
@@ -39,6 +43,7 @@ def upgrade() -> None:
         sa.Column("assessed_at", sa.DateTime(timezone=True), server_default=sa.func.now(), nullable=False),
         sa.ForeignKeyConstraint(["hospital_id", "patient_id"], ["patients.hospital_id", "patients.id"], name="fk_nursing_assessment_patient"),
         sa.ForeignKeyConstraint(["hospital_id", "encounter_id"], ["encounters.hospital_id", "encounters.id"], name="fk_nursing_assessment_encounter"),
+        sa.ForeignKeyConstraint(["hospital_id", "encounter_id", "patient_id"], ["encounters.hospital_id", "encounters.id", "encounters.patient_id"], name="fk_nursing_assessment_encounter_patient"),
         sa.ForeignKeyConstraint(["hospital_id", "department_id"], ["departments.hospital_id", "departments.id"], name="fk_nursing_assessment_department"),
         sa.CheckConstraint("assessment_type IN ('admission', 'shift', 'focused', 'discharge')", name="ck_nursing_assessment_type"),
         sa.CheckConstraint("pain_score IS NULL OR pain_score BETWEEN 0 AND 10", name="ck_nursing_assessment_pain"),
@@ -70,6 +75,7 @@ def upgrade() -> None:
         sa.Column("recorded_at", sa.DateTime(timezone=True), server_default=sa.func.now(), nullable=False),
         sa.ForeignKeyConstraint(["hospital_id", "patient_id"], ["patients.hospital_id", "patients.id"], name="fk_nursing_observation_patient"),
         sa.ForeignKeyConstraint(["hospital_id", "encounter_id"], ["encounters.hospital_id", "encounters.id"], name="fk_nursing_observation_encounter"),
+        sa.ForeignKeyConstraint(["hospital_id", "encounter_id", "patient_id"], ["encounters.hospital_id", "encounters.id", "encounters.patient_id"], name="fk_nursing_observation_encounter_patient"),
         sa.CheckConstraint("heart_rate IS NULL OR heart_rate BETWEEN 1 AND 300", name="ck_nursing_obs_hr"),
         sa.CheckConstraint("respiratory_rate IS NULL OR respiratory_rate BETWEEN 1 AND 100", name="ck_nursing_obs_rr"),
         sa.CheckConstraint("temperature_c IS NULL OR temperature_c BETWEEN 25 AND 45", name="ck_nursing_obs_temp"),
@@ -95,6 +101,7 @@ def upgrade() -> None:
         sa.Column("signed_at", sa.DateTime(timezone=True), server_default=sa.func.now(), nullable=False),
         sa.ForeignKeyConstraint(["hospital_id", "patient_id"], ["patients.hospital_id", "patients.id"], name="fk_nursing_note_patient"),
         sa.ForeignKeyConstraint(["hospital_id", "encounter_id"], ["encounters.hospital_id", "encounters.id"], name="fk_nursing_note_encounter"),
+        sa.ForeignKeyConstraint(["hospital_id", "encounter_id", "patient_id"], ["encounters.hospital_id", "encounters.id", "encounters.patient_id"], name="fk_nursing_note_encounter_patient"),
         sa.CheckConstraint("note_type IN ('shift_handover', 'progress', 'incident', 'discharge', 'other')", name="ck_nursing_note_type"),
         sa.CheckConstraint("length(trim(note_text)) >= 3", name="ck_nursing_note_text"),
     )
@@ -116,6 +123,7 @@ def upgrade() -> None:
         sa.Column("updated_at", sa.DateTime(timezone=True), server_default=sa.func.now(), nullable=False),
         sa.ForeignKeyConstraint(["hospital_id", "patient_id"], ["patients.hospital_id", "patients.id"], name="fk_nursing_care_plan_patient"),
         sa.ForeignKeyConstraint(["hospital_id", "encounter_id"], ["encounters.hospital_id", "encounters.id"], name="fk_nursing_care_plan_encounter"),
+        sa.ForeignKeyConstraint(["hospital_id", "encounter_id", "patient_id"], ["encounters.hospital_id", "encounters.id", "encounters.patient_id"], name="fk_nursing_care_plan_encounter_patient"),
         sa.ForeignKeyConstraint(["hospital_id", "department_id"], ["departments.hospital_id", "departments.id"], name="fk_nursing_care_plan_department"),
         sa.UniqueConstraint("hospital_id", "id", name="uq_nursing_care_plan_hospital_id_id"),
         sa.CheckConstraint("status IN ('active', 'completed', 'cancelled')", name="ck_nursing_care_plan_status"),
@@ -165,3 +173,4 @@ def downgrade() -> None:
     op.drop_table("nursing_observations")
     op.drop_index("ix_nursing_assessment_encounter", table_name="nursing_assessments")
     op.drop_table("nursing_assessments")
+    op.drop_constraint("uq_encounter_hospital_id_patient", "encounters", type_="unique")
