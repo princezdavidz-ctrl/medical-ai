@@ -173,6 +173,8 @@ These corrections are included in the current development branch; they have not 
 - [ ] Maternal postpartum observations: postpartum state only, observation after delivery, BP consistency, maternal vitals/blood-loss bounds, uterine tone/lochia values and meaningful observation requirement.
 - [ ] Pregnancy ending: obstetrician-only permission, reason enum, note required, active labor closure, no delivery record and ended pregnancy closed-state constraints.
 - [ ] Maternity episode closure: postpartum-only closure, reason required/persisted, labor delivered before closure and denial of later clinical writes.
+- [ ] Maternity concurrency and lock ordering: concurrent labor observation/delivery/pregnancy-ending/episode-close requests acquire episode before labor, preserve state invariants, avoid deadlocks and reject duplicate terminal transitions.
+- [ ] Maternity timestamp chronology: reject future or out-of-order antenatal, labor, delivery, newborn and postpartum events; verify timezone-aware comparisons and audit timestamps.
 - [ ] Maternity privacy/audit: RLS across all maternity tables, cross-hospital UUID substitution, composite mother/delivery/newborn FKs, assignment expiry/revocation and no clinical narrative in audit metadata.
 - [ ] Maternity clinical safety: no automatic gestational age/EDD, partograph scoring, fetal interpretation, obstetric risk score, Apgar calculation, medication dosing, resuscitation device control or clinical AI activation.
 - [ ] Patient MRN uniqueness per hospital and composite foreign-key tenant isolation across registration profile, identity documents, next of kin and duplicate cases.
