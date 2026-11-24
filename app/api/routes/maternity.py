@@ -607,8 +607,15 @@ def record_delivery(
     db: Session = Depends(get_db),
 ) -> DeliveryRecord:
     user, hospital_id = context
+    # Lock order is episode -> labor for every maternity transition.
+    # Read the parent ID first without a lock, then acquire locks in that order.
+    labor_ref = _get_labor(db, hospital_id=hospital_id, labor_id=labor_id)
+    episode = _get_episode(
+        db, hospital_id=hospital_id, episode_id=labor_ref.episode_id, lock=True
+    )
     labor = _get_labor(db, hospital_id=hospital_id, labor_id=labor_id, lock=True)
-    episode = _get_episode(db, hospital_id=hospital_id, episode_id=labor.episode_id, lock=True)
+    if labor.episode_id != episode.id:
+        raise HTTPException(status_code=409, detail={"code": "labor_episode_changed"})
     _require_episode_access(
         db, user_id=user.id, hospital_id=hospital_id,
         episode=episode, allowed=_DELIVERY_ROLES,
