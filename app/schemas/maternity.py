@@ -48,6 +48,7 @@ class MaternityEpisodeRead(BaseModel):
     created_by_user_id: UUID
     created_at: datetime
     closed_at: datetime | None
+    closed_reason: str | None
 
 
 class MaternityAntenatalVisitCreate(BaseModel):
