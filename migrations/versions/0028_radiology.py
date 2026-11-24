@@ -177,12 +177,13 @@ def upgrade() -> None:
         ),
         sa.CheckConstraint(
             "(status = 'scheduled' AND scheduled_at IS NOT NULL AND started_at IS NULL "
-            "AND completed_at IS NULL AND cancelled_at IS NULL) OR "
+            "AND completed_at IS NULL AND cancelled_at IS NULL AND performed_by_user_id IS NULL) OR "
             "(status = 'in_progress' AND scheduled_at IS NOT NULL AND started_at IS NOT NULL "
-            "AND completed_at IS NULL AND cancelled_at IS NULL) OR "
+            "AND completed_at IS NULL AND cancelled_at IS NULL AND performed_by_user_id IS NOT NULL) OR "
             "(status = 'completed' AND scheduled_at IS NOT NULL AND started_at IS NOT NULL "
-            "AND completed_at IS NOT NULL AND cancelled_at IS NULL) OR "
-            "(status = 'cancelled' AND scheduled_at IS NOT NULL AND cancelled_at IS NOT NULL)",
+            "AND completed_at IS NOT NULL AND cancelled_at IS NULL AND performed_by_user_id IS NOT NULL) OR "
+            "(status = 'cancelled' AND scheduled_at IS NOT NULL AND cancelled_at IS NOT NULL "
+            "AND performed_by_user_id IS NULL)",
             name="ck_imaging_study_workflow_timestamps",
         ),
         sa.CheckConstraint("length(trim(accession_number)) >= 2", name="ck_imaging_study_accession_text"),
@@ -233,7 +234,8 @@ def upgrade() -> None:
             name="ck_imaging_report_content",
         ),
         sa.CheckConstraint(
-            "critical_flag = false OR (critical_note IS NOT NULL AND length(trim(critical_note)) >= 3)",
+            "(critical_flag = true AND critical_note IS NOT NULL AND length(trim(critical_note)) >= 3) OR "
+            "(critical_flag = false AND critical_note IS NULL)",
             name="ck_imaging_report_critical_note",
         ),
     )
