@@ -336,6 +336,7 @@ def close_nursing_care_plan(
         resource_type="nursing_care_plan", resource_id=plan.id,
     )
     db.commit()
+    _restore_tenant_context(db, user_id=user.id, hospital_id=hospital_id)
     db.refresh(plan)
     return plan
 
