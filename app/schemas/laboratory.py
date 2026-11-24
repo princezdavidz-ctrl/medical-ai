@@ -169,6 +169,8 @@ class LaboratoryResultCreate(BaseModel):
             raise ValueError("laboratory_result_requires_exactly_one_value")
         if self.value_numeric is not None and self.unit is None:
             raise ValueError("numeric_laboratory_result_requires_unit")
+        if self.abnormality == "critical" and not self.critical_flag:
+            raise ValueError("critical_abnormality_requires_critical_flag")
         if self.critical_flag and (
             self.critical_note is None or len(self.critical_note) < 3
         ):
@@ -254,3 +256,17 @@ class LaboratoryQueueItemRead(BaseModel):
     order: LaboratoryOrderRead
     patient: LaboratoryPatientSummary
     test: LaboratoryTestDefinitionRead
+
+
+class LaboratorySpecimenReject(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    reason: str = Field(min_length=3, max_length=2000)
+
+    @field_validator("reason")
+    @classmethod
+    def trim_reason(cls, value):
+        value = value.strip()
+        if len(value) < 3:
+            raise ValueError("laboratory_specimen_rejection_reason_required")
+        return value
