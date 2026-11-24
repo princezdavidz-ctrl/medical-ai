@@ -47,7 +47,7 @@ Pharmacy provides a governed hospital medication catalog, encounter-linked presc
 ## Clinical safety boundaries
 
 - No medication definitions, dosing regimens or clinical drug data are seeded.
-- Dose and frequency are prescriber-entered text. The system does not calculate, recommend or adjust a dose, route, frequency, duration or quantity.
+- Dose and frequency are prescriber-entered text. When a catalog default route is present, the prescribed route must match it. The system does not calculate, recommend or adjust a dose, route, frequency, duration or quantity.
 - No automated allergy, interaction, contraindication, pregnancy, renal/hepatic, age-based or duplicate-therapy checking is enabled in this module.
 - No automatic substitution or generic-equivalence decision is made.
 - Pharmacist review is an explicit human workflow; approval does not certify that an order is clinically appropriate.
