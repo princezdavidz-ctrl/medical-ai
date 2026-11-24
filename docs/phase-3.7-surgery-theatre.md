@@ -24,6 +24,7 @@ This milestone adds theatre inventory, scheduled surgical cases, team assignment
 |---|---|---|
 | POST | `/api/v1/surgery/theatres` | Create theatre room |
 | GET | `/api/v1/surgery/theatres` | List theatres by department scope |
+| POST | `/api/v1/surgery/encounters/{encounter_id}/lead-surgeon-assignment` | Assign a lead surgeon to an encounter |
 | POST | `/api/v1/surgery/cases` | Schedule a surgical case |
 | GET | `/api/v1/surgery/cases` | List assigned cases or manager-visible cases |
 | GET | `/api/v1/surgery/cases/{case_id}` | Read case and records |
