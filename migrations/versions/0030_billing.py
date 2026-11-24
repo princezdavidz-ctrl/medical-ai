@@ -216,22 +216,44 @@ def upgrade() -> None:
         RETURNS trigger
         LANGUAGE plpgsql
         AS $billing_history$
-        DECLARE invoice_state text;
+        DECLARE
+            invoice_state text;
+            invoice_currency text;
+            service_state text;
+            service_currency text;
         BEGIN
             IF TG_TABLE_NAME = 'invoice_lines' THEN
                 IF TG_OP = 'INSERT' THEN
-                    SELECT status INTO invoice_state
+                    SELECT status, currency INTO invoice_state, invoice_currency
                     FROM invoices
                     WHERE hospital_id = NEW.hospital_id AND id = NEW.invoice_id
                     FOR UPDATE;
                     IF invoice_state IS DISTINCT FROM 'draft' THEN
                         RAISE EXCEPTION 'invoice lines can only be added to draft invoices';
                     END IF;
+                    SELECT status, currency INTO service_state, service_currency
+                    FROM billing_service_definitions
+                    WHERE hospital_id = NEW.hospital_id AND id = NEW.service_definition_id
+                    FOR SHARE;
+                    IF service_state IS DISTINCT FROM 'active'
+                        OR service_currency IS DISTINCT FROM invoice_currency
+                        OR NEW.currency IS DISTINCT FROM invoice_currency THEN
+                        RAISE EXCEPTION 'invoice line service must be active and currency must match invoice';
+                    END IF;
+                    UPDATE invoices
+                    SET subtotal_total = subtotal_total + NEW.line_total
+                    WHERE hospital_id = NEW.hospital_id AND id = NEW.invoice_id;
                     RETURN NEW;
                 END IF;
                 RAISE EXCEPTION 'invoice lines are append-only';
             END IF;
 
+            IF TG_OP = 'INSERT' THEN
+                IF NEW.status != 'pending' THEN
+                    RAISE EXCEPTION 'new payment records must start pending';
+                END IF;
+                RETURN NEW;
+            END IF;
             IF TG_OP = 'DELETE' THEN
                 RAISE EXCEPTION 'payment records cannot be deleted';
             END IF;
@@ -261,7 +283,7 @@ def upgrade() -> None:
     )
     op.execute(
         "CREATE TRIGGER invoice_payments_guard "
-        "BEFORE UPDATE OR DELETE ON invoice_payments "
+        "BEFORE INSERT OR UPDATE OR DELETE ON invoice_payments "
         "FOR EACH ROW EXECUTE FUNCTION protect_billing_history()"
     )
 
