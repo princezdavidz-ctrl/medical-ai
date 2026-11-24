@@ -430,6 +430,22 @@ class MaternityEpisodeClose(BaseModel):
         return value
 
 
+
+class MaternityTeamAssignmentCreate(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    staff_user_id: UUID
+    assignment_reason: str = Field(min_length=3, max_length=500)
+
+    @field_validator("assignment_reason")
+    @classmethod
+    def normalize_assignment_reason(cls, value):
+        value = value.strip()
+        if len(value) < 3:
+            raise ValueError("maternity_assignment_reason_too_short")
+        return value
+
+
 class MaternityEpisodeDetailRead(BaseModel):
     episode: MaternityEpisodeRead
     antenatal_visits: list[MaternityAntenatalVisitRead]
