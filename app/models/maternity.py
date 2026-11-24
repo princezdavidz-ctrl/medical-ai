@@ -189,6 +189,7 @@ class DeliveryRecord(Base):
         UniqueConstraint("hospital_id", "id", name="uq_maternity_delivery_hospital_id_id"),
         UniqueConstraint("hospital_id", "id", "mother_patient_id", name="uq_maternity_delivery_hospital_id_mother"),
         UniqueConstraint("hospital_id", "labor_record_id", name="uq_maternity_delivery_labor"),
+        UniqueConstraint("hospital_id", "episode_id", name="uq_maternity_delivery_episode"),
         CheckConstraint("delivery_mode IN ('spontaneous_vaginal', 'assisted_vaginal', 'cesarean', 'breech', 'other')", name="ck_maternity_delivery_mode"),
         CheckConstraint("estimated_blood_loss_ml IS NULL OR estimated_blood_loss_ml BETWEEN 0 AND 50000", name="ck_maternity_delivery_blood_loss"),
         CheckConstraint("placenta_delivered_at IS NULL OR placenta_delivered_at >= delivered_at", name="ck_maternity_delivery_placenta_time"),
@@ -196,7 +197,7 @@ class DeliveryRecord(Base):
 
     id: Mapped[uuid.UUID] = mapped_column(Uuid(as_uuid=True), primary_key=True, default=uuid.uuid4)
     hospital_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("hospitals.id"), nullable=False)
-    labor_record_id: Mapped[uuid.UUID] = mapped_column(Uuid(as_uuid=True), nullable=False)
+    labor_record_id: Mapped[uuid.UUID | None] = mapped_column(Uuid(as_uuid=True))
     episode_id: Mapped[uuid.UUID] = mapped_column(Uuid(as_uuid=True), nullable=False)
     mother_patient_id: Mapped[uuid.UUID] = mapped_column(Uuid(as_uuid=True), nullable=False)
     delivered_by_user_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id"), nullable=False)
