@@ -236,6 +236,17 @@ These corrections are included in the current development branch; they have not 
 - [ ] Medication history integrity: database append-only triggers prevent update/delete of review events and dispense records; audit metadata excludes dose, frequency, instructions and clinical indication.
 - [ ] Medication tenant/privacy: RLS on catalog/order/review/dispense tables, composite patient/encounter/department/medication-definition FKs and cross-hospital UUID substitution denial.
 - [ ] Medication clinical safety: no seeded medication catalog/doses, no dose calculation or recommendation, no automated allergy/interaction/contraindication checking, no substitution, no stock deduction, no MAR/administration action and no AI treatment activation.
+- [ ] Phase 3.13 billing service catalog: hospital/department scope, code uniqueness, nonnegative price, uppercase three-letter currency, draft-only creation, independent finance approval, reasoned retirement and retired service denial.
+- [ ] Invoice creation: billing role/department, encounter and patient linkage, generated invoice-number uniqueness, explicit currency and cross-hospital UUID substitution denial.
+- [ ] Invoice line entry: draft invoice only, active same-department service definition, currency match, positive quantity, Numeric(12,3) precision, unit-price snapshot, two-decimal ROUND_HALF_UP line total, Numeric(16,2) line/invoice overflow rejection and database-triggered subtotal aggregation.
+- [ ] Invoice immutability: database trigger rejects line update/delete and line insertion after issue; issue requires positive total and a different finance issuer from creator.
+- [ ] Invoice lifecycle: draft → issued → partially_paid → paid, void only from draft/issued with zero paid amount, pending payment must be failed before void and reason/actor/timestamp consistency.
+- [ ] Payment recording: pending-only creation, supported method enum, currency match, optional external reference uniqueness, payment amount precision and no gateway call.
+- [ ] Payment confirmation: separate creator/confirmer, invoice balance locking, concurrent confirmation, overpayment prevention, partial/full status transitions, currency check and immutable confirmed payment.
+- [ ] Payment failure: pending → failed only, reason required, failed payment immutable, failed payments do not change invoice balance.
+- [ ] Billing concurrency: invoice row locking across line insertion/issue, payment create/confirm/fail and void; no double subtotal, overpayment or pending-payment void race.
+- [ ] Billing tenant/privacy: RLS on service catalog/invoice/line/payment tables, composite patient/encounter/department/service FKs, minimum patient identity and audit metadata minimization.
+- [ ] Billing financial boundaries: no seeded prices/tax rules, no VAT/levy calculation, no insurance claim creation, no automated clinical charge capture, no refund/reversal/ledger, no gateway integration and no claim of actual external settlement.
 - [ ] Module-to-API integration and cross-module workflows.
 - [ ] Kenya SHA and private insurer claims workflows.
 - [ ] Pharmacy, laboratory, radiology, medical devices, messaging and payment integrations.
