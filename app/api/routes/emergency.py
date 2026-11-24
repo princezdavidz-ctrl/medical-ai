@@ -158,7 +158,7 @@ def _require_visit_read(
 ) -> str:
     membership = _membership(db, user_id=user_id, hospital_id=hospital_id)
     role_name = _role_name(db, membership)
-    if role_name in _REGISTRATION_ROLES | _ADMIN_ROLES:
+    if role_name in _ADMIN_ROLES:
         return role_name
     if role_name in _EMERGENCY_NURSE_ROLES and (
         membership.department_id == visit.department_id
