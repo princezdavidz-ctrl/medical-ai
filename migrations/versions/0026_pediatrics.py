@@ -47,6 +47,11 @@ def upgrade() -> None:
         sa.UniqueConstraint("hospital_id", "id", name="uq_pediatric_care_hospital_id"),
         sa.UniqueConstraint("hospital_id", "encounter_id", name="uq_pediatric_care_encounter"),
         sa.CheckConstraint("status IN ('active', 'closed')", name="ck_pediatric_care_status"),
+        sa.CheckConstraint(
+            "(status = 'active' AND closed_at IS NULL) OR "
+            "(status = 'closed' AND closed_at IS NOT NULL)",
+            name="ck_pediatric_care_closure_state",
+        ),
     )
     op.create_index(
         "ix_pediatric_care_patient_created",
