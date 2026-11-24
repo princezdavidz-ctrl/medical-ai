@@ -1,3 +1,4 @@
+from datetime import datetime
 from decimal import Decimal
 from typing import Literal
 from uuid import UUID
@@ -62,10 +63,11 @@ class MedicationDefinitionRead(BaseModel):
     status: str
     created_by_user_id: UUID
     approved_by_user_id: UUID | None
-    approved_at: object | None
+    approved_at: datetime | None
     retired_by_user_id: UUID | None
-    retired_at: object | None
+    retired_at: datetime | None
     retirement_reason: str | None
+    created_at: datetime
 
 
 class MedicationDefinitionRetire(BaseModel):
@@ -133,9 +135,9 @@ class MedicationOrderRead(BaseModel):
     instructions: str | None
     status: str
     quantity_dispensed_total: Decimal
-    ordered_at: object
+    ordered_at: datetime
     cancelled_by_user_id: UUID | None
-    cancelled_at: object | None
+    cancelled_at: datetime | None
     cancellation_reason: str | None
 
 
@@ -162,7 +164,7 @@ class MedicationOrderReviewEventRead(BaseModel):
     reviewed_by_user_id: UUID
     decision: str
     review_note: str
-    reviewed_at: object
+    reviewed_at: datetime
 
 
 class MedicationDispenseCreate(BaseModel):
@@ -199,7 +201,7 @@ class MedicationDispenseRead(BaseModel):
     quantity_unit: str
     batch_reference: str | None
     dispense_note: str | None
-    dispensed_at: object
+    dispensed_at: datetime
 
 
 class MedicationOrderCancel(BaseModel):
