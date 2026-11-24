@@ -307,7 +307,7 @@ def schedule_surgical_case(
         raise HTTPException(status_code=409, detail={"code": "surgical_encounter_not_active"})
     patient = db.scalar(select(Patient).where(
         Patient.id == encounter.patient_id, Patient.hospital_id == hospital_id
-    ))
+    ).with_for_update())
     if patient is None or patient.status != "active":
         raise HTTPException(status_code=409, detail={"code": "surgical_patient_not_active"})
     theatre = db.scalar(select(TheatreRoom).where(
@@ -335,6 +335,7 @@ def schedule_surgical_case(
     resource_conflict = or_(
         SurgicalCase.theatre_room_id == theatre.id,
         SurgicalCase.surgeon_user_id == user.id,
+        SurgicalCase.patient_id == patient.id,
     )
     overlap = db.scalar(select(SurgicalCase.id).where(
         SurgicalCase.hospital_id == hospital_id,
