@@ -480,6 +480,8 @@ def list_laboratory_orders(
         if order_status not in {"ordered", "in_progress", "completed", "cancelled"}:
             raise HTTPException(status_code=422, detail={"code": "invalid_laboratory_order_status"})
         query = query.where(LaboratoryOrder.status == order_status)
+    else:
+        query = query.where(LaboratoryOrder.status.in_(("ordered", "in_progress")))
     orders = list(db.scalars(
         query.order_by(
             case(
@@ -488,6 +490,7 @@ def list_laboratory_orders(
                 else_=2,
             ),
             LaboratoryOrder.ordered_at.asc(),
+            LaboratoryOrder.id.asc(),
         ).limit(limit).offset(offset)
     ).all())
     items = []
