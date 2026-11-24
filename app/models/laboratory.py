@@ -224,7 +224,8 @@ class LaboratoryResult(Base):
             name="ck_lab_result_critical_note",
         ),
         CheckConstraint(
-            "abnormality != 'critical' OR critical_flag = true",
+            "(abnormality = 'critical' AND critical_flag = true) OR "
+            "(abnormality != 'critical' AND critical_flag = false)",
             name="ck_lab_result_critical_abnormality_flag",
         ),
         Index("ix_lab_result_status_time", "hospital_id", "status", "entered_at"),
