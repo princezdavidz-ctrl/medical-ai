@@ -69,6 +69,7 @@ def upgrade() -> None:
         sa.ForeignKeyConstraint(["hospital_id", "patient_id"], ["patients.hospital_id", "patients.id"], name="fk_inpatient_admission_patient"),
         sa.ForeignKeyConstraint(["hospital_id", "encounter_id", "patient_id"], ["encounters.hospital_id", "encounters.id", "encounters.patient_id"], name="fk_inpatient_admission_encounter_patient"),
         sa.ForeignKeyConstraint(["hospital_id", "source_encounter_id"], ["encounters.hospital_id", "encounters.id"], name="fk_inpatient_admission_source_encounter"),
+        sa.ForeignKeyConstraint(["hospital_id", "source_encounter_id", "patient_id"], ["encounters.hospital_id", "encounters.id", "encounters.patient_id"], name="fk_inpatient_admission_source_patient"),
         sa.ForeignKeyConstraint(["hospital_id", "ward_id"], ["wards.hospital_id", "wards.id"], name="fk_inpatient_admission_ward"),
         sa.UniqueConstraint("hospital_id", "id", name="uq_inpatient_admission_hospital_id_id"),
         sa.CheckConstraint("status IN ('requested', 'accepted', 'admitted', 'discharged', 'cancelled')", name="ck_inpatient_admission_status"),
