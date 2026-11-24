@@ -248,3 +248,9 @@ class LaboratoryOrderDetailRead(BaseModel):
     specimens: list[LaboratorySpecimenRead]
     results: list[LaboratoryResultRead]
     critical_acknowledgement: LaboratoryCriticalAcknowledgementRead | None
+
+
+class LaboratoryQueueItemRead(BaseModel):
+    order: LaboratoryOrderRead
+    patient: LaboratoryPatientSummary
+    test: LaboratoryTestDefinitionRead
