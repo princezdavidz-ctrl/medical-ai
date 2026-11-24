@@ -200,6 +200,7 @@ class DeliveryRecord(Base):
         UniqueConstraint("hospital_id", "episode_id", name="uq_maternity_delivery_episode"),
         UniqueConstraint("hospital_id", "surgical_case_id", name="uq_maternity_delivery_surgical_case"),
         CheckConstraint("delivery_mode IN ('spontaneous_vaginal', 'assisted_vaginal', 'cesarean', 'breech', 'other')", name="ck_maternity_delivery_mode"),
+        CheckConstraint("(delivery_mode = 'cesarean' AND surgical_case_id IS NOT NULL) OR (delivery_mode != 'cesarean' AND surgical_case_id IS NULL)", name="ck_maternity_delivery_surgical_case"),
         CheckConstraint("estimated_blood_loss_ml IS NULL OR estimated_blood_loss_ml BETWEEN 0 AND 50000", name="ck_maternity_delivery_blood_loss"),
         CheckConstraint("placenta_delivered_at IS NULL OR placenta_delivered_at >= delivered_at", name="ck_maternity_delivery_placenta_time"),
     )
