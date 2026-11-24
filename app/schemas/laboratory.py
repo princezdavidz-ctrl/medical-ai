@@ -179,8 +179,8 @@ class LaboratoryResultCreate(BaseModel):
             raise ValueError("laboratory_result_requires_exactly_one_value")
         if self.value_numeric is not None and self.unit is None:
             raise ValueError("numeric_laboratory_result_requires_unit")
-        if self.abnormality == "critical" and not self.critical_flag:
-            raise ValueError("critical_abnormality_requires_critical_flag")
+        if self.critical_flag != (self.abnormality == "critical"):
+            raise ValueError("critical_flag_and_abnormality_must_match")
         if self.critical_flag and (
             self.critical_note is None or len(self.critical_note) < 3
         ):
