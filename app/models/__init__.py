@@ -27,6 +27,13 @@ from app.models.ai_usage import AIUsageCounter, AIUsageEvent, AIUsagePolicy, AIU
 from app.models.ai_operations import AIHospitalControl
 from app.models.patient_context import PatientCareAssignment
 from app.models.opd import OPDVisit, OPDTriageAssessment, OPDConsultationNote, OPDDiagnosis
+from app.models.nursing import (
+    NursingAssessment,
+    NursingObservation,
+    NursingNote,
+    NursingCarePlan,
+    NursingCarePlanReview,
+)
 from app.models.patient_registration import (
     PatientDuplicateCase,
     PatientIdentityDocument,
@@ -81,6 +88,11 @@ __all__ = [
     "OPDTriageAssessment",
     "OPDConsultationNote",
     "OPDDiagnosis",
+    "NursingAssessment",
+    "NursingObservation",
+    "NursingNote",
+    "NursingCarePlan",
+    "NursingCarePlanReview",
     "Organization",
     "Patient",
     "PatientCareAssignment",
