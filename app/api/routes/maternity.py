@@ -25,6 +25,7 @@ from app.models import (
     PatientCareAssignment,
     PostpartumObservation,
     Role,
+    SurgicalCase,
 )
 from app.schemas.maternity import (
     DeliveryRecordCreate,
@@ -219,6 +220,26 @@ def _get_newborn(
     if newborn is None:
         raise HTTPException(status_code=404, detail={"code": "newborn_record_not_found"})
     return newborn
+
+
+def _validate_delivery_surgical_case(
+    db: Session, *, hospital_id: UUID, episode: MaternityEpisode,
+    delivery_mode: str, surgical_case_id: UUID | None,
+) -> None:
+    if delivery_mode == "cesarean":
+        if surgical_case_id is None:
+            raise HTTPException(status_code=422, detail={"code": "cesarean_requires_surgical_case_link"})
+        surgical_case = db.scalar(select(SurgicalCase).where(
+            SurgicalCase.id == surgical_case_id,
+            SurgicalCase.hospital_id == hospital_id,
+            SurgicalCase.patient_id == episode.patient_id,
+            SurgicalCase.encounter_id == episode.encounter_id,
+            SurgicalCase.status.in_(("in_progress", "recovery", "completed")),
+        ).with_for_update())
+        if surgical_case is None:
+            raise HTTPException(status_code=409, detail={"code": "matching_active_or_completed_cesarean_case_required"})
+    elif surgical_case_id is not None:
+        raise HTTPException(status_code=422, detail={"code": "surgical_case_link_only_allowed_for_cesarean"})
 
 
 def _episode_detail(db: Session, episode: MaternityEpisode) -> dict:
@@ -538,6 +559,10 @@ def record_delivery(
         raise HTTPException(status_code=409, detail={"code": "labor_not_eligible_for_delivery"})
     if payload.delivered_at < labor.started_at:
         raise HTTPException(status_code=422, detail={"code": "delivery_before_labor_start"})
+    _validate_delivery_surgical_case(
+        db, hospital_id=hospital_id, episode=episode,
+        delivery_mode=payload.delivery_mode, surgical_case_id=payload.surgical_case_id,
+    )
     delivery = DeliveryRecord(
         hospital_id=hospital_id,
         labor_record_id=labor.id,
@@ -584,6 +609,10 @@ def record_planned_cesarean_delivery(
         raise HTTPException(status_code=409, detail={"code": "maternity_episode_not_eligible_for_planned_delivery"})
     if payload.delivery_mode != "cesarean":
         raise HTTPException(status_code=422, detail={"code": "no_labor_delivery_must_be_cesarean"})
+    _validate_delivery_surgical_case(
+        db, hospital_id=hospital_id, episode=episode,
+        delivery_mode=payload.delivery_mode, surgical_case_id=payload.surgical_case_id,
+    )
     existing_labor = db.scalar(select(LaborRecord.id).where(
         LaborRecord.hospital_id == hospital_id,
         LaborRecord.episode_id == episode.id,
