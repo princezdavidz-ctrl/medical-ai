@@ -170,6 +170,8 @@ def _require_admission_access(
     )
     if role_name in _WARD_ADMIN_ROLES:
         return membership, role_name
+    if role_name in _CLINICIAN_ROLES and admission.requested_by_user_id == user_id:
+        return membership, role_name
     if membership.department_id != ward.department_id or not _has_assignment(
         db, user_id=user_id, hospital_id=hospital_id,
         encounter_id=admission.encounter_id, department_id=ward.department_id,
@@ -415,7 +417,10 @@ def list_admissions(
             ),
         )
         query = query.where(
-            InpatientAdmission.encounter_id.in_(assigned_encounters)
+            or_(
+                InpatientAdmission.requested_by_user_id == user.id,
+                InpatientAdmission.encounter_id.in_(assigned_encounters),
+            )
         )
     admissions = list(db.scalars(
         query.order_by(InpatientAdmission.requested_at.desc())
