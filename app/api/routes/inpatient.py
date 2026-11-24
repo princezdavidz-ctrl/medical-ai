@@ -206,10 +206,10 @@ def create_ward(
         raise HTTPException(status_code=404, detail={"code": "ward_department_not_found"})
     ward = Ward(hospital_id=hospital_id, **payload.model_dump())
     db.add(ward)
-    db.flush()
-    _audit(db, hospital_id=hospital_id, user_id=user.id,
-           action="inpatient.ward.created", resource_type="ward", resource_id=ward.id)
     try:
+        db.flush()
+        _audit(db, hospital_id=hospital_id, user_id=user.id,
+               action="inpatient.ward.created", resource_type="ward", resource_id=ward.id)
         db.commit()
     except IntegrityError:
         db.rollback()
@@ -263,10 +263,10 @@ def create_bed(
         raise HTTPException(status_code=404, detail={"code": "active_ward_not_found"})
     bed = HospitalBed(hospital_id=hospital_id, ward_id=ward.id, **payload.model_dump())
     db.add(bed)
-    db.flush()
-    _audit(db, hospital_id=hospital_id, user_id=user.id,
-           action="inpatient.bed.created", resource_type="hospital_bed", resource_id=bed.id)
     try:
+        db.flush()
+        _audit(db, hospital_id=hospital_id, user_id=user.id,
+               action="inpatient.bed.created", resource_type="hospital_bed", resource_id=bed.id)
         db.commit()
     except IntegrityError:
         db.rollback()
@@ -353,11 +353,11 @@ def request_admission(
         status="requested",
     )
     db.add(admission)
-    db.flush()
-    _audit(db, hospital_id=hospital_id, user_id=user.id,
-           action="inpatient.admission.requested",
-           resource_type="inpatient_admission", resource_id=admission.id)
     try:
+        db.flush()
+        _audit(db, hospital_id=hospital_id, user_id=user.id,
+               action="inpatient.admission.requested",
+               resource_type="inpatient_admission", resource_id=admission.id)
         db.commit()
     except IntegrityError:
         db.rollback()
