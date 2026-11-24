@@ -201,6 +201,10 @@ class LaboratoryResult(Base):
             name="ck_lab_result_text_value",
         ),
         CheckConstraint(
+            "value_numeric IS NULL OR (unit IS NOT NULL AND length(trim(unit)) >= 1)",
+            name="ck_lab_result_numeric_unit",
+        ),
+        CheckConstraint(
             "(value_text IS NOT NULL AND value_numeric IS NULL) OR "
             "(value_text IS NULL AND value_numeric IS NOT NULL)",
             name="ck_lab_result_exactly_one_value",
