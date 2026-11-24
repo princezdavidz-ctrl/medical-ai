@@ -238,11 +238,11 @@ def upgrade() -> None:
         CREATE OR REPLACE FUNCTION reject_medication_history_mutation()
         RETURNS trigger
         LANGUAGE plpgsql
-        AS $
+        AS $medication_history$
         BEGIN
             RAISE EXCEPTION 'medication history records are append-only';
         END;
-        $
+        $medication_history$
     """)
     for table in ("medication_order_review_events", "medication_dispenses"):
         op.execute(
