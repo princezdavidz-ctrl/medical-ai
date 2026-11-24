@@ -215,6 +215,18 @@ These corrections are included in the current development branch; they have not 
 - [ ] Laboratory concurrency and locking: order → specimen → result lock order across collection, receipt, rejection, processing, result verification, acknowledgement and cancellation; no duplicate active specimen/result or deadlock.
 - [ ] Laboratory tenant/privacy: RLS on catalog/order/specimen/result/acknowledgement tables, composite patient/encounter/department/test-definition FKs, audit metadata minimization and cross-hospital UUID substitution denial.
 - [ ] Laboratory clinical safety: no seeded clinical test catalog, no automatic reference-range/abnormality interpretation, no analyzer ingestion, no autonomous critical alert, no diagnosis/treatment recommendation or clinical AI activation.
+- [ ] Phase 3.11 imaging procedure catalog: hospital-scoped code uniqueness, modality/contrast/body-region constraints, active department, draft-only creation, independent approval, professional-registration presence, creator/approver separation, reasoned retirement and no unapproved orderability.
+- [ ] Imaging order creation: active clinician role, in-progress encounter, active patient, exact patient/encounter/department assignment, active approved procedure definition, imaging department routing and cross-hospital substitution denial.
+- [ ] Radiology queue and privacy: imaging-department-only visibility, clinician assignment-only access, minimum patient identity, open-order default, STAT/urgent priority ordering, deterministic pagination and audit metadata minimization.
+- [ ] Imaging scheduling: timezone-aware future appointment, accession uniqueness, one study per order, order/study state synchronization, retired procedure schedule/start denial, duplicate schedule denial and concurrent schedule/cancel locking.
+- [ ] Imaging acquisition: scheduled → in_progress → completed transitions, performing-user attribution, ownership checks, timestamps, invalid transition denial and order state consistency.
+- [ ] Imaging PACS references: UID requires PACS system reference, opaque reference handling, no DICOM upload/retrieval claim and no PHI embedded in external reference fields.
+- [ ] Imaging report entry: completed study required, radiologist/resident author roles, required findings/impression, critical flag/note consistency, one report per study and append-only preliminary report.
+- [ ] Imaging report verification: registered verifier role, different verifier from author, preliminary → final transition, immutable final report and order completion timestamp.
+- [ ] Imaging critical finding: manual-only critical flag, required note, no automated threshold/notification, assigned ordering clinician acknowledgement, duplicate acknowledgement denial and audit.
+- [ ] Imaging cancellation: ordering clinician or radiology supervisor authorization, reason required, scheduled study cancellation, no cancellation after acquisition starts and concurrent start/cancel conflict handling.
+- [ ] Imaging tenant/privacy: RLS on procedure/order/study/report/acknowledgement tables, composite patient/encounter/department/procedure FKs, minimum patient identity and cross-hospital UUID substitution denial.
+- [ ] Imaging clinical safety: no seeded procedure catalog, no contrast prescribing/dosing, no automated image analysis or interpretation, no autonomous critical escalation and no AI activation outside central AI release gates.
 - [ ] Module-to-API integration and cross-module workflows.
 - [ ] Kenya SHA and private insurer claims workflows.
 - [ ] Pharmacy, laboratory, radiology, medical devices, messaging and payment integrations.
