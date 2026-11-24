@@ -417,7 +417,7 @@ def schedule_surgical_case(
         ),
     ).limit(1))
     if overlap is not None:
-        raise HTTPException(status_code=409, detail={"code": "theatre_or_surgeon_schedule_conflict"})
+        raise HTTPException(status_code=409, detail={"code": "theatre_surgeon_or_patient_schedule_conflict"})
     surgical_case = SurgicalCase(
         hospital_id=hospital_id,
         patient_id=patient.id,
