@@ -65,6 +65,12 @@ class PediatricGrowthObservation(Base):
         CheckConstraint("mid_upper_arm_cm IS NULL OR mid_upper_arm_cm BETWEEN 5 AND 60", name="ck_pediatric_growth_muac"),
         CheckConstraint("temperature_c IS NULL OR temperature_c BETWEEN 25 AND 45", name="ck_pediatric_growth_temperature"),
         CheckConstraint("source IN ('measured', 'reported')", name="ck_pediatric_growth_source"),
+        CheckConstraint(
+            "weight_kg IS NOT NULL OR height_cm IS NOT NULL OR "
+            "head_circumference_cm IS NOT NULL OR mid_upper_arm_cm IS NOT NULL OR "
+            "temperature_c IS NOT NULL",
+            name="ck_pediatric_growth_has_measurement",
+        ),
         Index("ix_pediatric_growth_record_time", "hospital_id", "care_record_id", "observed_at"),
     )
 
@@ -98,6 +104,10 @@ class PediatricDevelopmentalScreening(Base):
         CheckConstraint(
             "outcome IN ('age_appropriate', 'monitor', 'refer', 'not_assessed', 'unable_to_assess')",
             name="ck_pediatric_screening_outcome",
+        ),
+        CheckConstraint(
+            "outcome != 'refer' OR referral_recommended = true",
+            name="ck_pediatric_screening_referral_consistency",
         ),
         Index("ix_pediatric_screening_record_date", "hospital_id", "care_record_id", "screened_at"),
     )
@@ -135,6 +145,10 @@ class PediatricImmunizationHistory(Base):
         CheckConstraint(
             "record_status != 'administered' OR administered_at IS NOT NULL",
             name="ck_pediatric_immunization_administered_at",
+        ),
+        CheckConstraint(
+            "source != 'caregiver_report' OR record_status != 'administered'",
+            name="ck_pediatric_immunization_caregiver_provenance",
         ),
         Index("ix_pediatric_immunization_record_date", "hospital_id", "care_record_id", "administered_at"),
     )
