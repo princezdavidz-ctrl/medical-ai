@@ -46,7 +46,7 @@ class BillingServiceDefinitionCreate(BaseModel):
     @classmethod
     def normalize_currency(cls, value):
         value = value.strip().upper()
-        if len(value) != 3 or not value.isalpha():
+        if len(value) != 3 or not value.isascii() or not value.isalpha():
             raise ValueError("billing_currency_must_be_three_letter_code")
         return value
 
