@@ -85,6 +85,12 @@ def upgrade() -> None:
         sa.CheckConstraint("mid_upper_arm_cm IS NULL OR mid_upper_arm_cm BETWEEN 5 AND 60", name="ck_pediatric_growth_muac"),
         sa.CheckConstraint("temperature_c IS NULL OR temperature_c BETWEEN 25 AND 45", name="ck_pediatric_growth_temperature"),
         sa.CheckConstraint("source IN ('measured', 'reported')", name="ck_pediatric_growth_source"),
+        sa.CheckConstraint(
+            "weight_kg IS NOT NULL OR height_cm IS NOT NULL OR "
+            "head_circumference_cm IS NOT NULL OR mid_upper_arm_cm IS NOT NULL OR "
+            "temperature_c IS NOT NULL",
+            name="ck_pediatric_growth_has_measurement",
+        ),
     )
     op.create_index(
         "ix_pediatric_growth_record_time",
@@ -118,6 +124,10 @@ def upgrade() -> None:
         sa.CheckConstraint(
             "outcome IN ('age_appropriate', 'monitor', 'refer', 'not_assessed', 'unable_to_assess')",
             name="ck_pediatric_screening_outcome",
+        ),
+        sa.CheckConstraint(
+            "outcome != 'refer' OR referral_recommended = true",
+            name="ck_pediatric_screening_referral_consistency",
         ),
     )
     op.create_index(
@@ -156,6 +166,10 @@ def upgrade() -> None:
         sa.CheckConstraint(
             "record_status != 'administered' OR administered_at IS NOT NULL",
             name="ck_pediatric_immunization_administered_at",
+        ),
+        sa.CheckConstraint(
+            "source != 'caregiver_report' OR record_status != 'administered'",
+            name="ck_pediatric_immunization_caregiver_provenance",
         ),
     )
     op.create_index(
