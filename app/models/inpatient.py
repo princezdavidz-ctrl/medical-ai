@@ -98,6 +98,7 @@ class InpatientAdmission(Base):
             name="fk_inpatient_admission_ward",
         ),
         UniqueConstraint("hospital_id", "id", name="uq_inpatient_admission_hospital_id_id"),
+        UniqueConstraint("hospital_id", "id", "patient_id", name="uq_inpatient_admission_hospital_id_patient"),
         CheckConstraint(
             "status IN ('requested', 'accepted', 'admitted', 'discharged', 'cancelled')",
             name="ck_inpatient_admission_status",
@@ -148,6 +149,8 @@ class BedAssignment(Base):
             "status != 'released' OR released_at IS NOT NULL",
             name="ck_bed_assignment_release_timestamp",
         ),
+        UniqueConstraint("hospital_id", "id", name="uq_bed_assignment_hospital_id_id"),
+        UniqueConstraint("hospital_id", "id", "admission_id", name="uq_bed_assignment_hospital_id_id_admission"),
         Index(
             "uq_bed_assignment_active_bed",
             "hospital_id", "bed_id", unique=True,
