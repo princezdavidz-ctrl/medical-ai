@@ -265,7 +265,10 @@ def list_theatres(
         allowed=_SURGEON_ROLES | _ANESTHESIA_ROLES | _THEATRE_NURSE_ROLES,
     )
     query = select(TheatreRoom).where(TheatreRoom.hospital_id == hospital_id)
-    if role_name not in _THEATRE_MANAGER_ROLES:
+    if role_name in _THEATRE_MANAGER_ROLES:
+        if department_id is not None:
+            query = query.where(TheatreRoom.department_id == department_id)
+    elif role_name not in _SURGEON_ROLES | _ANESTHESIA_ROLES | {"theatre_nurse", "scrub_nurse", "circulating_nurse"}:
         if department_id is not None and department_id != membership.department_id:
             raise HTTPException(status_code=403, detail={"code": "surgery_department_scope_required"})
         query = query.where(TheatreRoom.department_id == membership.department_id)
@@ -478,7 +481,10 @@ def assign_surgical_team_member(
         db, user_id=user.id, hospital_id=hospital_id,
         allowed=_SURGEON_ROLES,
     )
-    if actor_role not in _THEATRE_MANAGER_ROLES and surgical_case.surgeon_user_id != user.id:
+    if actor_role not in _THEATRE_MANAGER_ROLES and (
+        surgical_case.surgeon_user_id != user.id
+        or not _has_assignment(db, user_id=user.id, hospital_id=hospital_id, case=surgical_case)
+    ):
         raise HTTPException(status_code=403, detail={"code": "lead_surgeon_or_theatre_manager_required"})
     if surgical_case.status not in {"scheduled", "in_progress"}:
         raise HTTPException(status_code=409, detail={"code": "surgical_case_team_locked"})
