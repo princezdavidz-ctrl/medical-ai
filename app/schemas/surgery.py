@@ -60,8 +60,9 @@ class SurgicalCaseCreate(BaseModel):
             raise ValueError("surgical_schedule_end_must_follow_start")
         if self.scheduled_end_at - self.scheduled_start_at > timedelta(hours=24):
             raise ValueError("surgical_schedule_duration_exceeds_limit")
-        if self.scheduled_start_at < datetime.now(timezone.utc) - timedelta(minutes=5):
-            raise ValueError("surgical_schedule_cannot_start_in_past")
+        now = datetime.now(timezone.utc)
+        if self.scheduled_start_at < now - timedelta(minutes=5) or self.scheduled_end_at <= now:
+            raise ValueError("surgical_schedule_cannot_be_in_past")
         return self
 
 
