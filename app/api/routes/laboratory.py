@@ -216,7 +216,7 @@ def _require_order_access(
     role_name = _role_name(db, membership)
     if membership is None:
         raise HTTPException(status_code=404, detail={"code": "laboratory_order_not_found"})
-    if role_name in _LAB_WORK_ROLES and membership.department_id == order.laboratory_department_id:
+    if role_name in _LAB_COLLECTION_ROLES and membership.department_id == order.laboratory_department_id:
         return "laboratory"
     if (
         role_name in _CLINICIAN_ROLES
@@ -497,7 +497,7 @@ def list_laboratory_orders(
     user, hospital_id = context
     membership = _membership(db, user_id=user.id, hospital_id=hospital_id)
     role_name = _role_name(db, membership)
-    if membership is None or role_name not in _LAB_WORK_ROLES:
+    if membership is None or role_name not in _LAB_COLLECTION_ROLES:
         raise HTTPException(status_code=403, detail={"code": "laboratory_work_queue_role_required"})
     query = select(LaboratoryOrder).where(
         LaboratoryOrder.hospital_id == hospital_id,
