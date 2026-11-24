@@ -74,8 +74,14 @@ Every module milestone must include:
 - AI assistant modules are workflow clients of the central AI API; they do not host separate models, knowledge stores or bypass release gates.
 - HIE, FHIR, SHA, private insurers, messaging, payment and device integrations are implemented against real partner specifications in the integration phase.
 
-## First implementation target
+## Implementation progress
 
-**Module 1 — Patient Registration & Management (Phase 3.1).**
+| Module | Milestone | Status | Pull request |
+|---|---|---|---|
+| Patient Registration & Management | Phase 3.1 | Implemented; Phase 5 verification pending | PR #27 (merged) |
+| OPD | Phase 3.2 | Implemented; Phase 5 verification pending | PR #28 (merged) |
+| Nursing | Phase 3.3 | In implementation | Current branch |
 
-The Phase 1 backend already has basic patient create/list/read foundations. Phase 3.1 will extend them into a governed registration workflow: duplicate detection, identity/document capture, contact and next-of-kin details, consent/lawful basis, patient merge review, patient status and audit history. No automatic patient merge is permitted.
+Patient Registration & Management extends the Phase 1 patient foundation with governed duplicate review, identity/document metadata, contact and next-of-kin details, consent/lawful-basis recording, patient status and audit history. Automatic patient merging is prohibited.
+
+OPD provides registration, queue, arrival, manual triage, assigned clinician consultation, diagnosis recording and disposition. Nursing provides assignment-scoped assessments, observations, signed notes and care plans. Both remain subject to the Phase 5 test campaign and clinical/security release gates.
