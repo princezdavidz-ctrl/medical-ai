@@ -37,6 +37,13 @@ class PediatricGrowthObservationCreate(BaseModel):
     notes: str | None = Field(default=None, max_length=4000)
     observed_at: datetime
 
+    @field_validator("observed_at")
+    @classmethod
+    def require_aware_observation_time(cls, value):
+        if value.tzinfo is None or value.utcoffset() is None:
+            raise ValueError("pediatric_observation_timestamp_must_include_timezone")
+        return value
+
     @model_validator(mode="after")
     def require_measurement(self):
         if all(value is None for value in (
@@ -89,6 +96,13 @@ class PediatricDevelopmentalScreeningCreate(BaseModel):
             raise ValueError("developmental_instrument_name_required")
         return value
 
+    @field_validator("screened_at")
+    @classmethod
+    def require_aware_screening_time(cls, value):
+        if value.tzinfo is None or value.utcoffset() is None:
+            raise ValueError("developmental_screening_timestamp_must_include_timezone")
+        return value
+
     @model_validator(mode="after")
     def validate_screening(self):
         if self.screened_at > datetime.now(timezone.utc):
@@ -130,6 +144,13 @@ class PediatricImmunizationHistoryCreate(BaseModel):
         value = value.strip()
         if len(value) < 2:
             raise ValueError("vaccine_label_required")
+        return value
+
+    @field_validator("administered_at")
+    @classmethod
+    def require_aware_immunization_time(cls, value):
+        if value is not None and (value.tzinfo is None or value.utcoffset() is None):
+            raise ValueError("immunization_timestamp_must_include_timezone")
         return value
 
     @model_validator(mode="after")
