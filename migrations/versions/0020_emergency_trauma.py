@@ -89,6 +89,7 @@ def upgrade() -> None:
         sa.CheckConstraint("temperature_c IS NULL OR temperature_c BETWEEN 25 AND 45", name="ck_emergency_triage_temp"),
         sa.CheckConstraint("systolic_bp IS NULL OR systolic_bp BETWEEN 30 AND 300", name="ck_emergency_triage_systolic"),
         sa.CheckConstraint("diastolic_bp IS NULL OR diastolic_bp BETWEEN 20 AND 200", name="ck_emergency_triage_diastolic"),
+        sa.CheckConstraint("systolic_bp IS NULL OR diastolic_bp IS NULL OR systolic_bp > diastolic_bp", name="ck_emergency_triage_bp_order"),
         sa.CheckConstraint("spo2_percent IS NULL OR spo2_percent BETWEEN 0 AND 100", name="ck_emergency_triage_spo2"),
         sa.CheckConstraint("red_flag_present = false OR (red_flag_note IS NOT NULL AND length(trim(red_flag_note)) >= 3)", name="ck_emergency_triage_red_flag_note"),
     )
