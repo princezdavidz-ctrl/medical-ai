@@ -138,6 +138,7 @@ class LaborObservation(Base):
             name="fk_labor_observation_record",
         ),
         CheckConstraint("labor_stage IN ('latent', 'active', 'second_stage')", name="ck_labor_observation_stage"),
+        CheckConstraint("membrane_status IS NULL OR membrane_status IN ('intact', 'ruptured', 'unknown')", name="ck_labor_observation_membranes"),
         CheckConstraint("cervical_dilation_cm IS NULL OR cervical_dilation_cm BETWEEN 0 AND 10", name="ck_labor_cervical_dilation"),
         CheckConstraint("fetal_heart_rate IS NULL OR fetal_heart_rate BETWEEN 50 AND 240", name="ck_labor_fhr"),
         CheckConstraint("contractions_per_10_min IS NULL OR contractions_per_10_min BETWEEN 0 AND 10", name="ck_labor_contractions"),
