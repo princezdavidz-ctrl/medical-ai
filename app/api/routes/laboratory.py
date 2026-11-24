@@ -122,6 +122,32 @@ def _has_assignment(
     ).limit(1)) is not None
 
 
+
+def _require_specimen_collection_access(
+    db: Session, *, user_id: UUID, hospital_id: UUID, order: LaboratoryOrder
+) -> None:
+    membership = _membership(db, user_id=user_id, hospital_id=hospital_id)
+    role_name = _role_name(db, membership)
+    if membership is None:
+        raise HTTPException(status_code=403, detail={"code": "specimen_collection_role_required"})
+    if role_name in _LAB_WORK_ROLES and membership.department_id == order.laboratory_department_id:
+        return
+    care_team_roles = _CLINICIAN_ROLES | {
+        "nurse", "registered_nurse", "nursing_officer", "midwife",
+        "emergency_nurse", "triage_nurse",
+    }
+    if (
+        role_name in care_team_roles
+        and membership.department_id == order.ordering_department_id
+        and _has_assignment(
+            db, user_id=user_id, hospital_id=hospital_id,
+            patient_id=order.patient_id, encounter_id=order.encounter_id,
+            department_id=order.ordering_department_id,
+        )
+    ):
+        return
+    raise HTTPException(status_code=403, detail={"code": "specimen_collection_role_or_assignment_required"})
+
 def _get_test_definition(
     db: Session, *, hospital_id: UUID, definition_id: UUID, lock: bool = False
 ) -> LaboratoryTestDefinition:
@@ -307,7 +333,7 @@ def approve_laboratory_test_definition(
         db, user_id=user.id, hospital_id=hospital_id,
         allowed=_LAB_VERIFY_ROLES, department_id=definition.department_id,
     )
-    if not membership.professional_registration:
+    if not membership.professional_registration or not membership.professional_registration.strip():
         raise HTTPException(status_code=403, detail={"code": "laboratory_approver_registration_required"})
     if definition.status != "draft":
         raise HTTPException(status_code=409, detail={"code": "laboratory_definition_not_draft"})
@@ -554,9 +580,8 @@ def create_laboratory_specimen(
 ) -> LaboratorySpecimen:
     user, hospital_id = context
     order = _get_order(db, hospital_id=hospital_id, order_id=order_id, lock=True)
-    _require_lab_role(
-        db, user_id=user.id, hospital_id=hospital_id,
-        allowed=_LAB_WORK_ROLES, department_id=order.laboratory_department_id,
+    _require_specimen_collection_access(
+        db, user_id=user.id, hospital_id=hospital_id, order=order
     )
     if order.status not in {"ordered", "in_progress"}:
         raise HTTPException(status_code=409, detail={"code": "laboratory_order_not_open"})
@@ -771,7 +796,7 @@ def verify_laboratory_result(
         db, user_id=user.id, hospital_id=hospital_id,
         allowed=_LAB_VERIFY_ROLES, department_id=order.laboratory_department_id,
     )
-    if not membership.professional_registration:
+    if not membership.professional_registration or not membership.professional_registration.strip():
         raise HTTPException(status_code=403, detail={"code": "laboratory_verifier_registration_required"})
     if result.status != "preliminary" or specimen.status != "processing":
         raise HTTPException(status_code=409, detail={"code": "laboratory_result_not_verifiable"})
