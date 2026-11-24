@@ -158,6 +158,23 @@ These corrections are included in the current development branch; they have not 
 - [ ] Surgical cancellation: scheduled-only cancellation, lead surgeon/theatre manager permissions, reason required, no cancellation after procedure start and schedule conflict release.
 - [ ] Surgery tenant/privacy: RLS on all surgery tables, composite patient/encounter/theatre/case FKs, cross-hospital substitution and audit records without clinical narrative.
 - [ ] Surgery clinical safety: no automatic procedure selection, ASA scoring, anesthesia dosing, medication orders, blood product orders, device control or clinical AI activation.
+- [ ] Phase 3.8 maternity episode: active patient, same-patient in-progress encounter, active maternity department, assigned clinician, gravida/para, LMP/EDD validation, pregnancy number uniqueness and one active episode per patient.
+- [ ] Maternity role/access: midwife/obstetrician/maternity nurse/neonatal roles, cross-department team assignment, same-hospital membership, encounter assignment, department boundaries and admin access.
+- [ ] Maternity antenatal visits: gestational age bounds, maternal BP consistency, weight/fundal height/FHR bounds, timestamp timezone/future/episode chronology and append-only history.
+- [ ] Labor start: assigned midwife/obstetrician, one labor record per episode, pregnancy state transition, start timestamp and concurrent duplicate labor creation.
+- [ ] Labor observations: labor stage, cervical dilation, FHR, contraction frequency/duration, maternal vitals, membrane status, timestamp ordering, stage history and no automated partograph/alert scoring.
+- [ ] Delivery from labor: allowed labor states, same mother/episode, delivery timestamp, placenta timestamp, blood-loss bounds, one delivery per episode and labor end-state consistency.
+- [ ] Planned cesarean without labor: cesarean-only route, matching same-patient/same-encounter surgical case, surgical case active/recovery/completed state and no duplicate delivery.
+- [ ] Cesarean linkage integrity: database composite FK to surgical case patient, one delivery per surgical case, no surgical-case link for vaginal/assisted delivery and required link for cesarean.
+- [ ] Newborn records: multiple birth orders, sex/outcome values, birth chronology, weight/length/head circumference bounds, manual Apgar 0–10 at 1/5/10 minutes and resuscitation flag.
+- [ ] Newborn outcome rules: stillbirth cannot link to a patient; neonatal-death and live-birth record handling; no newborn observation for stillbirth or recorded neonatal death.
+- [ ] Newborn patient linking: registration role, same-hospital active patient, DOB match, sex consistency, one patient linked to one newborn record and concurrent duplicate link protection.
+- [ ] Newborn observations: assigned neonatal role, live-birth only, observation after birth, temperature/HR/RR/SpO2 bounds, feeding/urine/stool values and append-only history.
+- [ ] Maternal postpartum observations: postpartum state only, observation after delivery, BP consistency, maternal vitals/blood-loss bounds, uterine tone/lochia values and meaningful observation requirement.
+- [ ] Pregnancy ending: obstetrician-only permission, reason enum, note required, active labor closure, no delivery record and ended pregnancy closed-state constraints.
+- [ ] Maternity episode closure: postpartum-only closure, reason required/persisted, labor delivered before closure and denial of later clinical writes.
+- [ ] Maternity privacy/audit: RLS across all maternity tables, cross-hospital UUID substitution, composite mother/delivery/newborn FKs, assignment expiry/revocation and no clinical narrative in audit metadata.
+- [ ] Maternity clinical safety: no automatic gestational age/EDD, partograph scoring, fetal interpretation, obstetric risk score, Apgar calculation, medication dosing, resuscitation device control or clinical AI activation.
 - [ ] Patient MRN uniqueness per hospital and composite foreign-key tenant isolation across registration profile, identity documents, next of kin and duplicate cases.
 - [ ] Patient create/list/read/update RBAC: registration-role access, active care-assignment-only clinical reads, assignment expiry/revocation, department matching and cross-hospital denial.
 - [ ] Patient demographic updates: required-name null rejection, immutable MRN, future DOB rejection, duplicate re-detection and no duplicate-case duplication.
