@@ -219,24 +219,29 @@ def upgrade() -> None:
         DECLARE
             invoice_state text;
             invoice_currency text;
+            invoice_department uuid;
             service_state text;
             service_currency text;
+            service_department uuid;
+            invoice_subtotal numeric;
+            invoice_paid numeric;
         BEGIN
             IF TG_TABLE_NAME = 'invoice_lines' THEN
                 IF TG_OP = 'INSERT' THEN
-                    SELECT status, currency INTO invoice_state, invoice_currency
+                    SELECT status, currency, department_id INTO invoice_state, invoice_currency, invoice_department
                     FROM invoices
                     WHERE hospital_id = NEW.hospital_id AND id = NEW.invoice_id
                     FOR UPDATE;
                     IF invoice_state IS DISTINCT FROM 'draft' THEN
                         RAISE EXCEPTION 'invoice lines can only be added to draft invoices';
                     END IF;
-                    SELECT status, currency INTO service_state, service_currency
+                    SELECT status, currency, department_id INTO service_state, service_currency, service_department
                     FROM billing_service_definitions
                     WHERE hospital_id = NEW.hospital_id AND id = NEW.service_definition_id
                     FOR SHARE;
                     IF service_state IS DISTINCT FROM 'active'
                         OR service_currency IS DISTINCT FROM invoice_currency
+                        OR service_department IS DISTINCT FROM invoice_department
                         OR NEW.currency IS DISTINCT FROM invoice_currency THEN
                         RAISE EXCEPTION 'invoice line service must be active and currency must match invoice';
                     END IF;
@@ -249,8 +254,14 @@ def upgrade() -> None:
             END IF;
 
             IF TG_OP = 'INSERT' THEN
-                IF NEW.status != 'pending' THEN
-                    RAISE EXCEPTION 'new payment records must start pending';
+                SELECT status, currency INTO invoice_state, invoice_currency
+                FROM invoices
+                WHERE hospital_id = NEW.hospital_id AND id = NEW.invoice_id
+                FOR UPDATE;
+                IF NEW.status != 'pending'
+                    OR invoice_state NOT IN ('issued', 'partially_paid')
+                    OR NEW.currency IS DISTINCT FROM invoice_currency THEN
+                    RAISE EXCEPTION 'new payment must be pending and match an open invoice currency';
                 END IF;
                 RETURN NEW;
             END IF;
@@ -271,6 +282,18 @@ def upgrade() -> None:
                 OR NEW.created_at IS DISTINCT FROM OLD.created_at
                 OR NEW.status NOT IN ('confirmed', 'failed') THEN
                 RAISE EXCEPTION 'only pending payment finalization is permitted';
+            END IF;
+            IF NEW.status = 'confirmed' THEN
+                SELECT status, currency, subtotal_total, amount_paid_total
+                INTO invoice_state, invoice_currency, invoice_subtotal, invoice_paid
+                FROM invoices
+                WHERE hospital_id = NEW.hospital_id AND id = NEW.invoice_id
+                FOR UPDATE;
+                IF invoice_state NOT IN ('issued', 'partially_paid')
+                    OR NEW.currency IS DISTINCT FROM invoice_currency
+                    OR NEW.amount > invoice_subtotal - invoice_paid THEN
+                    RAISE EXCEPTION 'confirmed payment exceeds or does not match the open invoice balance';
+                END IF;
             END IF;
             RETURN NEW;
         END;
