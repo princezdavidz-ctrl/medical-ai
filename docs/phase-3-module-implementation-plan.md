@@ -80,8 +80,9 @@ Every module milestone must include:
 |---|---|---|---|
 | Patient Registration & Management | Phase 3.1 | Implemented; Phase 5 verification pending | PR #27 (merged) |
 | OPD | Phase 3.2 | Implemented; Phase 5 verification pending | PR #28 (merged) |
-| Nursing | Phase 3.3 | Implemented; Phase 5 verification pending | PR #29 (merged) |\n| Inpatient & Ward Management | Phase 3.4 | In implementation | Current branch |
+| Nursing | Phase 3.3 | Implemented; Phase 5 verification pending | PR #29 (merged) |
+| Inpatient & Ward Management | Phase 3.4 | In implementation | Current branch |
 
 Patient Registration & Management extends the Phase 1 patient foundation with governed duplicate review, identity/document metadata, contact and next-of-kin details, consent/lawful-basis recording, patient status and audit history. Automatic patient merging is prohibited.
 
-OPD provides registration, queue, arrival, manual triage, assigned clinician consultation, diagnosis recording and disposition. Nursing provides assignment-scoped assessments, observations, signed notes and care plans. Both remain subject to the Phase 5 test campaign and clinical/security release gates.
+OPD provides registration, queue, arrival, manual triage, assigned clinician consultation, diagnosis recording and disposition. Nursing provides assignment-scoped assessments, observations, signed notes and care plans. Inpatient & Ward Management adds ward/bed inventory, admission requests and acceptance, bed assignment, care-team assignment and clinician-led discharge. All modules remain subject to the Phase 5 test campaign and clinical/security release gates.
