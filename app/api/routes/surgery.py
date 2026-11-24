@@ -331,6 +331,7 @@ def assign_lead_surgeon_to_encounter(
         assignment_reason=payload.assignment_reason,
         status="active",
         valid_from=datetime.now(timezone.utc),
+        valid_until=datetime.now(timezone.utc) + timedelta(days=30),
     )
     db.add(assignment)
     db.flush()
