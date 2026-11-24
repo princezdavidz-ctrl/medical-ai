@@ -106,7 +106,9 @@ class SurgicalSafetyChecklistCreate(BaseModel):
     phase: Literal["sign_in", "time_out", "sign_out"]
     patient_identity_confirmed: bool
     procedure_confirmed: bool
+    site_marking_applicable: bool = True
     site_confirmed: bool
+    counts_applicable: bool = True
     consent_verified: bool
     allergies_reviewed: bool
     anesthesia_safety_confirmed: bool
@@ -124,7 +126,9 @@ class SurgicalSafetyChecklistRead(BaseModel):
     revision: int
     patient_identity_confirmed: bool
     procedure_confirmed: bool
+    site_marking_applicable: bool
     site_confirmed: bool
+    counts_applicable: bool
     consent_verified: bool
     allergies_reviewed: bool
     anesthesia_safety_confirmed: bool
