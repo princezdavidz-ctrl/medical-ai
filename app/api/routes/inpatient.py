@@ -380,6 +380,54 @@ def get_admission(
     return admission
 
 
+@router.get("/admissions", response_model=list[AdmissionRead])
+def list_admissions(
+    context: tuple = Depends(get_current_context),
+    db: Session = Depends(get_db),
+    ward_id: UUID | None = None,
+    admission_status: str | None = Query(default=None, alias="status", max_length=24),
+    limit: int = Query(default=50, ge=1, le=100),
+    offset: int = Query(default=0, ge=0),
+) -> list[InpatientAdmission]:
+    user, hospital_id = context
+    membership, role_name = _require_role(
+        db, user_id=user.id, hospital_id=hospital_id,
+        allowed=_CLINICIAN_ROLES | _NURSING_ROLES,
+    )
+    query = select(InpatientAdmission).where(
+        InpatientAdmission.hospital_id == hospital_id
+    )
+    if ward_id is not None:
+        query = query.where(InpatientAdmission.ward_id == ward_id)
+    if admission_status is not None:
+        query = query.where(InpatientAdmission.status == admission_status)
+    if role_name not in _WARD_ADMIN_ROLES:
+        now = datetime.now(timezone.utc)
+        assigned_encounters = select(PatientCareAssignment.encounter_id).where(
+            PatientCareAssignment.hospital_id == hospital_id,
+            PatientCareAssignment.staff_user_id == user.id,
+            PatientCareAssignment.department_id == membership.department_id,
+            PatientCareAssignment.status == "active",
+            PatientCareAssignment.valid_from <= now,
+            or_(
+                PatientCareAssignment.valid_until.is_(None),
+                PatientCareAssignment.valid_until > now,
+            ),
+        )
+        query = query.where(
+            InpatientAdmission.encounter_id.in_(assigned_encounters)
+        )
+    admissions = list(db.scalars(
+        query.order_by(InpatientAdmission.requested_at.desc())
+        .limit(limit).offset(offset)
+    ).all())
+    _audit(db, hospital_id=hospital_id, user_id=user.id,
+           action="inpatient.admissions.viewed",
+           resource_type="inpatient_admission_list", resource_id=None)
+    db.commit()
+    return admissions
+
+
 @router.post("/admissions/{admission_id}/accept", response_model=AdmissionRead)
 def accept_admission(
     admission_id: UUID,
@@ -450,6 +498,17 @@ def assign_admission_bed(
         raise HTTPException(status_code=422, detail={"code": "bed_not_in_requested_ward"})
     if bed.status != "available":
         raise HTTPException(status_code=409, detail={"code": "bed_not_available"})
+    ward = db.scalar(select(Ward).where(
+        Ward.id == bed.ward_id, Ward.hospital_id == hospital_id
+    ))
+    if ward is None:
+        raise HTTPException(status_code=409, detail={"code": "bed_ward_missing"})
+    if ward.ward_type == "icu" and bed.bed_type not in {"critical_care", "high_dependency"}:
+        raise HTTPException(status_code=422, detail={"code": "icu_ward_requires_critical_or_high_dependency_bed"})
+    if ward.ward_type == "maternity" and bed.bed_type not in {"maternity", "standard", "isolation"}:
+        raise HTTPException(status_code=422, detail={"code": "bed_type_not_compatible_with_maternity_ward"})
+    if ward.ward_type == "pediatric" and bed.bed_type not in {"pediatric", "standard", "isolation"}:
+        raise HTTPException(status_code=422, detail={"code": "bed_type_not_compatible_with_pediatric_ward"})
     now = datetime.now(timezone.utc)
     assignment = BedAssignment(
         hospital_id=hospital_id,
