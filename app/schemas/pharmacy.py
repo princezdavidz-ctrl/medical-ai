@@ -92,7 +92,7 @@ class MedicationOrderCreate(BaseModel):
     route: MedicationRoute
     frequency_text: str = Field(min_length=1, max_length=160)
     duration_days: int | None = Field(default=None, ge=1, le=3650)
-    quantity_prescribed: Decimal = Field(gt=0, le=1000000000, max_digits=12, decimal_places=3)
+    quantity_prescribed: Decimal = Field(gt=0, le=999999999.999, max_digits=12, decimal_places=3)
     quantity_unit: str = Field(min_length=1, max_length=40)
     refills: int = Field(default=0, ge=0, le=12)
     indication: str = Field(min_length=3, max_length=4000)
