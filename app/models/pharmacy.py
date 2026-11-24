@@ -38,7 +38,8 @@ class MedicationDefinition(Base):
         ),
         CheckConstraint(
             "length(trim(code)) >= 2 AND length(trim(generic_name)) >= 2 "
-            "AND length(trim(strength_label)) >= 1 AND length(trim(dosage_form)) >= 2",
+            "AND length(trim(active_ingredient)) >= 2 AND length(trim(strength_label)) >= 1 "
+            "AND length(trim(dosage_form)) >= 2",
             name="ck_medication_definition_text",
         ),
         Index("ix_medication_definition_department_status", "hospital_id", "department_id", "status"),
@@ -115,6 +116,10 @@ class MedicationOrder(Base):
         CheckConstraint(
             "status != 'dispensed' OR quantity_dispensed_total = quantity_prescribed",
             name="ck_medication_order_fully_dispensed",
+        ),
+        CheckConstraint(
+            "status != 'partially_dispensed' OR quantity_dispensed_total < quantity_prescribed",
+            name="ck_medication_order_partial_dispense",
         ),
         CheckConstraint(
             "status != 'cancelled' OR (cancelled_at IS NOT NULL AND cancelled_by_user_id IS NOT NULL "
