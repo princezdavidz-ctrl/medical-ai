@@ -791,8 +791,21 @@ def start_surgical_case(
         AnesthesiaRecord.surgical_case_id == surgical_case.id,
     ))
     now = datetime.now(timezone.utc)
-    if anesthesia is None or anesthesia.started_at > now:
-        raise HTTPException(status_code=409, detail={"code": "valid_anesthesia_record_required"})
+    anesthesia_membership = (
+        _membership(db, user_id=anesthesia.anesthesia_provider_user_id, hospital_id=hospital_id)
+        if anesthesia is not None else None
+    )
+    anesthesia_role = _role_name(db, anesthesia_membership)
+    if (
+        anesthesia is None
+        or anesthesia.started_at > now
+        or anesthesia_role not in _ANESTHESIA_ROLES
+        or not _has_assignment(
+            db, user_id=anesthesia.anesthesia_provider_user_id,
+            hospital_id=hospital_id, case=surgical_case,
+        )
+    ):
+        raise HTTPException(status_code=409, detail={"code": "valid_assigned_anesthesia_record_required"})
     surgical_case.status = "in_progress"
     surgical_case.actual_started_at = now
     _audit(db, hospital_id=hospital_id, user_id=user.id,
