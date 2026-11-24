@@ -147,7 +147,7 @@ These corrections are included in the current development branch; they have not 
 - [ ] Lead surgeon assignment: theatre-manager-only assignment to active encounter, valid surgeon membership, cross-department patient assignment, duplicate assignment prevention, 30-day preassignment expiry and extension through scheduled case end plus recovery window.
 - [ ] Theatre conflict prevention: overlapping theatre, surgeon or patient schedules; simultaneous case creation; active case overruns; cancellation freeing schedule; completed case no longer blocking.
 - [ ] Surgical team assignment: lead surgeon/theatre manager authority, same-hospital staff, cross-department assignment, allowed surgeon/anesthesia/theatre nurse roles, active encounter assignment and duplicate prevention.
-- [ ] Surgical detail access: assigned team and hospital administrators can read clinical case detail; theatre managers can manage schedules/team but cannot read clinical notes without assignment.
+- [ ] Surgical detail access: assigned team and hospital administrators can read clinical case detail; theatre managers are department-scoped for operations and cannot read clinical notes without assignment.
 - [ ] Surgical safety checklists: sign-in/time-out/sign-out phase state, revision ordering, failed checks retained, latest revision gates, not-applicable site/count handling and concurrent revisions.
 - [ ] Anesthesia record: assigned anesthetist role, single record per case, ASA class 1–6, timestamp bounds, assessment required, no medication dose fields and end-time validation.
 - [ ] Surgical case start: lead surgeon only, passing latest sign-in and time-out checklists, valid anesthesia record, correct scheduled state and concurrent start denial.
