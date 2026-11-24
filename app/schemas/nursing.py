@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timedelta, timezone
 from decimal import Decimal
 from typing import Literal
 from uuid import UUID
@@ -19,6 +19,17 @@ class NursingAssessmentCreate(BaseModel):
     pressure_injury_risk_level: Literal["low", "moderate", "high", "not_assessed"] | None = None
     nutrition_concerns: str | None = Field(default=None, max_length=4000)
     nursing_concerns: str | None = Field(default=None, max_length=8000)
+
+    @model_validator(mode="after")
+    def require_assessment_content(self):
+        fields = (
+            self.general_condition, self.mental_status, self.mobility_status,
+            self.skin_assessment, self.nutrition_concerns, self.nursing_concerns,
+            self.pain_score, self.fall_risk_level, self.pressure_injury_risk_level,
+        )
+        if not any(value is not None and (not isinstance(value, str) or value.strip()) for value in fields):
+            raise ValueError("nursing_assessment_requires_clinical_content")
+        return self
 
 
 class NursingAssessmentRead(BaseModel):
@@ -64,8 +75,18 @@ class NursingObservationCreate(BaseModel):
         if self.systolic_bp is not None and self.diastolic_bp is not None:
             if self.systolic_bp <= self.diastolic_bp:
                 raise ValueError("systolic_bp_must_exceed_diastolic_bp")
-        if not any(value is not None for key, value in self.model_dump().items() if key != "observed_at"):
+        measurements = (
+            self.heart_rate, self.respiratory_rate, self.temperature_c,
+            self.systolic_bp, self.diastolic_bp, self.spo2_percent,
+            self.pain_score, self.consciousness_level, self.oxygen_delivery,
+            self.intake_ml, self.output_ml,
+        )
+        if not any(value is not None and (not isinstance(value, str) or value.strip()) for value in measurements):
             raise ValueError("nursing_observation_requires_at_least_one_measurement")
+        if self.observed_at.tzinfo is None or self.observed_at.utcoffset() is None:
+            raise ValueError("nursing_observation_timestamp_must_include_timezone")
+        if self.observed_at > datetime.now(timezone.utc) + timedelta(minutes=5):
+            raise ValueError("nursing_observation_timestamp_cannot_be_in_future")
         return self
 
 
