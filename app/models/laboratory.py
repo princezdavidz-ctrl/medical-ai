@@ -86,7 +86,8 @@ class LaboratoryOrder(Base):
             name="ck_lab_order_cancellation_state",
         ),
         CheckConstraint(
-            "status != 'completed' OR completed_at IS NOT NULL",
+            "(status = 'completed' AND completed_at IS NOT NULL) OR "
+            "(status != 'completed' AND completed_at IS NULL)",
             name="ck_lab_order_completion_timestamp",
         ),
         Index("ix_lab_order_patient_encounter", "hospital_id", "patient_id", "encounter_id"),
@@ -137,6 +138,14 @@ class LaboratorySpecimen(Base):
         CheckConstraint(
             "status NOT IN ('processing', 'completed') OR processing_started_at IS NOT NULL",
             name="ck_lab_specimen_processing_state",
+        ),
+        CheckConstraint(
+            "(status = 'collected' AND received_at IS NULL AND processing_started_at IS NULL) OR "
+            "(status = 'received' AND received_at IS NOT NULL AND processing_started_at IS NULL) OR "
+            "(status = 'processing' AND received_at IS NOT NULL AND processing_started_at IS NOT NULL) OR "
+            "(status = 'rejected') OR "
+            "(status = 'completed' AND received_at IS NOT NULL AND processing_started_at IS NOT NULL)",
+            name="ck_lab_specimen_workflow_timestamps",
         ),
         Index("ix_lab_specimen_order_time", "hospital_id", "order_id", "collected_at"),
         Index(
