@@ -201,6 +201,7 @@ def upgrade() -> None:
         sa.ForeignKeyConstraint(["hospital_id", "newborn_patient_id"], ["patients.hospital_id", "patients.id"], name="fk_maternity_newborn_patient"),
         sa.UniqueConstraint("hospital_id", "id", name="uq_maternity_newborn_hospital_id_id"),
         sa.UniqueConstraint("hospital_id", "delivery_id", "birth_order", name="uq_maternity_newborn_birth_order"),
+        sa.UniqueConstraint("hospital_id", "newborn_patient_id", name="uq_maternity_newborn_patient_link"),
         sa.CheckConstraint("birth_order >= 1", name="ck_maternity_newborn_birth_order"),
         sa.CheckConstraint("sex IN ('female', 'male', 'intersex', 'unknown')", name="ck_maternity_newborn_sex"),
         sa.CheckConstraint("outcome IN ('live_birth', 'stillbirth', 'neonatal_death')", name="ck_maternity_newborn_outcome"),
