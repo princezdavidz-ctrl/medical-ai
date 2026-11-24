@@ -489,7 +489,10 @@ def record_labor_observation(
         db, user_id=user.id, hospital_id=hospital_id,
         episode=episode, allowed=_LABOR_ROLES,
     )
-    if labor.status not in {"latent", "active", "second_stage"}:
+    if (
+        episode.status != "active" or episode.pregnancy_status != "in_labor"
+        or labor.status not in {"latent", "active", "second_stage"}
+    ):
         raise HTTPException(status_code=409, detail={"code": "labor_record_not_open"})
     if payload.observed_at < labor.started_at:
         raise HTTPException(status_code=422, detail={"code": "labor_observation_before_labor_start"})
@@ -530,7 +533,10 @@ def record_delivery(
         db, user_id=user.id, hospital_id=hospital_id,
         episode=episode, allowed=_DELIVERY_ROLES,
     )
-    if labor.status not in {"latent", "active", "second_stage"}:
+    if (
+        episode.status != "active" or episode.pregnancy_status != "in_labor"
+        or labor.status not in {"latent", "active", "second_stage"}
+    ):
         raise HTTPException(status_code=409, detail={"code": "labor_not_eligible_for_delivery"})
     if payload.delivered_at < labor.started_at:
         raise HTTPException(status_code=422, detail={"code": "delivery_before_labor_start"})
@@ -577,6 +583,8 @@ def record_newborn(
         db, user_id=user.id, hospital_id=hospital_id,
         episode=episode, allowed=_NEWBORN_ROLES,
     )
+    if episode.status != "active" or episode.pregnancy_status != "postpartum":
+        raise HTTPException(status_code=409, detail={"code": "maternity_episode_not_open_for_newborn_records"})
     if payload.birth_at < delivery.delivered_at:
         raise HTTPException(status_code=422, detail={"code": "newborn_birth_before_delivery_record"})
     newborn = NewbornRecord(
@@ -698,7 +706,7 @@ def record_newborn_observation(
         db, user_id=user.id, hospital_id=hospital_id,
         episode=episode, allowed=_NEONATAL_ROLES,
     )
-    if newborn.outcome != "live_birth":
+    if episode.status != "active" or newborn.outcome != "live_birth":
         raise HTTPException(status_code=409, detail={"code": "newborn_not_eligible_for_observation"})
     if payload.observed_at < newborn.birth_at:
         raise HTTPException(status_code=422, detail={"code": "newborn_observation_before_birth"})
@@ -772,6 +780,7 @@ def close_maternity_episode(
         raise HTTPException(status_code=409, detail={"code": "labor_must_be_completed_before_episode_close"})
     episode.status = "closed"
     episode.closed_at = datetime.now(timezone.utc)
+    episode.closed_reason = payload.reason
     _audit(db, hospital_id=hospital_id, user_id=user.id,
            action="maternity.episode.closed", resource_type="maternity_episode", resource_id=episode.id)
     db.commit()
