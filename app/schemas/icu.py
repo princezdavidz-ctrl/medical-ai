@@ -37,6 +37,7 @@ class ICUStayRead(BaseModel):
     started_at: datetime
     stepdown_requested_by_user_id: UUID | None
     stepdown_requested_at: datetime | None
+    stepdown_reason: str | None
     closed_by_user_id: UUID | None
     closed_at: datetime | None
 
