@@ -132,6 +132,16 @@ These corrections are included in the current development branch; they have not 
 - [ ] Emergency-to-inpatient handoff: admission_requested source encounter eligibility, active clinician assignment, duplicate inpatient admission protection and no false bed confirmation.
 - [ ] Emergency tenant integrity: RLS on all emergency tables, composite patient/encounter/department foreign keys, cross-hospital ID substitution and audit attribution.
 - [ ] Emergency clinical safety: no automated triage scoring, diagnosis, treatment recommendation, medication administration, referral acceptance, ambulance dispatch or clinical AI activation.
+- [ ] Phase 3.6 ICU: start only from admitted inpatient with active occupied bed assignment in an active ICU ward and matching inpatient encounter/department.
+- [ ] ICU authorization: ICU clinician/nurse role, active hospital membership, ICU department membership and active encounter assignment; no unassigned or cross-hospital access.
+- [ ] ICU concurrency: duplicate active ICU stay per admission, concurrent start versus discharge, stepdown versus close, observation writes versus close and partial unique index behavior.
+- [ ] ICU observations: vital numeric bounds, blood pressure ordering, pain score, separate GCS component bounds, fluid intake/output/urine output bounds, timezone/future timestamps and observation chronology.
+- [ ] ICU care events: event type, assigned staff, event timestamps, chronology and append-only behavior.
+- [ ] ICU progress notes: allowed note types, assigned staff, signature actor/time, no edit/delete route and clinical narrative privacy in audit.
+- [ ] ICU stepdown: clinician-only request, reason required, status transition, no false transfer completion, no premature bed release and active ICU stay uniqueness retained.
+- [ ] ICU closure: inpatient discharge must be completed first, assigned ICU clinician only, closure timestamp/actor and post-closure write denial.
+- [ ] ICU detail/list: assigned staff scope, administrator read access, pagination limits, RLS and audit on access.
+- [ ] ICU clinical safety: no automated APACHE/SOFA or GCS score calculation, alarms, diagnosis, prognosis, ventilator control, medication dosing, vasopressor orders or AI activation.
 - [ ] Patient MRN uniqueness per hospital and composite foreign-key tenant isolation across registration profile, identity documents, next of kin and duplicate cases.
 - [ ] Patient create/list/read/update RBAC: registration-role access, active care-assignment-only clinical reads, assignment expiry/revocation, department matching and cross-hospital denial.
 - [ ] Patient demographic updates: required-name null rejection, immutable MRN, future DOB rejection, duplicate re-detection and no duplicate-case duplication.

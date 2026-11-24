@@ -82,8 +82,9 @@ Every module milestone must include:
 | OPD | Phase 3.2 | Implemented; Phase 5 verification pending | PR #28 (merged) |
 | Nursing | Phase 3.3 | Implemented; Phase 5 verification pending | PR #29 (merged) |
 | Inpatient & Ward Management | Phase 3.4 | Implemented; Phase 5 verification pending | PR #30 (merged) |
-| Emergency & Trauma | Phase 3.5 | In implementation | Current branch |
+| Emergency & Trauma | Phase 3.5 | Implemented; Phase 5 verification pending | PR #31 (merged) |
+| ICU | Phase 3.6 | In implementation | Current branch |
 
 Patient Registration & Management extends the Phase 1 patient foundation with governed duplicate review, identity/document metadata, contact and next-of-kin details, consent/lawful-basis recording, patient status and audit history. Automatic patient merging is prohibited.
 
-OPD provides registration, queue, arrival, manual triage, assigned clinician consultation, diagnosis recording and disposition. Nursing provides assignment-scoped assessments, observations, signed notes and care plans. Inpatient & Ward Management adds ward/bed inventory, admission requests and acceptance, bed assignment, care-team assignment and clinician-led discharge. Emergency & Trauma adds arrival registration, manual triage/reassessment, assigned clinician treatment, care events, signed notes and disposition. All modules remain subject to the Phase 5 test campaign and clinical/security release gates.
+OPD provides registration, queue, arrival, manual triage, assigned clinician consultation, diagnosis recording and disposition. Nursing provides assignment-scoped assessments, observations, signed notes and care plans. Inpatient & Ward Management adds ward/bed inventory, admission requests and acceptance, bed assignment, care-team assignment and clinician-led discharge. Emergency & Trauma adds arrival registration, manual triage/reassessment, assigned clinician treatment, care events, signed notes and disposition. ICU adds assigned ICU stays, observations, care events, signed progress notes and stepdown requests. All modules remain subject to the Phase 5 test campaign and clinical/security release gates.

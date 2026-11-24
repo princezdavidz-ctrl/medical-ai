@@ -29,6 +29,7 @@ from app.models.patient_context import PatientCareAssignment
 from app.models.opd import OPDVisit, OPDTriageAssessment, OPDConsultationNote, OPDDiagnosis
 from app.models.inpatient import Ward, HospitalBed, InpatientAdmission, BedAssignment
 from app.models.emergency import EmergencyVisit, EmergencyTriageAssessment, EmergencyCareEvent, EmergencyNote
+from app.models.icu import ICUStay, ICUObservation, ICUCareEvent, ICUProgressNote
 from app.models.nursing import (
     NursingAssessment,
     NursingObservation,
@@ -98,6 +99,10 @@ __all__ = [
     "EmergencyTriageAssessment",
     "EmergencyCareEvent",
     "EmergencyNote",
+    "ICUStay",
+    "ICUObservation",
+    "ICUCareEvent",
+    "ICUProgressNote",
     "NursingAssessment",
     "NursingObservation",
     "NursingNote",
