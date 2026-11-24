@@ -216,7 +216,9 @@ def _require_order_access(
     role_name = _role_name(db, membership)
     if membership is None:
         raise HTTPException(status_code=404, detail={"code": "laboratory_order_not_found"})
-    if role_name in _LAB_COLLECTION_ROLES and membership.department_id == order.laboratory_department_id:
+    if role_name == "phlebotomist" and membership.department_id == order.laboratory_department_id:
+        return "collection_only"
+    if role_name in _LAB_WORK_ROLES and membership.department_id == order.laboratory_department_id:
         return "laboratory"
     if (
         role_name in _CLINICIAN_ROLES
@@ -556,8 +558,13 @@ def get_laboratory_order(
 ) -> dict:
     user, hospital_id = context
     order = _get_order(db, hospital_id=hospital_id, order_id=order_id)
-    _require_order_access(db, user_id=user.id, hospital_id=hospital_id, order=order)
+    access_scope = _require_order_access(
+        db, user_id=user.id, hospital_id=hospital_id, order=order
+    )
     result = _order_detail(db, order)
+    if access_scope == "collection_only":
+        result["results"] = []
+        result["critical_acknowledgement"] = None
     write_audit_event(
         db, hospital_id=hospital_id, actor_user_id=user.id,
         action="laboratory.order.viewed", resource_type="laboratory_order",
