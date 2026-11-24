@@ -143,7 +143,7 @@ class AnesthesiaRecordCreate(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     anesthesia_type: Literal["general", "regional", "local", "sedation", "combined"]
-    asa_class: int = Field(ge=1, le=5)
+    asa_class: int = Field(ge=1, le=6)
     airway_method: str | None = Field(default=None, max_length=160)
     pre_anesthesia_assessment: str = Field(min_length=3, max_length=10000)
     intraoperative_notes: str | None = Field(default=None, max_length=12000)
