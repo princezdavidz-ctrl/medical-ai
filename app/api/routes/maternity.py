@@ -561,8 +561,9 @@ def record_labor_observation(
     db: Session = Depends(get_db),
 ) -> LaborObservation:
     user, hospital_id = context
+    labor_ref = _get_labor(db, hospital_id=hospital_id, labor_id=labor_id)
+    episode = _get_episode(db, hospital_id=hospital_id, episode_id=labor_ref.episode_id, lock=True)
     labor = _get_labor(db, hospital_id=hospital_id, labor_id=labor_id, lock=True)
-    episode = _get_episode(db, hospital_id=hospital_id, episode_id=labor.episode_id, lock=True)
     _require_episode_access(
         db, user_id=user.id, hospital_id=hospital_id,
         episode=episode, allowed=_LABOR_ROLES,
@@ -957,7 +958,7 @@ def end_pregnancy(
         if labor.status in {"delivered", "ended"}:
             raise HTTPException(status_code=409, detail={"code": "labor_already_ended"})
         labor.status = "ended"
-        labor.ended_at = datetime.now(timezone.utc)
+        labor.ended_at = max(datetime.now(timezone.utc), labor.started_at)
     now = datetime.now(timezone.utc)
     episode.pregnancy_status = "ended"
     episode.pregnancy_end_reason = payload.reason
