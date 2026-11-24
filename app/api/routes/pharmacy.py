@@ -389,6 +389,8 @@ def create_medication_order(
     ))
     if pharmacy_department is None:
         raise HTTPException(status_code=409, detail={"code": "pharmacy_department_not_active"})
+    order_payload = payload.model_dump()
+    order_payload.pop("medication_definition_id")
     order = MedicationOrder(
         hospital_id=hospital_id,
         patient_id=patient.id,
@@ -397,7 +399,7 @@ def create_medication_order(
         pharmacy_department_id=definition.department_id,
         medication_definition_id=definition.id,
         prescribed_by_user_id=user.id,
-        **payload.model_dump(),
+        **order_payload,
         status="pending_pharmacy_review",
         quantity_dispensed_total=0,
     )
@@ -523,6 +525,12 @@ def review_medication_order(
     )
     if not membership.professional_registration or not membership.professional_registration.strip():
         raise HTTPException(status_code=403, detail={"code": "pharmacist_registration_required"})
+    definition = _get_definition(
+        db, hospital_id=hospital_id,
+        definition_id=order.medication_definition_id, lock=True,
+    )
+    if definition.status != "active":
+        raise HTTPException(status_code=409, detail={"code": "retired_medication_cannot_be_reviewed"})
     if order.prescribed_by_user_id == user.id:
         raise HTTPException(status_code=403, detail={"code": "prescriber_cannot_review_own_order"})
     if order.status not in {"pending_pharmacy_review", "on_hold", "approved_for_dispense"}:
@@ -574,6 +582,12 @@ def dispense_medication(
     )
     if not membership.professional_registration or not membership.professional_registration.strip():
         raise HTTPException(status_code=403, detail={"code": "pharmacist_registration_required"})
+    definition = _get_definition(
+        db, hospital_id=hospital_id,
+        definition_id=order.medication_definition_id, lock=True,
+    )
+    if definition.status != "active":
+        raise HTTPException(status_code=409, detail={"code": "retired_medication_cannot_be_dispensed"})
     if order.status not in {"approved_for_dispense", "partially_dispensed"}:
         raise HTTPException(status_code=409, detail={"code": "medication_order_not_approved_for_dispense"})
     if payload.quantity_unit != order.quantity_unit:
