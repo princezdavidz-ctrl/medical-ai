@@ -633,7 +633,11 @@ def complete_imaging_study(
         db, user_id=user.id, hospital_id=hospital_id,
         allowed=_RADIOLOGY_WORK_ROLES, department_id=order.imaging_department_id,
     )
-    if study.status != "in_progress" or study.performed_by_user_id != user.id:
+    if (
+        order.status != "in_progress"
+        or study.status != "in_progress"
+        or study.performed_by_user_id != user.id
+    ):
         raise HTTPException(status_code=409, detail={"code": "imaging_study_not_owned_or_in_progress"})
     study.status = "completed"
     study.completed_at = datetime.now(timezone.utc)
@@ -670,7 +674,7 @@ def enter_imaging_report(
         db, user_id=user.id, hospital_id=hospital_id,
         allowed=_REPORT_AUTHOR_ROLES, department_id=order.imaging_department_id,
     )
-    if study.status != "completed":
+    if study.status != "completed" or order.status != "in_progress":
         raise HTTPException(status_code=409, detail={"code": "completed_imaging_study_required"})
     existing = db.scalar(select(ImagingReport.id).where(
         ImagingReport.hospital_id == hospital_id,
@@ -721,7 +725,11 @@ def verify_imaging_report(
     )
     if not membership.professional_registration or not membership.professional_registration.strip():
         raise HTTPException(status_code=403, detail={"code": "radiology_verifier_registration_required"})
-    if report.status != "preliminary" or study.status != "completed":
+    if (
+        report.status != "preliminary"
+        or study.status != "completed"
+        or order.status != "in_progress"
+    ):
         raise HTTPException(status_code=409, detail={"code": "imaging_report_not_verifiable"})
     if report.entered_by_user_id == user.id:
         raise HTTPException(status_code=403, detail={"code": "imaging_report_two_person_verification_required"})
