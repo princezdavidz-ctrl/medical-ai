@@ -97,6 +97,7 @@ class InpatientAdmission(Base):
             "status IN ('requested', 'accepted', 'admitted', 'discharged', 'cancelled')",
             name="ck_inpatient_admission_status",
         ),
+        CheckConstraint("length(trim(admission_reason)) >= 3", name="ck_inpatient_admission_reason"),
         Index(
             "uq_inpatient_active_patient",
             "hospital_id", "patient_id",
