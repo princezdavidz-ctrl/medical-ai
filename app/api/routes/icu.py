@@ -133,11 +133,13 @@ def _has_assignment(
 def _require_stay_access(
     db: Session, *, user_id: UUID, hospital_id: UUID, stay: ICUStay,
     allowed: set[str] | None = None,
+    allow_admin: bool = False,
 ) -> str:
     allowed = allowed or (_ICU_NURSE_ROLES | _ICU_CLINICIAN_ROLES)
     _, role_name = _require_role(
         db, user_id=user_id, hospital_id=hospital_id,
         allowed=allowed, department_id=stay.department_id,
+        allow_admin=allow_admin,
     )
     if role_name not in _ADMIN_ROLES and not _has_assignment(
         db, user_id=user_id, hospital_id=hospital_id, stay=stay
@@ -312,7 +314,9 @@ def get_icu_stay(
 ) -> dict:
     user, hospital_id = context
     stay = _get_stay(db, hospital_id=hospital_id, stay_id=stay_id)
-    _require_stay_access(db, user_id=user.id, hospital_id=hospital_id, stay=stay)
+    _require_stay_access(
+        db, user_id=user.id, hospital_id=hospital_id, stay=stay, allow_admin=True,
+    )
     result = _stay_detail(db, stay)
     _audit(
         db, hospital_id=hospital_id, user_id=user.id,
