@@ -1,6 +1,5 @@
 import uuid
 from datetime import datetime
-from decimal import Decimal
 
 from sqlalchemy import (
     Boolean, CheckConstraint, DateTime, ForeignKey, ForeignKeyConstraint,
@@ -153,12 +152,12 @@ class ImagingStudy(Base):
         ),
         CheckConstraint(
             "(status = 'scheduled' AND scheduled_at IS NOT NULL AND started_at IS NULL "
-            "AND completed_at IS NULL) OR "
+            "AND completed_at IS NULL AND cancelled_at IS NULL) OR "
             "(status = 'in_progress' AND scheduled_at IS NOT NULL AND started_at IS NOT NULL "
-            "AND completed_at IS NULL) OR "
+            "AND completed_at IS NULL AND cancelled_at IS NULL) OR "
             "(status = 'completed' AND scheduled_at IS NOT NULL AND started_at IS NOT NULL "
-            "AND completed_at IS NOT NULL) OR "
-            "(status = 'cancelled' AND cancelled_at IS NOT NULL)",
+            "AND completed_at IS NOT NULL AND cancelled_at IS NULL) OR "
+            "(status = 'cancelled' AND scheduled_at IS NOT NULL AND cancelled_at IS NOT NULL)",
             name="ck_imaging_study_workflow_timestamps",
         ),
         CheckConstraint(
