@@ -74,10 +74,13 @@ def _require_role(
     hospital_id: UUID,
     allowed: set[str],
     department_id: UUID | None = None,
+    allow_ward_admin: bool = True,
 ) -> tuple[HospitalMembership, str]:
     membership = _membership(db, user_id=user_id, hospital_id=hospital_id)
     role_name = _role_name(db, membership)
-    if membership is None or role_name not in allowed | _WARD_ADMIN_ROLES:
+    if membership is None or (
+        role_name not in allowed and not (allow_ward_admin and role_name in _WARD_ADMIN_ROLES)
+    ):
         raise HTTPException(status_code=403, detail={"code": "inpatient_role_not_authorized"})
     if role_name not in _WARD_ADMIN_ROLES and department_id is not None:
         if membership.department_id != department_id:
@@ -118,8 +121,9 @@ def _has_assignment(
 def _require_source_encounter(
     db: Session, *, user_id: UUID, hospital_id: UUID, encounter_id: UUID
 ) -> Encounter:
-    membership, role_name = _require_role(
-        db, user_id=user_id, hospital_id=hospital_id, allowed=_CLINICIAN_ROLES,
+    membership, _ = _require_role(
+        db, user_id=user_id, hospital_id=hospital_id,
+        allowed=_CLINICIAN_ROLES, allow_ward_admin=False,
     )
     encounter = db.scalar(select(Encounter).where(
         Encounter.id == encounter_id,
@@ -175,10 +179,11 @@ def _require_admission_access(
 
 
 def _audit(db: Session, *, hospital_id: UUID, user_id: UUID,
-           action: str, resource_type: str, resource_id: UUID) -> None:
+           action: str, resource_type: str, resource_id: UUID | None) -> None:
     write_audit_event(
         db, hospital_id=hospital_id, actor_user_id=user_id,
-        action=action, resource_type=resource_type, resource_id=str(resource_id),
+        action=action, resource_type=resource_type,
+        resource_id=str(resource_id) if resource_id is not None else None,
     )
 
 
@@ -220,19 +225,22 @@ def list_wards(
     active_only: bool = True,
 ) -> list[Ward]:
     user, hospital_id = context
-    _require_role(
+    membership, role_name = _require_role(
         db, user_id=user.id, hospital_id=hospital_id,
         allowed=_CLINICIAN_ROLES | _NURSING_ROLES,
     )
     query = select(Ward).where(Ward.hospital_id == hospital_id)
-    if department_id is not None:
+    if role_name not in _WARD_ADMIN_ROLES:
+        if department_id is not None and department_id != membership.department_id:
+            raise HTTPException(status_code=403, detail={"code": "inpatient_department_scope_required"})
+        query = query.where(Ward.department_id == membership.department_id)
+    elif department_id is not None:
         query = query.where(Ward.department_id == department_id)
     if active_only:
         query = query.where(Ward.status == "active")
     wards = list(db.scalars(query.order_by(Ward.name)).all())
     _audit(db, hospital_id=hospital_id, user_id=user.id,
-           action="inpatient.wards.viewed", resource_type="ward_list",
-           resource_id=wards[0].id if wards else UUID(int=0))
+           action="inpatient.wards.viewed", resource_type="ward_list", resource_id=None)
     db.commit()
     return wards
 
@@ -274,15 +282,16 @@ def list_ward_beds(
     status_filter: str | None = Query(default=None, alias="status", max_length=24),
 ) -> list[HospitalBed]:
     user, hospital_id = context
-    _require_role(
-        db, user_id=user.id, hospital_id=hospital_id,
-        allowed=_CLINICIAN_ROLES | _NURSING_ROLES,
-    )
     ward = db.scalar(select(Ward).where(
         Ward.id == ward_id, Ward.hospital_id == hospital_id
     ))
     if ward is None:
         raise HTTPException(status_code=404, detail={"code": "ward_not_found"})
+    _require_role(
+        db, user_id=user.id, hospital_id=hospital_id,
+        allowed=_CLINICIAN_ROLES | _NURSING_ROLES,
+        department_id=ward.department_id,
+    )
     query = select(HospitalBed).where(
         HospitalBed.hospital_id == hospital_id, HospitalBed.ward_id == ward.id
     )
@@ -353,6 +362,24 @@ def request_admission(
     return admission
 
 
+@router.get("/admissions/{admission_id}", response_model=AdmissionRead)
+def get_admission(
+    admission_id: UUID,
+    context: tuple = Depends(get_current_context),
+    db: Session = Depends(get_db),
+) -> InpatientAdmission:
+    user, hospital_id = context
+    admission = _get_admission(db, hospital_id=hospital_id, admission_id=admission_id)
+    _require_admission_access(
+        db, user_id=user.id, hospital_id=hospital_id, admission=admission,
+    )
+    _audit(db, hospital_id=hospital_id, user_id=user.id,
+           action="inpatient.admission.viewed",
+           resource_type="inpatient_admission", resource_id=admission.id)
+    db.commit()
+    return admission
+
+
 @router.post("/admissions/{admission_id}/accept", response_model=AdmissionRead)
 def accept_admission(
     admission_id: UUID,
@@ -369,6 +396,7 @@ def accept_admission(
     _require_role(
         db, user_id=user.id, hospital_id=hospital_id,
         allowed=_CLINICIAN_ROLES, department_id=ward.department_id,
+        allow_ward_admin=False,
     )
     if admission.status != "requested":
         raise HTTPException(status_code=409, detail={"code": "admission_not_in_requested_state"})
@@ -520,9 +548,10 @@ def discharge_inpatient(
     user, hospital_id = context
     admission = _get_admission(db, hospital_id=hospital_id, admission_id=admission_id, lock=True)
     ward = db.scalar(select(Ward).where(Ward.id == admission.ward_id, Ward.hospital_id == hospital_id))
-    membership, role_name = _require_role(
+    _require_role(
         db, user_id=user.id, hospital_id=hospital_id, allowed=_CLINICIAN_ROLES,
         department_id=ward.department_id if ward else None,
+        allow_ward_admin=False,
     )
     if (
         admission.status != "admitted"
