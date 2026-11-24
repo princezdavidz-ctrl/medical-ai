@@ -472,6 +472,42 @@ def accept_admission(
     return admission
 
 
+@router.post("/admissions/{admission_id}/cancel", response_model=AdmissionRead)
+def cancel_pending_admission(
+    admission_id: UUID,
+    context: tuple = Depends(get_current_context),
+    db: Session = Depends(get_db),
+) -> InpatientAdmission:
+    user, hospital_id = context
+    _require_role(db, user_id=user.id, hospital_id=hospital_id, allowed=set())
+    admission = _get_admission(db, hospital_id=hospital_id, admission_id=admission_id, lock=True)
+    if admission.status not in {"requested", "accepted"}:
+        raise HTTPException(status_code=409, detail={"code": "only_pending_admission_can_be_cancelled"})
+    now = datetime.now(timezone.utc)
+    admission.status = "cancelled"
+    encounter = db.scalar(select(Encounter).where(
+        Encounter.id == admission.encounter_id,
+        Encounter.hospital_id == hospital_id,
+    ).with_for_update())
+    if encounter is not None:
+        encounter.status = "cancelled"
+        encounter.ended_at = now
+    assignments = db.scalars(select(PatientCareAssignment).where(
+        PatientCareAssignment.hospital_id == hospital_id,
+        PatientCareAssignment.encounter_id == admission.encounter_id,
+        PatientCareAssignment.status == "active",
+    ).with_for_update()).all()
+    for assignment in assignments:
+        assignment.valid_until = max(now, assignment.valid_from + timedelta(seconds=1))
+    _audit(db, hospital_id=hospital_id, user_id=user.id,
+           action="inpatient.admission.cancelled",
+           resource_type="inpatient_admission", resource_id=admission.id)
+    db.commit()
+    _restore_tenant_context(db, user_id=user.id, hospital_id=hospital_id)
+    db.refresh(admission)
+    return admission
+
+
 @router.post(
     "/admissions/{admission_id}/bed-assignment",
     response_model=BedAssignmentRead,
@@ -501,8 +537,8 @@ def assign_admission_bed(
     ward = db.scalar(select(Ward).where(
         Ward.id == bed.ward_id, Ward.hospital_id == hospital_id
     ))
-    if ward is None:
-        raise HTTPException(status_code=409, detail={"code": "bed_ward_missing"})
+    if ward is None or ward.status != "active" or ward.id != admission.ward_id:
+        raise HTTPException(status_code=409, detail={"code": "bed_ward_missing_or_inactive"})
     if ward.ward_type == "icu" and bed.bed_type not in {"critical_care", "high_dependency"}:
         raise HTTPException(status_code=422, detail={"code": "icu_ward_requires_critical_or_high_dependency_bed"})
     if ward.ward_type == "maternity" and bed.bed_type not in {"maternity", "standard", "isolation"}:
@@ -681,6 +717,13 @@ def mark_bed_ready(
         raise HTTPException(status_code=404, detail={"code": "hospital_bed_not_found"})
     if bed.status != "cleaning":
         raise HTTPException(status_code=409, detail={"code": "bed_not_in_cleaning_state"})
+    active_assignment = db.scalar(select(BedAssignment.id).where(
+        BedAssignment.hospital_id == hospital_id,
+        BedAssignment.bed_id == bed.id,
+        BedAssignment.status == "active",
+    ).limit(1))
+    if active_assignment is not None:
+        raise HTTPException(status_code=409, detail={"code": "bed_still_has_active_assignment"})
     bed.status = "available"
     _audit(db, hospital_id=hospital_id, user_id=user.id,
            action="inpatient.bed.ready", resource_type="hospital_bed", resource_id=bed.id)
