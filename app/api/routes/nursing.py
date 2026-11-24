@@ -2,7 +2,7 @@ from datetime import datetime, timezone
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy import or_, select, text
+from sqlalchemy import or_, select, text, text
 from sqlalchemy.orm import Session
 
 from app.api.audit import write_audit_event
@@ -55,6 +55,17 @@ def _membership(db: Session, *, user_id: UUID, hospital_id: UUID):
 def _role_name(db: Session, membership: HospitalMembership | None) -> str:
     role = db.get(Role, membership.role_id) if membership else None
     return role.name.strip().casefold().replace(" ", "_") if role else ""
+
+
+def _restore_tenant_context(db: Session, *, user_id: UUID, hospital_id: UUID) -> None:
+    db.execute(
+        text("SELECT set_config('app.current_hospital_id', :hospital_id, true)"),
+        {"hospital_id": str(hospital_id)},
+    )
+    db.execute(
+        text("SELECT set_config('app.current_user_id', :user_id, true)"),
+        {"user_id": str(user_id)},
+    )
 
 
 def _require_assigned_encounter(
@@ -160,6 +171,7 @@ def create_nursing_assessment(
         resource_type="nursing_assessment", resource_id=assessment.id,
     )
     db.commit()
+    _restore_tenant_context(db, user_id=user.id, hospital_id=hospital_id)
     db.refresh(assessment)
     return assessment
 
@@ -194,6 +206,7 @@ def record_nursing_observation(
         resource_type="nursing_observation", resource_id=observation.id,
     )
     db.commit()
+    _restore_tenant_context(db, user_id=user.id, hospital_id=hospital_id)
     db.refresh(observation)
     return observation
 
@@ -228,6 +241,7 @@ def create_nursing_note(
         resource_type="nursing_note", resource_id=note.id,
     )
     db.commit()
+    _restore_tenant_context(db, user_id=user.id, hospital_id=hospital_id)
     db.refresh(note)
     return note
 
@@ -263,6 +277,7 @@ def create_nursing_care_plan(
         resource_type="nursing_care_plan", resource_id=plan.id,
     )
     db.commit()
+    _restore_tenant_context(db, user_id=user.id, hospital_id=hospital_id)
     db.refresh(plan)
     return plan
 
@@ -298,6 +313,7 @@ def review_nursing_care_plan(
         resource_type="nursing_care_plan", resource_id=plan.id,
     )
     db.commit()
+    _restore_tenant_context(db, user_id=user.id, hospital_id=hospital_id)
     db.refresh(review)
     return review
 
