@@ -171,6 +171,12 @@ class ImagingStudyComplete(BaseModel):
             value = value.strip() or None
         return value
 
+    @model_validator(mode="after")
+    def validate_pacs_reference_pair(self):
+        if self.pacs_study_uid is not None and self.pacs_system_reference is None:
+            raise ValueError("pacs_study_uid_requires_system_reference")
+        return self
+
 
 class ImagingReportCreate(BaseModel):
     model_config = ConfigDict(extra="forbid")
