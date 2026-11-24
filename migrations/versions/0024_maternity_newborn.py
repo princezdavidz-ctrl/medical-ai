@@ -53,6 +53,8 @@ def upgrade() -> None:
         sa.CheckConstraint("pregnancy_status != 'ended' OR pregnancy_end_reason IS NOT NULL", name="ck_maternity_episode_end_reason"),
         sa.CheckConstraint("pregnancy_end_reason IS NULL OR pregnancy_end_reason IN ('miscarriage', 'ectopic', 'termination', 'other')", name="ck_maternity_episode_end_reason_value"),
         sa.CheckConstraint("status IN ('active', 'closed')", name="ck_maternity_episode_status"),
+        sa.CheckConstraint("status != 'closed' OR (closed_at IS NOT NULL AND closed_reason IS NOT NULL)", name="ck_maternity_episode_closed_fields"),
+        sa.CheckConstraint("pregnancy_status != 'ended' OR status = 'closed'", name="ck_maternity_episode_ended_closed"),
         sa.CheckConstraint("closed_reason IS NULL OR length(trim(closed_reason)) >= 3", name="ck_maternity_episode_closed_reason"),
     )
     op.create_index(
