@@ -168,14 +168,16 @@ def _require_episode_access(
     db: Session, *, user_id: UUID, hospital_id: UUID,
     episode: MaternityEpisode, allowed: set[str],
 ) -> str:
-    _, role_name = _require_role(
+    membership, role_name = _require_role(
         db, user_id=user_id, hospital_id=hospital_id,
-        allowed=allowed, department_id=episode.department_id,
+        allowed=allowed,
     )
-    if role_name not in _ADMIN_ROLES and not _has_assignment(
-        db, user_id=user_id, hospital_id=hospital_id,
-        patient_id=episode.patient_id, encounter_id=episode.encounter_id,
-        department_id=episode.department_id,
+    if role_name not in _ADMIN_ROLES and (
+        membership.department_id is None or not _has_assignment(
+            db, user_id=user_id, hospital_id=hospital_id,
+            patient_id=episode.patient_id, encounter_id=episode.encounter_id,
+            department_id=membership.department_id,
+        )
     ):
         raise HTTPException(status_code=404, detail={"code": "maternity_episode_not_found"})
     return role_name
@@ -377,10 +379,7 @@ def list_maternity_episodes(
                 PatientCareAssignment.valid_until > now,
             ),
         )
-        query = query.where(
-            MaternityEpisode.department_id == membership.department_id,
-            MaternityEpisode.encounter_id.in_(assigned_encounters),
-        )
+        query = query.where(MaternityEpisode.encounter_id.in_(assigned_encounters))
     if episode_status is not None:
         query = query.where(MaternityEpisode.status == episode_status)
     episodes = list(db.scalars(
