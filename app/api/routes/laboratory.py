@@ -51,7 +51,8 @@ _CATALOG_ROLES = {
 }
 _LAB_WORK_ROLES = {
     "lab_technician", "laboratory_technician", "medical_lab_scientist",
-    "lab_scientist", "phlebotomist", "lab_supervisor",
+    "lab_scientist", "medical_lab_technologist", "medical_laboratory_technologist",
+    "phlebotomist", "lab_supervisor",
     "laboratory_supervisor", "lab_director", "pathologist",
 }
 _LAB_VERIFY_ROLES = {
@@ -317,6 +318,35 @@ def approve_laboratory_test_definition(
     write_audit_event(
         db, hospital_id=hospital_id, actor_user_id=user.id,
         action="laboratory.test_definition.approved",
+        resource_type="laboratory_test_definition", resource_id=str(definition.id),
+    )
+    db.commit()
+    _restore_tenant_context(db, user_id=user.id, hospital_id=hospital_id)
+    db.refresh(definition)
+    return definition
+
+
+
+@router.post("/test-definitions/{definition_id}/retire", response_model=LaboratoryTestDefinitionRead)
+def retire_laboratory_test_definition(
+    definition_id: UUID,
+    context: tuple = Depends(get_current_context),
+    db: Session = Depends(get_db),
+) -> LaboratoryTestDefinition:
+    user, hospital_id = context
+    definition = _get_test_definition(
+        db, hospital_id=hospital_id, definition_id=definition_id, lock=True
+    )
+    _require_lab_role(
+        db, user_id=user.id, hospital_id=hospital_id,
+        allowed=_LAB_VERIFY_ROLES, department_id=definition.department_id,
+    )
+    if definition.status != "active":
+        raise HTTPException(status_code=409, detail={"code": "only_active_laboratory_definition_can_be_retired"})
+    definition.status = "retired"
+    write_audit_event(
+        db, hospital_id=hospital_id, actor_user_id=user.id,
+        action="laboratory.test_definition.retired",
         resource_type="laboratory_test_definition", resource_id=str(definition.id),
     )
     db.commit()
