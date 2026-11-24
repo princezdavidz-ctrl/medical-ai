@@ -164,6 +164,10 @@ class ImagingStudy(Base):
             "length(trim(accession_number)) >= 2",
             name="ck_imaging_study_accession_text",
         ),
+        CheckConstraint(
+            "pacs_study_uid IS NULL OR pacs_system_reference IS NOT NULL",
+            name="ck_imaging_study_pacs_reference_pair",
+        ),
         Index("ix_imaging_study_queue", "hospital_id", "status", "scheduled_at"),
     )
 
