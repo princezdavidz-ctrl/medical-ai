@@ -94,6 +94,10 @@ class Invoice(Base):
         CheckConstraint("subtotal_total >= 0 AND amount_paid_total >= 0", name="ck_invoice_amounts_nonnegative"),
         CheckConstraint("amount_paid_total <= subtotal_total", name="ck_invoice_amount_paid_limit"),
         CheckConstraint(
+            "issued_by_user_id IS NULL OR issued_by_user_id != created_by_user_id",
+            name="ck_invoice_issue_two_person",
+        ),
+        CheckConstraint(
             "(status = 'draft' AND issued_by_user_id IS NULL AND issued_at IS NULL "
             "AND amount_paid_total = 0 AND void_by_user_id IS NULL AND void_at IS NULL AND void_reason IS NULL) OR "
             "(status = 'issued' AND issued_by_user_id IS NOT NULL AND issued_at IS NOT NULL "
