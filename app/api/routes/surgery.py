@@ -2,7 +2,7 @@ from datetime import datetime, timedelta, timezone
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
-from sqlalchemy import or_, select, text
+from sqlalchemy import and_, or_, select, text
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
@@ -330,14 +330,23 @@ def schedule_surgical_case(
     surgeon_row = db.scalar(select(User).where(User.id == user.id).with_for_update())
     if surgeon_row is None:
         raise HTTPException(status_code=404, detail={"code": "surgeon_user_not_found"})
+    resource_conflict = or_(
+        SurgicalCase.theatre_room_id == theatre.id,
+        SurgicalCase.surgeon_user_id == user.id,
+    )
     overlap = db.scalar(select(SurgicalCase.id).where(
         SurgicalCase.hospital_id == hospital_id,
-        SurgicalCase.status.in_(("scheduled", "in_progress", "recovery")),
-        SurgicalCase.scheduled_start_at < payload.scheduled_end_at,
-        SurgicalCase.scheduled_end_at > payload.scheduled_start_at,
         or_(
-            SurgicalCase.theatre_room_id == theatre.id,
-            SurgicalCase.surgeon_user_id == user.id,
+            and_(
+                SurgicalCase.status.in_(("in_progress", "recovery")),
+                resource_conflict,
+            ),
+            and_(
+                SurgicalCase.status == "scheduled",
+                SurgicalCase.scheduled_start_at < payload.scheduled_end_at,
+                SurgicalCase.scheduled_end_at > payload.scheduled_start_at,
+                resource_conflict,
+            ),
         ),
     ).limit(1))
     if overlap is not None:
