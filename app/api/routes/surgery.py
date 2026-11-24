@@ -345,7 +345,7 @@ def assign_lead_surgeon_to_encounter(
         assigned_by_user_id=user.id,
         department_id=surgeon_membership.department_id,
         encounter_id=encounter.id,
-        assignment_reason=payload.assignment_reason,
+        assignment_reason=f"Surgical lead surgeon preassignment: {payload.assignment_reason}",
         status="active",
         valid_from=datetime.now(timezone.utc),
         valid_until=datetime.now(timezone.utc) + timedelta(days=30),
@@ -406,7 +406,9 @@ def schedule_surgical_case(
     if surgeon_assignment is None:
         raise HTTPException(status_code=403, detail={"code": "assigned_surgeon_required"})
     minimum_assignment_until = payload.scheduled_end_at + timedelta(hours=24)
-    if (
+    if surgeon_assignment.assignment_reason.startswith("Surgical lead surgeon preassignment:"):
+        surgeon_assignment.valid_until = minimum_assignment_until
+    elif (
         surgeon_assignment.valid_until is not None
         and surgeon_assignment.valid_until < minimum_assignment_until
     ):
