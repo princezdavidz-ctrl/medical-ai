@@ -98,6 +98,7 @@ class EmergencyTriageAssessment(Base):
         CheckConstraint("temperature_c IS NULL OR temperature_c BETWEEN 25 AND 45", name="ck_emergency_triage_temp"),
         CheckConstraint("systolic_bp IS NULL OR systolic_bp BETWEEN 30 AND 300", name="ck_emergency_triage_systolic"),
         CheckConstraint("diastolic_bp IS NULL OR diastolic_bp BETWEEN 20 AND 200", name="ck_emergency_triage_diastolic"),
+        CheckConstraint("systolic_bp IS NULL OR diastolic_bp IS NULL OR systolic_bp > diastolic_bp", name="ck_emergency_triage_bp_order"),
         CheckConstraint("spo2_percent IS NULL OR spo2_percent BETWEEN 0 AND 100", name="ck_emergency_triage_spo2"),
         CheckConstraint(
             "red_flag_present = false OR (red_flag_note IS NOT NULL AND length(trim(red_flag_note)) >= 3)",
