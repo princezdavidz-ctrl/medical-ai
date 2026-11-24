@@ -41,6 +41,7 @@ def upgrade() -> None:
         sa.UniqueConstraint("hospital_id", "id", name="uq_lab_test_definition_hospital_id"),
         sa.UniqueConstraint("hospital_id", "code", name="uq_lab_test_definition_code"),
         sa.CheckConstraint("status IN ('draft', 'active', 'retired')", name="ck_lab_test_definition_status"),
+        sa.CheckConstraint("length(trim(code)) >= 2 AND length(trim(name)) >= 2 AND length(trim(specimen_type)) >= 2", name="ck_lab_test_definition_text"),
         sa.CheckConstraint(
             "(status = 'draft' AND approved_by_user_id IS NULL AND approved_at IS NULL) OR "
             "(status IN ('active', 'retired') AND approved_by_user_id IS NOT NULL AND approved_at IS NOT NULL)",
@@ -103,8 +104,10 @@ def upgrade() -> None:
         sa.UniqueConstraint("hospital_id", "id", name="uq_lab_order_hospital_id"),
         sa.CheckConstraint("status IN ('ordered', 'in_progress', 'completed', 'cancelled')", name="ck_lab_order_status"),
         sa.CheckConstraint("priority IN ('routine', 'urgent', 'stat')", name="ck_lab_order_priority"),
+        sa.CheckConstraint("length(trim(clinical_indication)) >= 3", name="ck_lab_order_indication"),
         sa.CheckConstraint(
-            "(status = 'cancelled' AND cancelled_at IS NOT NULL AND cancellation_reason IS NOT NULL) OR "
+            "(status = 'cancelled' AND cancelled_at IS NOT NULL AND cancellation_reason IS NOT NULL "
+            "AND length(trim(cancellation_reason)) >= 3) OR "
             "(status != 'cancelled' AND cancelled_at IS NULL AND cancelled_by_user_id IS NULL AND cancellation_reason IS NULL)",
             name="ck_lab_order_cancellation_state",
         ),
@@ -151,7 +154,12 @@ def upgrade() -> None:
             name="ck_lab_specimen_status",
         ),
         sa.CheckConstraint(
-            "(status = 'rejected' AND rejected_at IS NOT NULL AND rejection_reason IS NOT NULL) OR "
+            "length(trim(accession_number)) >= 2 AND length(trim(specimen_type)) >= 2",
+            name="ck_lab_specimen_text",
+        ),
+        sa.CheckConstraint(
+            "(status = 'rejected' AND rejected_at IS NOT NULL AND rejection_reason IS NOT NULL "
+            "AND length(trim(rejection_reason)) >= 3) OR "
             "(status != 'rejected' AND rejected_at IS NULL AND rejection_reason IS NULL)",
             name="ck_lab_specimen_rejection_state",
         ),
@@ -210,6 +218,10 @@ def upgrade() -> None:
         sa.UniqueConstraint("hospital_id", "id", name="uq_lab_result_hospital_id"),
         sa.UniqueConstraint("hospital_id", "specimen_id", name="uq_lab_result_specimen"),
         sa.CheckConstraint(
+            "value_text IS NULL OR length(trim(value_text)) >= 1",
+            name="ck_lab_result_text_value",
+        ),
+        sa.CheckConstraint(
             "(value_text IS NOT NULL AND value_numeric IS NULL) OR "
             "(value_text IS NULL AND value_numeric IS NOT NULL)",
             name="ck_lab_result_exactly_one_value",
@@ -257,6 +269,10 @@ def upgrade() -> None:
             name="fk_lab_critical_ack_result",
         ),
         sa.UniqueConstraint("hospital_id", "result_id", name="uq_lab_critical_ack_result"),
+        sa.CheckConstraint(
+            "length(trim(acknowledgement_note)) >= 3",
+            name="ck_lab_critical_ack_note",
+        ),
     )
 
     for table in TABLES:
