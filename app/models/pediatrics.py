@@ -32,6 +32,11 @@ class PediatricCareRecord(Base):
         UniqueConstraint("hospital_id", "id", name="uq_pediatric_care_hospital_id"),
         UniqueConstraint("hospital_id", "encounter_id", name="uq_pediatric_care_encounter"),
         CheckConstraint("status IN ('active', 'closed')", name="ck_pediatric_care_status"),
+        CheckConstraint(
+            "(status = 'active' AND closed_at IS NULL) OR "
+            "(status = 'closed' AND closed_at IS NOT NULL)",
+            name="ck_pediatric_care_closure_state",
+        ),
         Index("ix_pediatric_care_patient_created", "hospital_id", "patient_id", "created_at"),
     )
 
