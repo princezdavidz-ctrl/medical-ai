@@ -60,6 +60,7 @@ _THEATRE_MANAGER_ROLES = {
     "theatre_manager", "operating_theatre_manager",
     "hospital_admin", "hospital_director", "system_admin",
 }
+_ADMIN_ROLES = {"hospital_admin", "hospital_director", "system_admin"}
 
 
 def _membership(db: Session, *, user_id: UUID, hospital_id: UUID):
@@ -465,10 +466,10 @@ def get_surgical_case(
 ) -> dict:
     user, hospital_id = context
     surgical_case = _get_case(db, hospital_id=hospital_id, case_id=case_id)
-    _require_case_team(
-        db, user_id=user.id, hospital_id=hospital_id,
-        case=surgical_case, allow_manager=True,
-    )
+    membership = _membership(db, user_id=user.id, hospital_id=hospital_id)
+    role_name = _role_name(db, membership)
+    if role_name not in _ADMIN_ROLES:
+        _require_case_team(db, user_id=user.id, hospital_id=hospital_id, case=surgical_case)
     result = _case_detail(db, surgical_case)
     _audit(db, hospital_id=hospital_id, user_id=user.id,
            action="surgery.case.viewed", resource_type="surgical_case", resource_id=surgical_case.id)
