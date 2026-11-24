@@ -65,6 +65,7 @@ from app.models.billing import (
     InvoiceLine,
     InvoicePayment,
 )
+from app.models.insurance import InsurerDefinition, PatientCoverage, InsuranceClaim, InsuranceClaimEvent
 from app.models.nursing import (
     NursingAssessment,
     NursingObservation,
@@ -176,6 +177,10 @@ __all__ = [
     "Invoice",
     "InvoiceLine",
     "InvoicePayment",
+    "InsurerDefinition",
+    "PatientCoverage",
+    "InsuranceClaim",
+    "InsuranceClaimEvent",
     "NursingAssessment",
     "NursingObservation",
     "NursingNote",
