@@ -780,10 +780,20 @@ def link_newborn_patient(
         and patient.administrative_sex not in {None, expected_sex}
     ):
         raise HTTPException(status_code=422, detail={"code": "newborn_patient_sex_mismatch"})
+    existing_link = db.scalar(select(NewbornRecord.id).where(
+        NewbornRecord.hospital_id == hospital_id,
+        NewbornRecord.newborn_patient_id == patient.id,
+    ).limit(1))
+    if existing_link is not None:
+        raise HTTPException(status_code=409, detail={"code": "patient_already_linked_to_newborn_record"})
     newborn.newborn_patient_id = patient.id
     _audit(db, hospital_id=hospital_id, user_id=user.id,
            action="maternity.newborn_patient.linked", resource_type="maternity_newborn", resource_id=newborn.id)
-    db.commit()
+    try:
+        db.commit()
+    except IntegrityError:
+        db.rollback()
+        raise HTTPException(status_code=409, detail={"code": "newborn_patient_link_conflict"}) from None
     _restore_tenant_context(db, user_id=user.id, hospital_id=hospital_id)
     db.refresh(newborn)
     return newborn
