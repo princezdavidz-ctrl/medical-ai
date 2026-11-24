@@ -115,7 +115,7 @@ def upgrade() -> None:
         sa.ForeignKeyConstraint(["hospital_id", "surgical_case_id"], ["surgical_cases.hospital_id", "surgical_cases.id"], name="fk_anesthesia_record_case"),
         sa.UniqueConstraint("hospital_id", "surgical_case_id", name="uq_anesthesia_record_case"),
         sa.CheckConstraint("anesthesia_type IN ('general', 'regional', 'local', 'sedation', 'combined')", name="ck_anesthesia_record_type"),
-        sa.CheckConstraint("asa_class BETWEEN 1 AND 5", name="ck_anesthesia_record_asa"),
+        sa.CheckConstraint("asa_class BETWEEN 1 AND 6", name="ck_anesthesia_record_asa"),
         sa.CheckConstraint("ended_at IS NULL OR ended_at > started_at", name="ck_anesthesia_record_time"),
         sa.CheckConstraint("length(trim(pre_anesthesia_assessment)) >= 3", name="ck_anesthesia_assessment"),
     )
