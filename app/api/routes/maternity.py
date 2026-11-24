@@ -236,18 +236,16 @@ def _episode_detail(db: Session, episode: MaternityEpisode) -> dict:
             LaborObservation.hospital_id == episode.hospital_id,
             LaborObservation.labor_record_id == labor.id,
         ).order_by(LaborObservation.observed_at)).all()
-    delivery = None
+    delivery = db.scalar(select(DeliveryRecord).where(
+        DeliveryRecord.hospital_id == episode.hospital_id,
+        DeliveryRecord.episode_id == episode.id,
+    ))
     newborns = []
-    if labor is not None:
-        delivery = db.scalar(select(DeliveryRecord).where(
-            DeliveryRecord.hospital_id == episode.hospital_id,
-            DeliveryRecord.labor_record_id == labor.id,
-        ))
-        if delivery is not None:
-            newborns = db.scalars(select(NewbornRecord).where(
-                NewbornRecord.hospital_id == episode.hospital_id,
-                NewbornRecord.delivery_id == delivery.id,
-            ).order_by(NewbornRecord.birth_order)).all()
+    if delivery is not None:
+        newborns = db.scalars(select(NewbornRecord).where(
+            NewbornRecord.hospital_id == episode.hospital_id,
+            NewbornRecord.delivery_id == delivery.id,
+        ).order_by(NewbornRecord.birth_order)).all()
     postpartum = db.scalars(select(PostpartumObservation).where(
         PostpartumObservation.hospital_id == episode.hospital_id,
         PostpartumObservation.episode_id == episode.id,
@@ -556,6 +554,62 @@ def record_delivery(
         db.flush()
         _audit(db, hospital_id=hospital_id, user_id=user.id,
                action="maternity.delivery.recorded", resource_type="maternity_delivery", resource_id=delivery.id)
+        db.commit()
+    except IntegrityError:
+        db.rollback()
+        raise HTTPException(status_code=409, detail={"code": "delivery_already_recorded"}) from None
+    _restore_tenant_context(db, user_id=user.id, hospital_id=hospital_id)
+    db.refresh(delivery)
+    return delivery
+
+
+@router.post(
+    "/episodes/{episode_id}/delivery",
+    response_model=DeliveryRecordRead,
+    status_code=status.HTTP_201_CREATED,
+)
+def record_planned_cesarean_delivery(
+    episode_id: UUID,
+    payload: DeliveryRecordCreate,
+    context: tuple = Depends(get_current_context),
+    db: Session = Depends(get_db),
+) -> DeliveryRecord:
+    user, hospital_id = context
+    episode = _get_episode(db, hospital_id=hospital_id, episode_id=episode_id, lock=True)
+    _require_episode_access(
+        db, user_id=user.id, hospital_id=hospital_id,
+        episode=episode, allowed=_DELIVERY_ROLES,
+    )
+    if episode.status != "active" or episode.pregnancy_status != "antenatal":
+        raise HTTPException(status_code=409, detail={"code": "maternity_episode_not_eligible_for_planned_delivery"})
+    if payload.delivery_mode != "cesarean":
+        raise HTTPException(status_code=422, detail={"code": "no_labor_delivery_must_be_cesarean"})
+    existing_labor = db.scalar(select(LaborRecord.id).where(
+        LaborRecord.hospital_id == hospital_id,
+        LaborRecord.episode_id == episode.id,
+    ))
+    existing_delivery = db.scalar(select(DeliveryRecord.id).where(
+        DeliveryRecord.hospital_id == hospital_id,
+        DeliveryRecord.episode_id == episode.id,
+    ))
+    if existing_labor is not None or existing_delivery is not None:
+        raise HTTPException(status_code=409, detail={"code": "planned_cesarean_requires_no_existing_labor_or_delivery"})
+    if payload.delivered_at < episode.created_at:
+        raise HTTPException(status_code=422, detail={"code": "delivery_before_maternity_episode"})
+    delivery = DeliveryRecord(
+        hospital_id=hospital_id,
+        labor_record_id=None,
+        episode_id=episode.id,
+        mother_patient_id=episode.patient_id,
+        delivered_by_user_id=user.id,
+        **payload.model_dump(),
+    )
+    db.add(delivery)
+    episode.pregnancy_status = "postpartum"
+    try:
+        db.flush()
+        _audit(db, hospital_id=hospital_id, user_id=user.id,
+               action="maternity.planned_cesarean.recorded", resource_type="maternity_delivery", resource_id=delivery.id)
         db.commit()
     except IntegrityError:
         db.rollback()
