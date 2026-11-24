@@ -375,6 +375,12 @@ class NewbornObservationRead(BaseModel):
     recorded_at: datetime
 
 
+
+class NewbornRecordDetailRead(BaseModel):
+    newborn: NewbornRecordRead
+    observations: list[NewbornObservationRead]
+
+
 class MaternityNoteCreate(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
