@@ -101,6 +101,23 @@ class SurgicalTeamAssignmentCreate(BaseModel):
         return value
 
 
+
+class SurgicalLeadSurgeonAssignmentCreate(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    surgeon_user_id: UUID
+    theatre_room_id: UUID
+    assignment_reason: str = Field(min_length=3, max_length=500)
+
+    @field_validator("assignment_reason")
+    @classmethod
+    def normalize_lead_assignment_reason(cls, value):
+        value = value.strip()
+        if len(value) < 3:
+            raise ValueError("lead_surgeon_assignment_reason_too_short")
+        return value
+
+
 class SurgicalSafetyChecklistCreate(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
