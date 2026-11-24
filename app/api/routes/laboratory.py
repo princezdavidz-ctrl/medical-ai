@@ -53,12 +53,13 @@ _CATALOG_ROLES = {
 _LAB_WORK_ROLES = {
     "lab_technician", "laboratory_technician", "medical_lab_scientist",
     "lab_scientist", "medical_lab_technologist", "medical_laboratory_technologist",
-    "phlebotomist", "lab_supervisor",
+    "lab_supervisor",
     "laboratory_supervisor", "lab_director", "pathologist",
 }
 _LAB_VERIFY_ROLES = {
     "lab_supervisor", "laboratory_supervisor", "lab_director", "pathologist",
 }
+_LAB_COLLECTION_ROLES = _LAB_WORK_ROLES | {"phlebotomist"}
 
 
 def _membership(db: Session, *, user_id: UUID, hospital_id: UUID):
@@ -130,7 +131,7 @@ def _require_specimen_collection_access(
     role_name = _role_name(db, membership)
     if membership is None:
         raise HTTPException(status_code=403, detail={"code": "specimen_collection_role_required"})
-    if role_name in _LAB_WORK_ROLES and membership.department_id == order.laboratory_department_id:
+    if role_name in _LAB_COLLECTION_ROLES and membership.department_id == order.laboratory_department_id:
         return
     care_team_roles = _CLINICIAN_ROLES | {
         "nurse", "registered_nurse", "nursing_officer", "midwife",
@@ -395,13 +396,13 @@ def list_laboratory_test_definitions(
     user, hospital_id = context
     membership = _membership(db, user_id=user.id, hospital_id=hospital_id)
     role_name = _role_name(db, membership)
-    if membership is None or role_name not in _CLINICIAN_ROLES | _LAB_WORK_ROLES | _CATALOG_ROLES:
+    if membership is None or role_name not in _CLINICIAN_ROLES | _LAB_COLLECTION_ROLES | _CATALOG_ROLES:
         raise HTTPException(status_code=403, detail={"code": "laboratory_catalog_access_required"})
     query = select(LaboratoryTestDefinition).where(
         LaboratoryTestDefinition.hospital_id == hospital_id,
         LaboratoryTestDefinition.status == "active",
     )
-    if role_name in _LAB_WORK_ROLES | _CATALOG_ROLES:
+    if role_name in _LAB_COLLECTION_ROLES | _CATALOG_ROLES:
         query = query.where(LaboratoryTestDefinition.department_id == membership.department_id)
     elif department_id is not None:
         query = query.where(LaboratoryTestDefinition.department_id == department_id)
