@@ -44,6 +44,7 @@ class ICUStay(Base):
             "status IN ('active', 'stepdown_requested', 'closed')",
             name="ck_icu_stay_status",
         ),
+        CheckConstraint("length(trim(admission_reason)) >= 3", name="ck_icu_stay_admission_reason"),
         Index(
             "uq_icu_active_admission", "hospital_id", "admission_id",
             unique=True, postgresql_where=text("status IN ('active', 'stepdown_requested')"),
