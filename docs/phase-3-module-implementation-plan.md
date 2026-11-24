@@ -85,7 +85,8 @@ Every module milestone must include:
 | Emergency & Trauma | Phase 3.5 | Implemented; Phase 5 verification pending | PR #31 (merged) |
 | ICU | Phase 3.6 | Implemented; Phase 5 verification pending | PR #32 (merged) |
 | Surgery & Theatre | Phase 3.7 | Implemented; Phase 5 verification pending | PR #33 (merged) |
-| Maternity & Newborn Care | Phase 3.8 | In implementation | Current branch |
+| Maternity & Newborn Care | Phase 3.8 | Implemented; Phase 5 verification pending | PR #34 (merged) |
+| Pediatrics & Child Health | Phase 3.9 | In implementation | Current branch |
 
 Patient Registration & Management extends the Phase 1 patient foundation with governed duplicate review, identity/document metadata, contact and next-of-kin details, consent/lawful-basis recording, patient status and audit history. Automatic patient merging is prohibited.
 
