@@ -121,6 +121,17 @@ These corrections are included in the current development branch; they have not 
 - [ ] Inpatient read/list: ward admin visibility, assigned clinician/nurse visibility, department isolation, cross-hospital IDs and audit events.
 - [ ] Inpatient lifecycle concurrency: simultaneous admission requests, bed assignment races, cancellation versus acceptance, discharge versus bed allocation and partial unique index enforcement.
 - [ ] Inpatient audit/privacy: no clinical reason, discharge narrative or patient identifiers copied into generic audit metadata; all transition actors and resource IDs recorded.
+- [ ] Phase 3.5 Emergency: arrival registration, patient active status, duplicate open emergency visit prevention, department scope and arrival-mode validation.
+- [ ] Emergency triage: role/department access, initial triage state, revision sequencing under concurrent reassessment, red-flag note requirement, acuity floor and vital/BP validation.
+- [ ] Emergency queue: manual acuity ordering, untriaged ordering, nurse open-queue scope, clinician assignment-only visibility, registration/admin visibility and pagination.
+- [ ] Emergency clinical detail: registration-only roles denied triage/event/note detail; nursing requires same-department open case; clinicians require active assignment; hospital admins remain audited.
+- [ ] Emergency treatment: clinician role only, waiting-to-treatment transition, assigned clinician ownership, assignment creation and competing clinician race.
+- [ ] Emergency care events: active assignment requirement, event type, timestamp timezone/future bounds, event chronology and append-only record history.
+- [ ] Emergency notes: active assignment requirement, note type, signature actor/time, no update/delete route and privacy-safe audit.
+- [ ] Emergency disposition: clinician-only discharge/admission/referral/transfer request after treatment, nurse-only left-without-being-seen before treatment, encounter status mapping and assignment expiry.
+- [ ] Emergency-to-inpatient handoff: admission_requested source encounter eligibility, active clinician assignment, duplicate inpatient admission protection and no false bed confirmation.
+- [ ] Emergency tenant integrity: RLS on all emergency tables, composite patient/encounter/department foreign keys, cross-hospital ID substitution and audit attribution.
+- [ ] Emergency clinical safety: no automated triage scoring, diagnosis, treatment recommendation, medication administration, referral acceptance, ambulance dispatch or clinical AI activation.
 - [ ] Patient MRN uniqueness per hospital and composite foreign-key tenant isolation across registration profile, identity documents, next of kin and duplicate cases.
 - [ ] Patient create/list/read/update RBAC: registration-role access, active care-assignment-only clinical reads, assignment expiry/revocation, department matching and cross-hospital denial.
 - [ ] Patient demographic updates: required-name null rejection, immutable MRN, future DOB rejection, duplicate re-detection and no duplicate-case duplication.
