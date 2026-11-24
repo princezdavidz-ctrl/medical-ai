@@ -23,6 +23,12 @@ class MedicationDefinition(Base):
         UniqueConstraint("hospital_id", "code", name="uq_medication_definition_code"),
         CheckConstraint("status IN ('draft', 'active', 'retired')", name="ck_medication_definition_status"),
         CheckConstraint(
+            "default_route IS NULL OR default_route IN ('oral', 'topical', 'inhalation', "
+            "'intravenous', 'intramuscular', 'subcutaneous', 'rectal', 'ophthalmic', "
+            "'otic', 'nasal', 'transdermal', 'other')",
+            name="ck_medication_definition_default_route",
+        ),
+        CheckConstraint(
             "(status = 'draft' AND approved_by_user_id IS NULL AND approved_at IS NULL "
             "AND retired_by_user_id IS NULL AND retired_at IS NULL AND retirement_reason IS NULL) OR "
             "(status = 'active' AND approved_by_user_id IS NOT NULL AND approved_at IS NOT NULL "
