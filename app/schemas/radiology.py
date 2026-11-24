@@ -186,9 +186,17 @@ class ImagingReportCreate(BaseModel):
     critical_flag: bool = False
     critical_note: str | None = Field(default=None, max_length=2000)
 
-    @field_validator("findings", "impression", "critical_note")
+    @field_validator("findings", "impression")
     @classmethod
-    def trim_report_text(cls, value):
+    def trim_required_report_text(cls, value):
+        value = value.strip()
+        if len(value) < 3:
+            raise ValueError("imaging_report_requires_findings_and_impression")
+        return value
+
+    @field_validator("critical_note")
+    @classmethod
+    def trim_critical_note(cls, value):
         if value is not None:
             value = value.strip() or None
         return value
