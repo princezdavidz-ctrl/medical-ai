@@ -133,6 +133,7 @@ def upgrade() -> None:
         sa.Column("recorded_at", sa.DateTime(timezone=True), server_default=sa.func.now(), nullable=False),
         sa.ForeignKeyConstraint(["hospital_id", "labor_record_id"], ["labor_records.hospital_id", "labor_records.id"], name="fk_labor_observation_record"),
         sa.CheckConstraint("labor_stage IN ('latent', 'active', 'second_stage')", name="ck_labor_observation_stage"),
+        sa.CheckConstraint("membrane_status IS NULL OR membrane_status IN ('intact', 'ruptured', 'unknown')", name="ck_labor_observation_membranes"),
         sa.CheckConstraint("cervical_dilation_cm IS NULL OR cervical_dilation_cm BETWEEN 0 AND 10", name="ck_labor_cervical_dilation"),
         sa.CheckConstraint("fetal_heart_rate IS NULL OR fetal_heart_rate BETWEEN 50 AND 240", name="ck_labor_fhr"),
         sa.CheckConstraint("contractions_per_10_min IS NULL OR contractions_per_10_min BETWEEN 0 AND 10", name="ck_labor_contractions"),
