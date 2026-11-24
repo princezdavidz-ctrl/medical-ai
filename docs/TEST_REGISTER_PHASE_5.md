@@ -90,6 +90,16 @@ These corrections are included in the current development branch; they have not 
 
 - [ ] Each of the 40 modules: permissions, workflow, data integrity, audit, accessibility and usability.
 - [ ] Phase 3.1 patient registration: duplicate candidate detection, human-reviewed identity matching, no automatic merge, consent/lawful basis, next-of-kin access, patient status transitions and audit history.
+- [ ] Phase 3.2 OPD: visit registration, queue token uniqueness/collision retry, one active visit per patient, arrival and valid state transitions.
+- [ ] OPD role scope: registration-wide queue, triage-nurse department open queue, clinician active encounter assignment, department mismatch and inactive membership denial.
+- [ ] OPD tenant isolation: composite hospital/patient/encounter/department FKs, RLS on all OPD tables, cross-hospital UUID substitution and audit attribution.
+- [ ] OPD triage: vital-sign numeric bounds, systolic/diastolic consistency, red-flag note requirement, red-flag urgency floor, one triage record per visit and no automated scoring.
+- [ ] OPD consultation: assigned clinician only, start/complete state transitions, one signed note per visit, required assessment/plan, no edit/delete path and post-closure access expiry.
+- [ ] OPD diagnosis: active consultation requirement, primary diagnosis uniqueness under concurrent writes, certainty states and approved/current knowledge concept validation.
+- [ ] OPD disposition: discharged/admission-requested/referred/transfer-requested only after consultation completion; left-without-being-seen only before consultation; no false bed/referral/transfer completion.
+- [ ] OPD assignment expiry and cancellation: encounter-scoped assignments, 24-hour review window, expired assignment denial and cancellation before arrival.
+- [ ] OPD audit and privacy: audit every transition without duplicating complaint, consultation text, vitals or other clinical narrative into audit metadata.
+- [ ] OPD queue ordering and pagination under concurrent arrival/triage updates; timezone-aware local visit date and token uniqueness.
 - [ ] Patient MRN uniqueness per hospital and composite foreign-key tenant isolation across registration profile, identity documents, next of kin and duplicate cases.
 - [ ] Patient create/list/read/update RBAC: registration-role access, active care-assignment-only clinical reads, assignment expiry/revocation, department matching and cross-hospital denial.
 - [ ] Patient demographic updates: required-name null rejection, immutable MRN, future DOB rejection, duplicate re-detection and no duplicate-case duplication.

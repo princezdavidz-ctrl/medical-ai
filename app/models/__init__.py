@@ -26,6 +26,7 @@ from app.models.ai_sessions import AISession, AISessionMessage
 from app.models.ai_usage import AIUsageCounter, AIUsageEvent, AIUsagePolicy, AIUsageReservation
 from app.models.ai_operations import AIHospitalControl
 from app.models.patient_context import PatientCareAssignment
+from app.models.opd import OPDVisit, OPDTriageAssessment, OPDConsultationNote, OPDDiagnosis
 from app.models.patient_registration import (
     PatientDuplicateCase,
     PatientIdentityDocument,
@@ -76,6 +77,10 @@ __all__ = [
     "OfflineSyncConflict",
     "OfflineSyncCursor",
     "OfflineSyncEvent",
+    "OPDVisit",
+    "OPDTriageAssessment",
+    "OPDConsultationNote",
+    "OPDDiagnosis",
     "Organization",
     "Patient",
     "PatientCareAssignment",

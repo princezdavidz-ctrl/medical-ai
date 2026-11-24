@@ -54,7 +54,10 @@ class Hospital(TimestampMixin, Base):
 
 class Department(TimestampMixin, Base):
     __tablename__ = "departments"
-    __table_args__ = (UniqueConstraint("hospital_id", "code", name="uq_department_hospital_code"),)
+    __table_args__ = (
+        UniqueConstraint("hospital_id", "code", name="uq_department_hospital_code"),
+        UniqueConstraint("hospital_id", "id", name="uq_department_hospital_id_id"),
+    )
 
     id: Mapped[uuid.UUID] = mapped_column(Uuid(as_uuid=True), primary_key=True, default=uuid.uuid4)
     hospital_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("hospitals.id"), nullable=False, index=True)
@@ -121,7 +124,10 @@ class Patient(TimestampMixin, Base):
 
 class Encounter(TimestampMixin, Base):
     __tablename__ = "encounters"
-    __table_args__ = (Index("ix_encounter_hospital_patient", "hospital_id", "patient_id"),)
+    __table_args__ = (
+        Index("ix_encounter_hospital_patient", "hospital_id", "patient_id"),
+        UniqueConstraint("hospital_id", "id", name="uq_encounter_hospital_id_id"),
+    )
 
     id: Mapped[uuid.UUID] = mapped_column(Uuid(as_uuid=True), primary_key=True, default=uuid.uuid4)
     hospital_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("hospitals.id"), nullable=False, index=True)
