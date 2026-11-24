@@ -299,6 +299,7 @@ def list_emergency_visits(
     role_name = _role_name(db, membership)
     if role_name not in _REGISTRATION_ROLES | _ADMIN_ROLES | _EMERGENCY_NURSE_ROLES | _CLINICIAN_ROLES:
         raise HTTPException(status_code=403, detail={"code": "emergency_read_role_required"})
+    now = datetime.now(timezone.utc)
     query = select(EmergencyVisit).where(EmergencyVisit.hospital_id == hospital_id)
     if role_name not in _REGISTRATION_ROLES | _ADMIN_ROLES:
         if membership.department_id is None:
@@ -312,10 +313,10 @@ def list_emergency_visits(
                 PatientCareAssignment.staff_user_id == user.id,
                 PatientCareAssignment.department_id == membership.department_id,
                 PatientCareAssignment.status == "active",
-                PatientCareAssignment.valid_from <= datetime.now(timezone.utc),
+                PatientCareAssignment.valid_from <= now,
                 or_(
                     PatientCareAssignment.valid_until.is_(None),
-                    PatientCareAssignment.valid_until > datetime.now(timezone.utc),
+                    PatientCareAssignment.valid_until > now,
                 ),
             )
             query = query.where(EmergencyVisit.encounter_id.in_(assigned_encounters))
@@ -389,7 +390,7 @@ def record_emergency_triage(
 ) -> dict:
     user, hospital_id = context
     visit = _get_visit(db, hospital_id=hospital_id, visit_id=visit_id, lock=True)
-    _, role_name = _require_role(
+    _require_role(
         db, user_id=user.id, hospital_id=hospital_id,
         allowed=_EMERGENCY_NURSE_ROLES,
         department_id=visit.department_id,
@@ -478,7 +479,7 @@ def record_emergency_care_event(
 ) -> EmergencyCareEvent:
     user, hospital_id = context
     visit = _get_visit(db, hospital_id=hospital_id, visit_id=visit_id)
-    _, role_name = _require_role(
+    _require_role(
         db, user_id=user.id, hospital_id=hospital_id,
         allowed=_EMERGENCY_NURSE_ROLES | _CLINICIAN_ROLES,
         department_id=visit.department_id,
