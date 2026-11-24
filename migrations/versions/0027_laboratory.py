@@ -168,6 +168,13 @@ def upgrade() -> None:
         "laboratory_specimens",
         ["hospital_id", "order_id", "collected_at"],
     )
+    op.create_index(
+        "uq_lab_specimen_one_active_per_order",
+        "laboratory_specimens",
+        ["hospital_id", "order_id"],
+        unique=True,
+        postgresql_where=sa.text("status != 'rejected'"),
+    )
 
     op.create_table(
         "laboratory_results",
@@ -216,6 +223,10 @@ def upgrade() -> None:
             "critical_flag = false OR (critical_note IS NOT NULL AND length(trim(critical_note)) >= 3)",
             name="ck_lab_result_critical_note",
         ),
+        sa.CheckConstraint(
+            "abnormality != 'critical' OR critical_flag = true",
+            name="ck_lab_result_critical_abnormality_flag",
+        ),
     )
     op.create_index(
         "ix_lab_result_status_time",
@@ -257,6 +268,7 @@ def downgrade() -> None:
     op.drop_table("laboratory_critical_acknowledgements")
     op.drop_index("ix_lab_result_status_time", table_name="laboratory_results")
     op.drop_table("laboratory_results")
+    op.drop_index("uq_lab_specimen_one_active_per_order", table_name="laboratory_specimens")
     op.drop_index("ix_lab_specimen_order_time", table_name="laboratory_specimens")
     op.drop_table("laboratory_specimens")
     op.drop_index("ix_lab_order_lab_queue", table_name="laboratory_orders")
