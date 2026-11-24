@@ -271,3 +271,9 @@ class ImagingOrderDetailRead(BaseModel):
     study: ImagingStudyRead | None
     report: ImagingReportRead | None
     critical_acknowledgement: ImagingCriticalAcknowledgementRead | None
+
+
+class ImagingQueueItemRead(BaseModel):
+    order: ImagingOrderRead
+    patient: ImagingPatientSummary
+    procedure: ImagingProcedureDefinitionRead
