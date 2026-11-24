@@ -247,7 +247,16 @@ These corrections are included in the current development branch; they have not 
 - [ ] Billing concurrency: invoice row locking across line insertion/issue, payment create/confirm/fail and void; no double subtotal, overpayment or pending-payment void race.
 - [ ] Billing tenant/privacy: RLS on service catalog/invoice/line/payment tables, composite patient/encounter/department/service FKs, minimum patient identity and audit metadata minimization.
 - [ ] Billing financial boundaries: no seeded prices/tax rules, no VAT/levy calculation, no insurance claim creation, no automated clinical charge capture, no refund/reversal/ledger, no gateway integration and no claim of actual external settlement.
-- [ ] Module-to-API integration and cross-module workflows.
+
+- [ ] Phase 3.14 insurer catalog: hospital-scoped code uniqueness, supported insurer type, draft-only creation, independent approval, retirement authorization and reason/actor/timestamp consistency.
+- [ ] Patient coverage: patient/insurer tenant linkage, active insurer requirement, member/policy identifiers, date validity, reported-to-verified transition, verifier attribution and verification evidence reference handling.
+- [ ] Insurance claim creation: verified same-patient coverage, issued same-patient/same-encounter invoice, currency consistency, claimed amount bounded by invoice total, hospital-scoped claim-number uniqueness and cross-hospital UUID substitution denial.
+- [ ] Claim submission: draft-only transition, external claim reference uniqueness, submission actor/time, required partner reference and immutable submission history.
+- [ ] Claim adjudication: submitted-only transition, authorized independent reviewer, accepted/partially-approved/rejected amount consistency, approval amount not exceeding claim amount and reasoned decision.
+- [ ] Claim payments: adjudicated claim only, payment cannot exceed approved outstanding balance, concurrent payment locking, partial/full settlement transitions and immutable payment event history.
+- [ ] Insurance tenant/privacy: RLS on insurer, coverage, claim and claim-event tables; composite hospital/patient/encounter/coverage/invoice foreign keys; audit metadata minimization and role separation.
+- [ ] Insurance boundaries: no live SHA/private insurer API, eligibility verification, preauthorization, e-claim submission, adjudication, remittance, benefit-limit calculation or actual payment settlement until Phase 4 partner integration.
+\n- [ ] Module-to-API integration and cross-module workflows.
 - [ ] Kenya SHA and private insurer claims workflows.
 - [ ] Pharmacy, laboratory, radiology, medical devices, messaging and payment integrations.
 - [ ] Performance/load, resilience, failover, backup restore and multi-hospital scale.
