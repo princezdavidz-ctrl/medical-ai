@@ -562,6 +562,12 @@ def schedule_imaging_study(
     )
     if order.status != "ordered":
         raise HTTPException(status_code=409, detail={"code": "only_ordered_imaging_can_be_scheduled"})
+    definition = _get_definition(
+        db, hospital_id=hospital_id,
+        definition_id=order.procedure_definition_id, lock=True,
+    )
+    if definition.status != "active":
+        raise HTTPException(status_code=409, detail={"code": "retired_imaging_procedure_cannot_be_scheduled"})
     study = ImagingStudy(
         hospital_id=hospital_id,
         order_id=order.id,
@@ -596,11 +602,17 @@ def start_imaging_study(
     user, hospital_id = context
     study_ref = _get_study(db, hospital_id=hospital_id, study_id=study_id)
     order = _get_order(db, hospital_id=hospital_id, order_id=study_ref.order_id, lock=True)
+    definition = _get_definition(
+        db, hospital_id=hospital_id,
+        definition_id=order.procedure_definition_id, lock=True,
+    )
     study = _get_study(db, hospital_id=hospital_id, study_id=study_id, lock=True)
     _require_radiology_role(
         db, user_id=user.id, hospital_id=hospital_id,
         allowed=_RADIOLOGY_WORK_ROLES, department_id=order.imaging_department_id,
     )
+    if definition.status != "active":
+        raise HTTPException(status_code=409, detail={"code": "retired_imaging_procedure_cannot_start"})
     if order.status != "scheduled" or study.status != "scheduled":
         raise HTTPException(status_code=409, detail={"code": "imaging_study_not_scheduled"})
     now = datetime.now(timezone.utc)
