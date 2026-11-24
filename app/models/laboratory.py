@@ -22,6 +22,7 @@ class LaboratoryTestDefinition(Base):
         UniqueConstraint("hospital_id", "id", name="uq_lab_test_definition_hospital_id"),
         UniqueConstraint("hospital_id", "code", name="uq_lab_test_definition_code"),
         CheckConstraint("status IN ('draft', 'active', 'retired')", name="ck_lab_test_definition_status"),
+        CheckConstraint("length(trim(code)) >= 2 AND length(trim(name)) >= 2 AND length(trim(specimen_type)) >= 2", name="ck_lab_test_definition_text"),
         CheckConstraint(
             "(status = 'draft' AND approved_by_user_id IS NULL AND approved_at IS NULL) OR "
             "(status IN ('active', 'retired') AND approved_by_user_id IS NOT NULL AND approved_at IS NOT NULL)",
@@ -80,8 +81,10 @@ class LaboratoryOrder(Base):
         UniqueConstraint("hospital_id", "id", name="uq_lab_order_hospital_id"),
         CheckConstraint("status IN ('ordered', 'in_progress', 'completed', 'cancelled')", name="ck_lab_order_status"),
         CheckConstraint("priority IN ('routine', 'urgent', 'stat')", name="ck_lab_order_priority"),
+        CheckConstraint("length(trim(clinical_indication)) >= 3", name="ck_lab_order_indication"),
         CheckConstraint(
-            "(status = 'cancelled' AND cancelled_at IS NOT NULL AND cancellation_reason IS NOT NULL) OR "
+            "(status = 'cancelled' AND cancelled_at IS NOT NULL AND cancellation_reason IS NOT NULL "
+            "AND length(trim(cancellation_reason)) >= 3) OR "
             "(status != 'cancelled' AND cancelled_at IS NULL AND cancelled_by_user_id IS NULL AND cancellation_reason IS NULL)",
             name="ck_lab_order_cancellation_state",
         ),
@@ -127,7 +130,12 @@ class LaboratorySpecimen(Base):
             name="ck_lab_specimen_status",
         ),
         CheckConstraint(
-            "(status = 'rejected' AND rejected_at IS NOT NULL AND rejection_reason IS NOT NULL) OR "
+            "length(trim(accession_number)) >= 2 AND length(trim(specimen_type)) >= 2",
+            name="ck_lab_specimen_text",
+        ),
+        CheckConstraint(
+            "(status = 'rejected' AND rejected_at IS NOT NULL AND rejection_reason IS NOT NULL "
+            "AND length(trim(rejection_reason)) >= 3) OR "
             "(status != 'rejected' AND rejected_at IS NULL AND rejection_reason IS NULL)",
             name="ck_lab_specimen_rejection_state",
         ),
@@ -180,6 +188,10 @@ class LaboratoryResult(Base):
         ),
         UniqueConstraint("hospital_id", "id", name="uq_lab_result_hospital_id"),
         UniqueConstraint("hospital_id", "specimen_id", name="uq_lab_result_specimen"),
+        CheckConstraint(
+            "value_text IS NULL OR length(trim(value_text)) >= 1",
+            name="ck_lab_result_text_value",
+        ),
         CheckConstraint(
             "(value_text IS NOT NULL AND value_numeric IS NULL) OR "
             "(value_text IS NULL AND value_numeric IS NOT NULL)",
@@ -236,6 +248,10 @@ class LaboratoryCriticalAcknowledgement(Base):
             name="fk_lab_critical_ack_result",
         ),
         UniqueConstraint("hospital_id", "result_id", name="uq_lab_critical_ack_result"),
+        CheckConstraint(
+            "length(trim(acknowledgement_note)) >= 3",
+            name="ck_lab_critical_ack_note",
+        ),
     )
 
     id: Mapped[uuid.UUID] = mapped_column(Uuid(as_uuid=True), primary_key=True, default=uuid.uuid4)
