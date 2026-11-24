@@ -39,6 +39,7 @@ def upgrade() -> None:
         sa.Column("created_by_user_id", sa.Uuid(), sa.ForeignKey("users.id"), nullable=False),
         sa.Column("created_at", sa.DateTime(timezone=True), server_default=sa.func.now(), nullable=False),
         sa.Column("closed_at", sa.DateTime(timezone=True)),
+        sa.Column("closed_reason", sa.Text()),
         sa.ForeignKeyConstraint(["hospital_id", "patient_id"], ["patients.hospital_id", "patients.id"], name="fk_maternity_episode_mother"),
         sa.ForeignKeyConstraint(["hospital_id", "encounter_id", "patient_id"], ["encounters.hospital_id", "encounters.id", "encounters.patient_id"], name="fk_maternity_episode_encounter_mother"),
         sa.ForeignKeyConstraint(["hospital_id", "department_id"], ["departments.hospital_id", "departments.id"], name="fk_maternity_episode_department"),
@@ -49,6 +50,7 @@ def upgrade() -> None:
         sa.CheckConstraint("gravida >= 1 AND para >= 0 AND para <= gravida", name="ck_maternity_episode_gravida_para"),
         sa.CheckConstraint("pregnancy_status IN ('antenatal', 'in_labor', 'postpartum', 'ended')", name="ck_maternity_episode_pregnancy_status"),
         sa.CheckConstraint("status IN ('active', 'closed')", name="ck_maternity_episode_status"),
+        sa.CheckConstraint("closed_reason IS NULL OR length(trim(closed_reason)) >= 3", name="ck_maternity_episode_closed_reason"),
     )
     op.create_index(
         "uq_maternity_active_episode_patient", "maternity_episodes",
