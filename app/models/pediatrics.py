@@ -123,6 +123,14 @@ class PediatricImmunizationHistory(Base):
             "record_status IN ('administered', 'reported', 'deferred', 'declined', 'unknown')",
             name="ck_pediatric_immunization_status",
         ),
+        CheckConstraint(
+            "source IN ('facility_record', 'caregiver_report', 'external_record')",
+            name="ck_pediatric_immunization_source",
+        ),
+        CheckConstraint(
+            "record_status != 'administered' OR administered_at IS NOT NULL",
+            name="ck_pediatric_immunization_administered_at",
+        ),
         Index("ix_pediatric_immunization_record_date", "hospital_id", "care_record_id", "administered_at"),
     )
 
