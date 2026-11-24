@@ -303,6 +303,17 @@ def create_maternity_episode(
         db, user_id=user.id, hospital_id=hospital_id,
         allowed=_EPISODE_ROLES, department_id=payload.department_id,
     )
+    encounter = db.scalar(select(Encounter).where(
+        Encounter.id == payload.encounter_id,
+        Encounter.hospital_id == hospital_id,
+    ).with_for_update())
+    if (
+        encounter is None
+        or encounter.patient_id != payload.patient_id
+        or encounter.status != "in_progress"
+        or encounter.department_id != payload.department_id
+    ):
+        raise HTTPException(status_code=409, detail={"code": "active_maternity_encounter_required"})
     patient = db.scalar(select(Patient).where(
         Patient.id == payload.patient_id,
         Patient.hospital_id == hospital_id,
@@ -310,16 +321,6 @@ def create_maternity_episode(
     ).with_for_update())
     if patient is None:
         raise HTTPException(status_code=404, detail={"code": "active_maternity_patient_not_found"})
-    encounter = db.scalar(select(Encounter).where(
-        Encounter.id == payload.encounter_id,
-        Encounter.hospital_id == hospital_id,
-    ).with_for_update())
-    if (
-        encounter is None or encounter.patient_id != patient.id
-        or encounter.status != "in_progress"
-        or encounter.department_id != payload.department_id
-    ):
-        raise HTTPException(status_code=409, detail={"code": "active_maternity_encounter_required"})
     department = db.scalar(select(Department).where(
         Department.id == payload.department_id,
         Department.hospital_id == hospital_id,
