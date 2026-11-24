@@ -92,7 +92,7 @@ def _require_role(
         role_name not in allowed and not (allow_manager and role_name in _THEATRE_MANAGER_ROLES)
     ):
         raise HTTPException(status_code=403, detail={"code": "surgery_role_not_authorized"})
-    if role_name not in _THEATRE_MANAGER_ROLES and department_id is not None:
+    if role_name not in _ADMIN_ROLES and department_id is not None:
         if membership.department_id != department_id:
             raise HTTPException(status_code=403, detail={"code": "surgery_department_scope_required"})
     return membership, role_name
@@ -229,7 +229,7 @@ def create_theatre_room(
     user, hospital_id = context
     _require_role(
         db, user_id=user.id, hospital_id=hospital_id,
-        allowed=set(),
+        allowed=set(), department_id=payload.department_id,
     )
     department = db.scalar(select(Department).where(
         Department.id == payload.department_id,
@@ -293,7 +293,8 @@ def assign_lead_surgeon_to_encounter(
 ) -> dict:
     user, hospital_id = context
     _require_role(
-        db, user_id=user.id, hospital_id=hospital_id, allowed=set(),
+        db, user_id=user.id, hospital_id=hospital_id,
+        allowed=set(), department_id=None,
     )
     encounter = db.scalar(select(Encounter).where(
         Encounter.id == encounter_id,
