@@ -398,6 +398,9 @@ def add_invoice_line(
     line_total = (payload.quantity * service.unit_price).quantize(
         Decimal("0.01"), rounding=ROUND_HALF_UP
     )
+    maximum_invoice_total = Decimal("99999999999999.99")
+    if line_total > maximum_invoice_total or invoice.subtotal_total + line_total > maximum_invoice_total:
+        raise HTTPException(status_code=422, detail={"code": "invoice_total_exceeds_supported_precision"})
     line = InvoiceLine(
         hospital_id=hospital_id,
         invoice_id=invoice.id,
