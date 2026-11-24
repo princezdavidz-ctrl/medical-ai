@@ -57,7 +57,9 @@ _RADIOLOGY_WORK_ROLES = {
     "radiologist", "radiology_resident",
 }
 _REPORT_AUTHOR_ROLES = {"radiologist", "radiology_resident"}
-_REPORT_VERIFY_ROLES = {"radiologist", "radiology_director", "imaging_supervisor"}
+_REPORT_VERIFY_ROLES = {
+    "radiologist", "radiology_director", "radiology_supervisor", "imaging_supervisor",
+}
 
 
 def _membership(db: Session, *, user_id: UUID, hospital_id: UUID):
