@@ -88,6 +88,11 @@ class InpatientAdmission(Base):
             name="fk_inpatient_admission_source_encounter",
         ),
         ForeignKeyConstraint(
+            ["hospital_id", "source_encounter_id", "patient_id"],
+            ["encounters.hospital_id", "encounters.id", "encounters.patient_id"],
+            name="fk_inpatient_admission_source_patient",
+        ),
+        ForeignKeyConstraint(
             ["hospital_id", "ward_id"],
             ["wards.hospital_id", "wards.id"],
             name="fk_inpatient_admission_ward",
