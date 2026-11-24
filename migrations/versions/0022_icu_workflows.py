@@ -28,6 +28,7 @@ def upgrade() -> None:
         sa.Column("started_at", sa.DateTime(timezone=True), server_default=sa.func.now(), nullable=False),
         sa.Column("stepdown_requested_by_user_id", sa.Uuid(), sa.ForeignKey("users.id")),
         sa.Column("stepdown_requested_at", sa.DateTime(timezone=True)),
+        sa.Column("stepdown_reason", sa.Text()),
         sa.Column("closed_by_user_id", sa.Uuid(), sa.ForeignKey("users.id")),
         sa.Column("closed_at", sa.DateTime(timezone=True)),
         sa.ForeignKeyConstraint(
