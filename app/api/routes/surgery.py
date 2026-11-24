@@ -307,6 +307,13 @@ def assign_lead_surgeon_to_encounter(
     ).with_for_update())
     if encounter is None or encounter.status != "in_progress":
         raise HTTPException(status_code=404, detail={"code": "active_surgical_encounter_not_found"})
+    patient = db.scalar(select(Patient).where(
+        Patient.id == encounter.patient_id,
+        Patient.hospital_id == hospital_id,
+        Patient.status == "active",
+    ))
+    if patient is None:
+        raise HTTPException(status_code=409, detail={"code": "surgical_patient_not_active"})
     theatre = db.scalar(select(TheatreRoom).where(
         TheatreRoom.id == payload.theatre_room_id,
         TheatreRoom.hospital_id == hospital_id,
