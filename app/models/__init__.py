@@ -32,6 +32,13 @@ from app.models.emergency import EmergencyVisit, EmergencyTriageAssessment, Emer
 from app.models.icu import ICUStay, ICUObservation, ICUCareEvent, ICUProgressNote
 from app.models.surgery import TheatreRoom, SurgicalCase, SurgicalSafetyChecklist, AnesthesiaRecord, SurgicalEvent, SurgicalNote
 from app.models.maternity import MaternityEpisode, MaternityAntenatalVisit, LaborRecord, LaborObservation, DeliveryRecord, NewbornRecord, PostpartumObservation, NewbornObservation, MaternityNote
+from app.models.pediatrics import (
+    PediatricCareRecord,
+    PediatricGrowthObservation,
+    PediatricDevelopmentalScreening,
+    PediatricImmunizationHistory,
+    PediatricClinicalNote,
+)
 from app.models.nursing import (
     NursingAssessment,
     NursingObservation,
@@ -120,6 +127,11 @@ __all__ = [
     "PostpartumObservation",
     "NewbornObservation",
     "MaternityNote",
+    "PediatricCareRecord",
+    "PediatricGrowthObservation",
+    "PediatricDevelopmentalScreening",
+    "PediatricImmunizationHistory",
+    "PediatricClinicalNote",
     "NursingAssessment",
     "NursingObservation",
     "NursingNote",
