@@ -117,6 +117,7 @@ def upgrade() -> None:
         sa.ForeignKeyConstraint(["hospital_id", "patient_id"], ["patients.hospital_id", "patients.id"], name="fk_nursing_care_plan_patient"),
         sa.ForeignKeyConstraint(["hospital_id", "encounter_id"], ["encounters.hospital_id", "encounters.id"], name="fk_nursing_care_plan_encounter"),
         sa.ForeignKeyConstraint(["hospital_id", "department_id"], ["departments.hospital_id", "departments.id"], name="fk_nursing_care_plan_department"),
+        sa.UniqueConstraint("hospital_id", "id", name="uq_nursing_care_plan_hospital_id_id"),
         sa.CheckConstraint("status IN ('active', 'completed', 'cancelled')", name="ck_nursing_care_plan_status"),
         sa.CheckConstraint("length(trim(nursing_diagnosis)) >= 3", name="ck_nursing_care_plan_diagnosis"),
         sa.CheckConstraint("length(trim(goals)) >= 3", name="ck_nursing_care_plan_goals"),
