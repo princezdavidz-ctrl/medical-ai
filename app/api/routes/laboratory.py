@@ -447,7 +447,8 @@ def create_laboratory_order(
     if patient is None:
         raise HTTPException(status_code=404, detail={"code": "laboratory_patient_not_found"})
     definition = _get_test_definition(
-        db, hospital_id=hospital_id, definition_id=payload.test_definition_id
+        db, hospital_id=hospital_id, definition_id=payload.test_definition_id,
+        lock=True,
     )
     if definition.status != "active":
         raise HTTPException(status_code=409, detail={"code": "laboratory_test_definition_not_active"})
