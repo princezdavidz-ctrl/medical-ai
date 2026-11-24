@@ -51,6 +51,7 @@ class MaternityEpisodeRead(BaseModel):
     created_at: datetime
     closed_at: datetime | None
     closed_reason: str | None
+    pregnancy_end_reason: str | None
 
 
 class MaternityAntenatalVisitCreate(BaseModel):
@@ -397,6 +398,22 @@ class NewbornPatientLink(BaseModel):
 
     patient_id: UUID
 
+
+
+
+class MaternityEpisodeEnd(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    reason: Literal["miscarriage", "ectopic", "termination", "other"]
+    note: str = Field(min_length=3, max_length=8000)
+
+    @field_validator("note")
+    @classmethod
+    def normalize_end_note(cls, value):
+        value = value.strip()
+        if len(value) < 3:
+            raise ValueError("pregnancy_end_note_too_short")
+        return value
 
 
 class MaternityEpisodeClose(BaseModel):
