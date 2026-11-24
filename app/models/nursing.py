@@ -14,6 +14,7 @@ from app.db.base import Base
 class NursingAssessment(Base):
     __tablename__ = "nursing_assessments"
     __table_args__ = (
+        ForeignKeyConstraint(["hospital_id", "encounter_id", "patient_id"], ["encounters.hospital_id", "encounters.id", "encounters.patient_id"], name="fk_nursingassessment_encounter_patient"),
         ForeignKeyConstraint(["hospital_id", "patient_id"], ["patients.hospital_id", "patients.id"], name="fk_nursing_assessment_patient"),
         ForeignKeyConstraint(["hospital_id", "department_id"], ["departments.hospital_id", "departments.id"], name="fk_nursing_assessment_department"),
         ForeignKeyConstraint(
@@ -54,6 +55,7 @@ class NursingAssessment(Base):
 class NursingObservation(Base):
     __tablename__ = "nursing_observations"
     __table_args__ = (
+        ForeignKeyConstraint(["hospital_id", "encounter_id", "patient_id"], ["encounters.hospital_id", "encounters.id", "encounters.patient_id"], name="fk_nursingobservation_encounter_patient"),
         ForeignKeyConstraint(["hospital_id", "patient_id"], ["patients.hospital_id", "patients.id"], name="fk_nursing_observation_patient"),
         ForeignKeyConstraint(
             ["hospital_id", "encounter_id"],
@@ -95,6 +97,7 @@ class NursingObservation(Base):
 class NursingNote(Base):
     __tablename__ = "nursing_notes"
     __table_args__ = (
+        ForeignKeyConstraint(["hospital_id", "encounter_id", "patient_id"], ["encounters.hospital_id", "encounters.id", "encounters.patient_id"], name="fk_nursingnote_encounter_patient"),
         ForeignKeyConstraint(["hospital_id", "patient_id"], ["patients.hospital_id", "patients.id"], name="fk_nursing_note_patient"),
         ForeignKeyConstraint(
             ["hospital_id", "encounter_id"],
@@ -122,6 +125,7 @@ class NursingNote(Base):
 class NursingCarePlan(Base):
     __tablename__ = "nursing_care_plans"
     __table_args__ = (
+        ForeignKeyConstraint(["hospital_id", "encounter_id", "patient_id"], ["encounters.hospital_id", "encounters.id", "encounters.patient_id"], name="fk_nursingcareplan_encounter_patient"),
         ForeignKeyConstraint(["hospital_id", "patient_id"], ["patients.hospital_id", "patients.id"], name="fk_nursing_care_plan_patient"),
         ForeignKeyConstraint(["hospital_id", "department_id"], ["departments.hospital_id", "departments.id"], name="fk_nursing_care_plan_department"),
         ForeignKeyConstraint(
