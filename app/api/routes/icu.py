@@ -491,7 +491,7 @@ def close_icu_stay_after_hospital_discharge(
     stay = _get_stay(db, hospital_id=hospital_id, stay_id=stay_id, lock=True)
     _require_stay_access(
         db, user_id=user.id, hospital_id=hospital_id, stay=stay,
-        allowed=_ICU_CLINICIAN_ROLES,
+        allowed=_ICU_CLINICIAN_ROLES, allow_admin=True,
     )
     if stay.status == "closed":
         raise HTTPException(status_code=409, detail={"code": "icu_stay_already_closed"})
