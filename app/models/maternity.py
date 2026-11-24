@@ -186,10 +186,16 @@ class DeliveryRecord(Base):
             ["maternity_episodes.hospital_id", "maternity_episodes.id", "maternity_episodes.patient_id"],
             name="fk_maternity_delivery_episode_mother",
         ),
+        ForeignKeyConstraint(
+            ["hospital_id", "surgical_case_id", "mother_patient_id"],
+            ["surgical_cases.hospital_id", "surgical_cases.id", "surgical_cases.patient_id"],
+            name="fk_maternity_delivery_surgical_case_mother",
+        ),
         UniqueConstraint("hospital_id", "id", name="uq_maternity_delivery_hospital_id_id"),
         UniqueConstraint("hospital_id", "id", "mother_patient_id", name="uq_maternity_delivery_hospital_id_mother"),
         UniqueConstraint("hospital_id", "labor_record_id", name="uq_maternity_delivery_labor"),
         UniqueConstraint("hospital_id", "episode_id", name="uq_maternity_delivery_episode"),
+        UniqueConstraint("hospital_id", "surgical_case_id", name="uq_maternity_delivery_surgical_case"),
         CheckConstraint("delivery_mode IN ('spontaneous_vaginal', 'assisted_vaginal', 'cesarean', 'breech', 'other')", name="ck_maternity_delivery_mode"),
         CheckConstraint("estimated_blood_loss_ml IS NULL OR estimated_blood_loss_ml BETWEEN 0 AND 50000", name="ck_maternity_delivery_blood_loss"),
         CheckConstraint("placenta_delivered_at IS NULL OR placenta_delivered_at >= delivered_at", name="ck_maternity_delivery_placenta_time"),
@@ -200,6 +206,7 @@ class DeliveryRecord(Base):
     labor_record_id: Mapped[uuid.UUID | None] = mapped_column(Uuid(as_uuid=True))
     episode_id: Mapped[uuid.UUID] = mapped_column(Uuid(as_uuid=True), nullable=False)
     mother_patient_id: Mapped[uuid.UUID] = mapped_column(Uuid(as_uuid=True), nullable=False)
+    surgical_case_id: Mapped[uuid.UUID | None] = mapped_column(Uuid(as_uuid=True))
     delivered_by_user_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id"), nullable=False)
     delivery_mode: Mapped[str] = mapped_column(String(32), nullable=False)
     delivered_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
