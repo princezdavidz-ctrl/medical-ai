@@ -22,6 +22,8 @@ class MaternityEpisodeCreate(BaseModel):
     def validate_pregnancy(self):
         if self.para > self.gravida:
             raise ValueError("para_cannot_exceed_gravida")
+        if self.last_menstrual_period is not None and self.last_menstrual_period > date.today():
+            raise ValueError("last_menstrual_period_cannot_be_in_future")
         if (
             self.last_menstrual_period is not None
             and self.estimated_due_date is not None
