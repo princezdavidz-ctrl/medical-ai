@@ -41,7 +41,7 @@ This milestone adds theatre inventory, scheduled surgical cases, team assignment
 ## Safety and authorization
 
 - Surgeons require an active hospital membership, an approved surgeon role and an active patient-care assignment for the encounter. Professional credential verification and privileges remain an external governance prerequisite.
-- Theatre managers can manage rooms, schedules, team assignment and cancellation; full clinical case detail is restricted to assigned team members and hospital administrators.
+- Theatre managers can manage rooms, schedules, team assignment and cancellation only within their own department; hospital administrators have hospital-wide operational scope. Full clinical case detail is restricted to assigned team members and hospital administrators.
 - Team members must have a recognized surgical/anesthesia/theatre-nursing role, active same-hospital membership and an explicit assignment to the patient encounter. Cross-department assignments are permitted only through the case team workflow.
 - Anesthesia documentation is restricted to assigned anesthesia-provider roles.
 - Failed safety checklist items can be recorded and remain in history; the case cannot start until the latest sign-in and time-out revisions pass.
