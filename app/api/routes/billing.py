@@ -617,6 +617,7 @@ def confirm_invoice_payment(
     payment.status = "confirmed"
     payment.confirmed_by_user_id = user.id
     payment.confirmed_at = now
+    db.flush()
     invoice.amount_paid_total += payment.amount
     invoice.status = "paid" if invoice.amount_paid_total == invoice.subtotal_total else "partially_paid"
     write_audit_event(
