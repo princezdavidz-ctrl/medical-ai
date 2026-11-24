@@ -653,6 +653,11 @@ def cancel_medication_order(
     )
     if not clinician_owner and not pharmacy_supervisor:
         raise HTTPException(status_code=403, detail={"code": "medication_order_cancellation_not_authorized"})
+    if pharmacy_supervisor and (
+        not membership.professional_registration
+        or not membership.professional_registration.strip()
+    ):
+        raise HTTPException(status_code=403, detail={"code": "pharmacy_supervisor_registration_required"})
     if order.status in {"partially_dispensed", "dispensed", "cancelled"} or order.quantity_dispensed_total > 0:
         raise HTTPException(status_code=409, detail={"code": "medication_order_already_dispensed_or_cancelled"})
     order.status = "cancelled"
