@@ -28,7 +28,8 @@ This milestone adds the inpatient admission lifecycle and ward/bed inventory. It
 | POST | `/api/v1/inpatient/admissions` | Request admission from an assigned source encounter |
 | GET | `/api/v1/inpatient/admissions` | List accessible admissions, including the clinician's own requests |
 | GET | `/api/v1/inpatient/admissions/{admission_id}` | Read an accessible admission |
-| POST | `/api/v1/inpatient/admissions/{admission_id}/accept` | Clinician accepts the admission |\n| POST | `/api/v1/inpatient/admissions/{admission_id}/cancel` | Cancel a pending admission |
+| POST | `/api/v1/inpatient/admissions/{admission_id}/accept` | Clinician accepts the admission |
+| POST | `/api/v1/inpatient/admissions/{admission_id}/cancel` | Cancel a pending admission |
 | POST | `/api/v1/inpatient/admissions/{admission_id}/cancel` | Cancel a pending admission |
 | POST | `/api/v1/inpatient/admissions/{admission_id}/bed-assignment` | Assign an available bed |
 | POST | `/api/v1/inpatient/admissions/{admission_id}/care-team` | Assign a nurse or clinician to the encounter |
