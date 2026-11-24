@@ -124,6 +124,7 @@ These corrections are included in the current development branch; they have not 
 - [ ] Phase 3.5 Emergency: arrival registration, patient active status, duplicate open emergency visit prevention, department scope and arrival-mode validation.
 - [ ] Emergency triage: role/department access, initial triage state, revision sequencing under concurrent reassessment, red-flag note requirement, acuity floor and vital/BP validation.
 - [ ] Emergency queue: manual acuity ordering, untriaged ordering, nurse open-queue scope, clinician assignment-only visibility, registration/admin visibility and pagination.
+- [ ] Emergency clinical detail: registration-only roles denied triage/event/note detail; nursing requires same-department open case; clinicians require active assignment; hospital admins remain audited.
 - [ ] Emergency treatment: clinician role only, waiting-to-treatment transition, assigned clinician ownership, assignment creation and competing clinician race.
 - [ ] Emergency care events: active assignment requirement, event type, timestamp timezone/future bounds, event chronology and append-only record history.
 - [ ] Emergency notes: active assignment requirement, note type, signature actor/time, no update/delete route and privacy-safe audit.
