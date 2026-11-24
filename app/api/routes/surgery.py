@@ -192,12 +192,12 @@ def _checklist_passed(checklist: SurgicalSafetyChecklist | None) -> bool:
     return all((
         checklist.patient_identity_confirmed,
         checklist.procedure_confirmed,
-        checklist.site_confirmed,
+        (not checklist.site_marking_applicable or checklist.site_confirmed),
         checklist.consent_verified,
         checklist.allergies_reviewed,
         checklist.anesthesia_safety_confirmed,
         checklist.equipment_ready,
-        checklist.counts_confirmed,
+        (not checklist.counts_applicable or checklist.counts_confirmed),
     ))
 
 
