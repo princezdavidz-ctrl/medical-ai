@@ -40,6 +40,7 @@ app.include_router(auth.router, prefix=settings.api_v1_prefix)
 app.include_router(patients.router, prefix=settings.api_v1_prefix)
 app.include_router(opd.router, prefix=settings.api_v1_prefix)
 app.include_router(nursing.router, prefix=settings.api_v1_prefix)
+app.include_router(nursing.router, prefix=settings.api_v1_prefix)
 app.include_router(ai.router, prefix=settings.api_v1_prefix)
 
 
