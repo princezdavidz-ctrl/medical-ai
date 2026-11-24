@@ -368,10 +368,12 @@ def retire_laboratory_test_definition(
     definition = _get_test_definition(
         db, hospital_id=hospital_id, definition_id=definition_id, lock=True
     )
-    _require_lab_role(
+    membership = _require_lab_role(
         db, user_id=user.id, hospital_id=hospital_id,
         allowed=_LAB_VERIFY_ROLES, department_id=definition.department_id,
     )
+    if not membership.professional_registration or not membership.professional_registration.strip():
+        raise HTTPException(status_code=403, detail={"code": "laboratory_retirement_registration_required"})
     if definition.status != "active":
         raise HTTPException(status_code=409, detail={"code": "only_active_laboratory_definition_can_be_retired"})
     definition.status = "retired"
