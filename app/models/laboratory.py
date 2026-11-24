@@ -24,8 +24,13 @@ class LaboratoryTestDefinition(Base):
         CheckConstraint("status IN ('draft', 'active', 'retired')", name="ck_lab_test_definition_status"),
         CheckConstraint("length(trim(code)) >= 2 AND length(trim(name)) >= 2 AND length(trim(specimen_type)) >= 2", name="ck_lab_test_definition_text"),
         CheckConstraint(
-            "(status = 'draft' AND approved_by_user_id IS NULL AND approved_at IS NULL) OR "
-            "(status IN ('active', 'retired') AND approved_by_user_id IS NOT NULL AND approved_at IS NOT NULL)",
+            "(status = 'draft' AND approved_by_user_id IS NULL AND approved_at IS NULL "
+            "AND retired_by_user_id IS NULL AND retired_at IS NULL AND retirement_reason IS NULL) OR "
+            "(status = 'active' AND approved_by_user_id IS NOT NULL AND approved_at IS NOT NULL "
+            "AND retired_by_user_id IS NULL AND retired_at IS NULL AND retirement_reason IS NULL) OR "
+            "(status = 'retired' AND approved_by_user_id IS NOT NULL AND approved_at IS NOT NULL "
+            "AND retired_by_user_id IS NOT NULL AND retired_at IS NOT NULL "
+            "AND retirement_reason IS NOT NULL AND length(trim(retirement_reason)) >= 3)",
             name="ck_lab_test_definition_approval_state",
         ),
         CheckConstraint(
@@ -47,6 +52,9 @@ class LaboratoryTestDefinition(Base):
     created_by_user_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id"), nullable=False)
     approved_by_user_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("users.id"))
     approved_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    retired_by_user_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("users.id"))
+    retired_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    retirement_reason: Mapped[str | None] = mapped_column(Text)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
 
 
