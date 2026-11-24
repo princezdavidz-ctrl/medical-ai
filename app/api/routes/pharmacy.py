@@ -382,6 +382,8 @@ def create_medication_order(
     )
     if definition.status != "active":
         raise HTTPException(status_code=409, detail={"code": "medication_definition_not_active"})
+    if definition.default_route is not None and payload.route != definition.default_route:
+        raise HTTPException(status_code=422, detail={"code": "prescription_route_must_match_catalog_default"})
     pharmacy_department = db.scalar(select(Department).where(
         Department.id == definition.department_id,
         Department.hospital_id == hospital_id,
