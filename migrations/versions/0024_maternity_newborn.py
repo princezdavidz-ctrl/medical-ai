@@ -110,6 +110,8 @@ def upgrade() -> None:
         sa.UniqueConstraint("hospital_id", "id", "episode_id", name="uq_labor_record_hospital_id_episode"),
         sa.UniqueConstraint("hospital_id", "episode_id", name="uq_labor_record_episode"),
         sa.CheckConstraint("status IN ('latent', 'active', 'second_stage', 'delivered', 'ended')", name="ck_labor_record_status"),
+        sa.CheckConstraint("(status IN ('delivered', 'ended') AND ended_at IS NOT NULL) OR (status NOT IN ('delivered', 'ended') AND ended_at IS NULL)", name="ck_labor_record_end_state"),
+        sa.CheckConstraint("ended_at IS NULL OR ended_at >= started_at", name="ck_labor_record_end_time"),
         sa.CheckConstraint("onset_type IN ('spontaneous', 'induced', 'augmented', 'other')", name="ck_labor_record_onset"),
         sa.CheckConstraint("membrane_status IN ('intact', 'ruptured', 'unknown')", name="ck_labor_record_membranes"),
         sa.CheckConstraint("presentation IN ('cephalic', 'breech', 'transverse', 'other', 'unknown')", name="ck_labor_record_presentation"),
