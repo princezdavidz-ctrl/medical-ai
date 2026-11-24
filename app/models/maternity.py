@@ -37,6 +37,7 @@ class MaternityEpisode(Base):
         CheckConstraint("gravida >= 1 AND para >= 0 AND para <= gravida", name="ck_maternity_episode_gravida_para"),
         CheckConstraint("pregnancy_status IN ('antenatal', 'in_labor', 'postpartum', 'ended')", name="ck_maternity_episode_pregnancy_status"),
         CheckConstraint("status IN ('active', 'closed')", name="ck_maternity_episode_status"),
+        CheckConstraint("closed_reason IS NULL OR length(trim(closed_reason)) >= 3", name="ck_maternity_episode_closed_reason"),
         Index(
             "uq_maternity_active_episode_patient",
             "hospital_id", "patient_id", unique=True,
@@ -60,6 +61,7 @@ class MaternityEpisode(Base):
     created_by_user_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id"), nullable=False)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
     closed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    closed_reason: Mapped[str | None] = mapped_column(Text)
 
 
 class MaternityAntenatalVisit(Base):
