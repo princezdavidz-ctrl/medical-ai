@@ -300,6 +300,9 @@ def list_ward_beds(
     if status_filter is not None:
         query = query.where(HospitalBed.status == status_filter)
     beds = list(db.scalars(query.order_by(HospitalBed.bed_number)).all())
+    _audit(db, hospital_id=hospital_id, user_id=user.id,
+           action="inpatient.beds.viewed", resource_type="hospital_bed_list",
+           resource_id=None)
     db.commit()
     return beds
 
