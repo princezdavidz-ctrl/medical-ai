@@ -393,6 +393,21 @@ class NewbornPatientLink(BaseModel):
     patient_id: UUID
 
 
+
+class MaternityEpisodeClose(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    reason: str = Field(min_length=3, max_length=4000)
+
+    @field_validator("reason")
+    @classmethod
+    def normalize_close_reason(cls, value):
+        value = value.strip()
+        if len(value) < 3:
+            raise ValueError("maternity_close_reason_too_short")
+        return value
+
+
 class MaternityEpisodeDetailRead(BaseModel):
     episode: MaternityEpisodeRead
     antenatal_visits: list[MaternityAntenatalVisitRead]
