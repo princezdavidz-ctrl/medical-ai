@@ -2,7 +2,7 @@ from datetime import datetime, timezone
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
-from sqlalchemy import or_, select, text
+from sqlalchemy import case, or_, select, text
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
@@ -34,6 +34,7 @@ from app.schemas.laboratory import (
     LaboratoryResultRead,
     LaboratorySpecimenCreate,
     LaboratorySpecimenRead,
+    LaboratorySpecimenReject,
     LaboratoryTestDefinitionCreate,
     LaboratoryTestDefinitionRead,
 )
@@ -446,7 +447,11 @@ def list_laboratory_orders(
         query = query.where(LaboratoryOrder.status == order_status)
     orders = list(db.scalars(
         query.order_by(
-            LaboratoryOrder.priority.desc(),
+            case(
+                (LaboratoryOrder.priority == "stat", 0),
+                (LaboratoryOrder.priority == "urgent", 1),
+                else_=2,
+            ),
             LaboratoryOrder.ordered_at.asc(),
         ).limit(limit).offset(offset)
     ).all())
@@ -577,6 +582,47 @@ def receive_laboratory_specimen(
         db, hospital_id=hospital_id, actor_user_id=user.id,
         action="laboratory.specimen.received", resource_type="laboratory_specimen",
         resource_id=str(specimen.id),
+    )
+    db.commit()
+    _restore_tenant_context(db, user_id=user.id, hospital_id=hospital_id)
+    db.refresh(specimen)
+    return specimen
+
+
+
+@router.post("/specimens/{specimen_id}/reject", response_model=LaboratorySpecimenRead)
+def reject_laboratory_specimen(
+    specimen_id: UUID,
+    payload: LaboratorySpecimenReject,
+    context: tuple = Depends(get_current_context),
+    db: Session = Depends(get_db),
+) -> LaboratorySpecimen:
+    user, hospital_id = context
+    specimen_ref = _get_specimen(db, hospital_id=hospital_id, specimen_id=specimen_id)
+    order = _get_order(db, hospital_id=hospital_id, order_id=specimen_ref.order_id, lock=True)
+    specimen = _get_specimen(db, hospital_id=hospital_id, specimen_id=specimen_id, lock=True)
+    _require_lab_role(
+        db, user_id=user.id, hospital_id=hospital_id,
+        allowed=_LAB_WORK_ROLES, department_id=order.laboratory_department_id,
+    )
+    if specimen.status not in {"collected", "received"}:
+        raise HTTPException(status_code=409, detail={"code": "specimen_not_rejectable_in_current_state"})
+    specimen.status = "rejected"
+    specimen.rejected_at = datetime.now(timezone.utc)
+    specimen.rejection_reason = payload.reason
+    remaining_active = db.scalar(select(LaboratorySpecimen.id).where(
+        LaboratorySpecimen.hospital_id == hospital_id,
+        LaboratorySpecimen.order_id == order.id,
+        LaboratorySpecimen.id != specimen.id,
+        LaboratorySpecimen.status != "rejected",
+    ).limit(1))
+    if remaining_active is None and order.status == "in_progress":
+        order.status = "ordered"
+    write_audit_event(
+        db, hospital_id=hospital_id, actor_user_id=user.id,
+        action="laboratory.specimen.rejected", resource_type="laboratory_specimen",
+        resource_id=str(specimen.id),
+        metadata={"order_id": str(order.id)},
     )
     db.commit()
     _restore_tenant_context(db, user_id=user.id, hospital_id=hospital_id)
@@ -724,9 +770,17 @@ def acknowledge_critical_laboratory_result(
     db: Session = Depends(get_db),
 ) -> LaboratoryCriticalAcknowledgement:
     user, hospital_id = context
+    result_ref = _get_result(db, hospital_id=hospital_id, result_id=result_id)
+    specimen_ref = _get_specimen(
+        db, hospital_id=hospital_id, specimen_id=result_ref.specimen_id
+    )
+    order = _get_order(
+        db, hospital_id=hospital_id, order_id=specimen_ref.order_id, lock=True
+    )
+    specimen = _get_specimen(
+        db, hospital_id=hospital_id, specimen_id=specimen_ref.id, lock=True
+    )
     result = _get_result(db, hospital_id=hospital_id, result_id=result_id, lock=True)
-    specimen = _get_specimen(db, hospital_id=hospital_id, specimen_id=result.specimen_id)
-    order = _get_order(db, hospital_id=hospital_id, order_id=specimen.order_id)
     if result.status != "final" or not result.critical_flag:
         raise HTTPException(status_code=409, detail={"code": "final_critical_result_required"})
     membership = _membership(db, user_id=user.id, hospital_id=hospital_id)
