@@ -297,6 +297,13 @@ class PostpartumObservationCreate(BaseModel):
         if self.systolic_bp is not None and self.diastolic_bp is not None:
             if self.systolic_bp <= self.diastolic_bp:
                 raise ValueError("systolic_bp_must_exceed_diastolic_bp")
+        has_observation = any(value is not None for value in (
+            self.maternal_heart_rate, self.systolic_bp, self.diastolic_bp,
+            self.temperature_c, self.spo2_percent, self.estimated_blood_loss_ml,
+            self.breastfeeding_initiated,
+        )) or self.uterine_tone != "not_assessed" or self.lochia != "not_assessed" or bool(self.notes and self.notes.strip())
+        if not has_observation:
+            raise ValueError("postpartum_observation_requires_measurement_or_note")
         if self.observed_at.tzinfo is None or self.observed_at.utcoffset() is None:
             raise ValueError("postpartum_timestamp_must_include_timezone")
         if self.observed_at > datetime.now(timezone.utc) + timedelta(minutes=5):
