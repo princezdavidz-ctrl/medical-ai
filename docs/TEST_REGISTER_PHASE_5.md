@@ -150,7 +150,7 @@ These corrections are included in the current development branch; they have not 
 - [ ] Surgical detail access: assigned team and hospital administrators can read clinical case detail; theatre managers are department-scoped for operations and cannot read clinical notes without assignment.
 - [ ] Surgical safety checklists: sign-in/time-out/sign-out phase state, revision ordering, failed checks retained, latest revision gates, not-applicable site/count handling and concurrent revisions.
 - [ ] Anesthesia record: assigned anesthetist role, single record per case, ASA class 1–6, timestamp bounds, assessment required, no medication dose fields and end-time validation.
-- [ ] Surgical case start: lead surgeon only, passing latest sign-in and time-out checklists, valid anesthesia record, correct scheduled state and concurrent start denial.
+- [ ] Surgical case start: lead surgeon only, passing latest sign-in and time-out checklists, valid anesthesia record from an active assigned anesthesia provider, correct scheduled state and concurrent start denial.
 - [ ] Surgical events: assigned team only, in-progress case only, event type, timestamp after actual start, append-only history and audit privacy.
 - [ ] Surgical notes: assigned team only, operative note only during surgery, post-op note only during recovery, signing identity/time and no edit/delete path.
 - [ ] Procedure completion: lead surgeon only, passing sign-out checklist, signed operative note, anesthesia end timestamp and transition to recovery.
