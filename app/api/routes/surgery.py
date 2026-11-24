@@ -161,7 +161,9 @@ def _require_case_team(
         allowed=allowed, department_id=case_department_id(db, case),
         allow_manager=allow_manager,
     )
-    if not _has_assignment(db, user_id=user_id, hospital_id=hospital_id, case=case):
+    if role_name not in _THEATRE_MANAGER_ROLES and not _has_assignment(
+        db, user_id=user_id, hospital_id=hospital_id, case=case
+    ):
         raise HTTPException(status_code=404, detail={"code": "assigned_surgical_case_not_found"})
     return role_name
 
