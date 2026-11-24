@@ -48,6 +48,7 @@ from app.schemas.maternity import (
     NewbornObservationRead,
     NewbornPatientLink,
     NewbornRecordCreate,
+    NewbornRecordDetailRead,
     NewbornRecordRead,
     PostpartumObservationCreate,
     PostpartumObservationRead,
@@ -797,6 +798,31 @@ def link_newborn_patient(
     _restore_tenant_context(db, user_id=user.id, hospital_id=hospital_id)
     db.refresh(newborn)
     return newborn
+
+
+@router.get("/newborns/{newborn_id}", response_model=NewbornRecordDetailRead)
+def get_newborn_record(
+    newborn_id: UUID,
+    context: tuple = Depends(get_current_context),
+    db: Session = Depends(get_db),
+) -> dict:
+    user, hospital_id = context
+    newborn = _get_newborn(db, hospital_id=hospital_id, newborn_id=newborn_id)
+    delivery = _get_delivery(db, hospital_id=hospital_id, delivery_id=newborn.delivery_id)
+    episode = _get_episode(db, hospital_id=hospital_id, episode_id=delivery.episode_id)
+    _require_episode_access(
+        db, user_id=user.id, hospital_id=hospital_id,
+        episode=episode, allowed=_NEONATAL_ROLES | _EPISODE_ROLES | _VISIT_ROLES,
+    )
+    observations = db.scalars(select(NewbornObservation).where(
+        NewbornObservation.hospital_id == hospital_id,
+        NewbornObservation.newborn_record_id == newborn.id,
+    ).order_by(NewbornObservation.observed_at)).all()
+    _audit(db, hospital_id=hospital_id, user_id=user.id,
+           action="maternity.newborn.viewed", resource_type="maternity_newborn", resource_id=newborn.id)
+    db.commit()
+    _restore_tenant_context(db, user_id=user.id, hospital_id=hospital_id)
+    return {"newborn": newborn, "observations": observations}
 
 
 @router.post(
