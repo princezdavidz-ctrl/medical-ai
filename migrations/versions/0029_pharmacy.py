@@ -234,6 +234,23 @@ def upgrade() -> None:
         ["hospital_id", "order_id", "dispensed_at"],
     )
 
+    op.execute("""
+        CREATE OR REPLACE FUNCTION reject_medication_history_mutation()
+        RETURNS trigger
+        LANGUAGE plpgsql
+        AS $
+        BEGIN
+            RAISE EXCEPTION 'medication history records are append-only';
+        END;
+        $
+    """)
+    for table in ("medication_order_review_events", "medication_dispenses"):
+        op.execute(
+            f"CREATE TRIGGER {table}_append_only "
+            f"BEFORE UPDATE OR DELETE ON {table} "
+            "FOR EACH ROW EXECUTE FUNCTION reject_medication_history_mutation()"
+        )
+
     for table in TABLES:
         op.execute(f"ALTER TABLE {table} ENABLE ROW LEVEL SECURITY")
         op.execute(f"ALTER TABLE {table} FORCE ROW LEVEL SECURITY")
@@ -245,6 +262,9 @@ def upgrade() -> None:
 
 
 def downgrade() -> None:
+    for table in ("medication_order_review_events", "medication_dispenses"):
+        op.execute(f"DROP TRIGGER IF EXISTS {table}_append_only ON {table}")
+    op.execute("DROP FUNCTION IF EXISTS reject_medication_history_mutation()")
     for table in reversed(TABLES):
         op.execute(f"DROP POLICY IF EXISTS hospital_tenant_isolation ON {table}")
         op.execute(f"ALTER TABLE {table} NO FORCE ROW LEVEL SECURITY")
