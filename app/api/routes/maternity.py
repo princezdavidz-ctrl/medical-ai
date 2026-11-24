@@ -40,6 +40,7 @@ from app.schemas.maternity import (
     MaternityEpisodeCreate,
     MaternityEpisodeDetailRead,
     MaternityEpisodeRead,
+    MaternityEpisodeEnd,
     MaternityNoteCreate,
     MaternityNoteRead,
     NewbornObservationCreate,
@@ -838,6 +839,52 @@ def create_maternity_note(
     _restore_tenant_context(db, user_id=user.id, hospital_id=hospital_id)
     db.refresh(note)
     return note
+
+
+@router.post("/episodes/{episode_id}/end-pregnancy", response_model=MaternityEpisodeRead)
+def end_pregnancy(
+    episode_id: UUID,
+    payload: MaternityEpisodeEnd,
+    context: tuple = Depends(get_current_context),
+    db: Session = Depends(get_db),
+) -> MaternityEpisode:
+    user, hospital_id = context
+    episode = _get_episode(db, hospital_id=hospital_id, episode_id=episode_id, lock=True)
+    _require_episode_access(
+        db, user_id=user.id, hospital_id=hospital_id,
+        episode=episode, allowed=_OBSTETRICIAN_ROLES,
+    )
+    if episode.status != "active" or episode.pregnancy_status not in {"antenatal", "in_labor"}:
+        raise HTTPException(status_code=409, detail={"code": "pregnancy_not_open_for_ending"})
+    labor = db.scalar(select(LaborRecord).where(
+        LaborRecord.hospital_id == hospital_id,
+        LaborRecord.episode_id == episode.id,
+    ).with_for_update())
+    if labor is not None:
+        if labor.status in {"delivered", "ended"}:
+            raise HTTPException(status_code=409, detail={"code": "labor_already_ended"})
+        labor.status = "ended"
+        labor.ended_at = datetime.now(timezone.utc)
+    now = datetime.now(timezone.utc)
+    episode.pregnancy_status = "ended"
+    episode.pregnancy_end_reason = payload.reason
+    episode.status = "closed"
+    episode.closed_at = now
+    episode.closed_reason = payload.note
+    note = MaternityNote(
+        hospital_id=hospital_id,
+        episode_id=episode.id,
+        author_user_id=user.id,
+        note_type="other",
+        note_text=payload.note,
+    )
+    db.add(note)
+    _audit(db, hospital_id=hospital_id, user_id=user.id,
+           action="maternity.pregnancy.ended", resource_type="maternity_episode", resource_id=episode.id)
+    db.commit()
+    _restore_tenant_context(db, user_id=user.id, hospital_id=hospital_id)
+    db.refresh(episode)
+    return episode
 
 
 @router.post("/episodes/{episode_id}/close", response_model=MaternityEpisodeRead)
