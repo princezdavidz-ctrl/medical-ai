@@ -4,7 +4,7 @@ from decimal import Decimal
 
 from sqlalchemy import (
     CheckConstraint, DateTime, ForeignKey, ForeignKeyConstraint, Index,
-    Numeric, String, Text, UniqueConstraint, Uuid, func,
+    Numeric, String, Text, UniqueConstraint, Uuid, func, text,
 )
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -139,6 +139,12 @@ class LaboratorySpecimen(Base):
             name="ck_lab_specimen_processing_state",
         ),
         Index("ix_lab_specimen_order_time", "hospital_id", "order_id", "collected_at"),
+        Index(
+            "uq_lab_specimen_one_active_per_order",
+            "hospital_id", "order_id",
+            unique=True,
+            postgresql_where=text("status != 'rejected'"),
+        ),
     )
 
     id: Mapped[uuid.UUID] = mapped_column(Uuid(as_uuid=True), primary_key=True, default=uuid.uuid4)
@@ -187,6 +193,10 @@ class LaboratoryResult(Base):
         CheckConstraint(
             "critical_flag = false OR (critical_note IS NOT NULL AND length(trim(critical_note)) >= 3)",
             name="ck_lab_result_critical_note",
+        ),
+        CheckConstraint(
+            "abnormality != 'critical' OR critical_flag = true",
+            name="ck_lab_result_critical_abnormality_flag",
         ),
         Index("ix_lab_result_status_time", "hospital_id", "status", "entered_at"),
     )
