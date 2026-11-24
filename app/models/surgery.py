@@ -143,7 +143,7 @@ class AnesthesiaRecord(Base):
             "anesthesia_type IN ('general', 'regional', 'local', 'sedation', 'combined')",
             name="ck_anesthesia_record_type",
         ),
-        CheckConstraint("asa_class BETWEEN 1 AND 5", name="ck_anesthesia_record_asa"),
+        CheckConstraint("asa_class BETWEEN 1 AND 6", name="ck_anesthesia_record_asa"),
         CheckConstraint("ended_at IS NULL OR ended_at > started_at", name="ck_anesthesia_record_time"),
         CheckConstraint("length(trim(pre_anesthesia_assessment)) >= 3", name="ck_anesthesia_assessment"),
     )
