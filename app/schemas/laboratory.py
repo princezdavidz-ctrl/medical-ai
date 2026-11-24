@@ -54,6 +54,9 @@ class LaboratoryTestDefinitionRead(BaseModel):
     created_by_user_id: UUID
     approved_by_user_id: UUID | None
     approved_at: datetime | None
+    retired_by_user_id: UUID | None
+    retired_at: datetime | None
+    retirement_reason: str | None
     created_at: datetime
 
 
@@ -276,4 +279,18 @@ class LaboratorySpecimenReject(BaseModel):
         value = value.strip()
         if len(value) < 3:
             raise ValueError("laboratory_specimen_rejection_reason_required")
+        return value
+
+
+class LaboratoryTestDefinitionRetire(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    reason: str = Field(min_length=3, max_length=2000)
+
+    @field_validator("reason")
+    @classmethod
+    def trim_reason(cls, value):
+        value = value.strip()
+        if len(value) < 3:
+            raise ValueError("laboratory_catalog_retirement_reason_required")
         return value
