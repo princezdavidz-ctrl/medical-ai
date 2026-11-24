@@ -30,6 +30,7 @@ from app.schemas.radiology import (
     ImagingOrderDetailRead,
     ImagingOrderRead,
     ImagingPatientSummary,
+    ImagingQueueItemRead,
     ImagingProcedureDefinitionCreate,
     ImagingProcedureDefinitionRead,
     ImagingProcedureDefinitionRetire,
@@ -459,7 +460,7 @@ def create_imaging_order(
     return order
 
 
-@router.get("/orders", response_model=list[dict])
+@router.get("/orders", response_model=list[ImagingQueueItemRead])
 def list_imaging_orders(
     context: tuple = Depends(get_current_context),
     db: Session = Depends(get_db),
