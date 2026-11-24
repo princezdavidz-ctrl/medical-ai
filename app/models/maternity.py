@@ -242,6 +242,7 @@ class NewbornRecord(Base):
         ),
         UniqueConstraint("hospital_id", "id", name="uq_maternity_newborn_hospital_id_id"),
         UniqueConstraint("hospital_id", "delivery_id", "birth_order", name="uq_maternity_newborn_birth_order"),
+        UniqueConstraint("hospital_id", "newborn_patient_id", name="uq_maternity_newborn_patient_link"),
         CheckConstraint("birth_order >= 1", name="ck_maternity_newborn_birth_order"),
         CheckConstraint("sex IN ('female', 'male', 'intersex', 'unknown')", name="ck_maternity_newborn_sex"),
         CheckConstraint("outcome IN ('live_birth', 'stillbirth', 'neonatal_death')", name="ck_maternity_newborn_outcome"),
