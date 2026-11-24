@@ -157,8 +157,8 @@ class ImagingStudy(Base):
             "AND completed_at IS NULL AND cancelled_at IS NULL AND performed_by_user_id IS NOT NULL) OR "
             "(status = 'completed' AND scheduled_at IS NOT NULL AND started_at IS NOT NULL "
             "AND completed_at IS NOT NULL AND cancelled_at IS NULL AND performed_by_user_id IS NOT NULL) OR "
-            "(status = 'cancelled' AND scheduled_at IS NOT NULL AND cancelled_at IS NOT NULL "
-            "AND performed_by_user_id IS NULL)",
+            "(status = 'cancelled' AND scheduled_at IS NOT NULL AND started_at IS NULL "
+            "AND completed_at IS NULL AND cancelled_at IS NOT NULL AND performed_by_user_id IS NULL)",
             name="ck_imaging_study_workflow_timestamps",
         ),
         CheckConstraint(
