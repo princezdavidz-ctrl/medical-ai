@@ -46,6 +46,13 @@ from app.models.laboratory import (
     LaboratoryResult,
     LaboratoryCriticalAcknowledgement,
 )
+from app.models.radiology import (
+    ImagingProcedureDefinition,
+    ImagingOrder,
+    ImagingStudy,
+    ImagingReport,
+    ImagingCriticalAcknowledgement,
+)
 from app.models.nursing import (
     NursingAssessment,
     NursingObservation,
@@ -144,6 +151,11 @@ __all__ = [
     "LaboratorySpecimen",
     "LaboratoryResult",
     "LaboratoryCriticalAcknowledgement",
+    "ImagingProcedureDefinition",
+    "ImagingOrder",
+    "ImagingStudy",
+    "ImagingReport",
+    "ImagingCriticalAcknowledgement",
     "NursingAssessment",
     "NursingObservation",
     "NursingNote",
