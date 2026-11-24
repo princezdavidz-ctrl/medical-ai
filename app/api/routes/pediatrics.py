@@ -131,6 +131,22 @@ def _require_record_access(
         raise HTTPException(status_code=404, detail={"code": "pediatric_record_not_found"})
 
 
+
+def _require_after_birth(
+    db: Session, *, record: PediatricCareRecord, event_at: datetime
+) -> None:
+    patient = db.scalar(select(Patient).where(
+        Patient.id == record.patient_id,
+        Patient.hospital_id == record.hospital_id,
+    ))
+    if patient is None or patient.date_of_birth is None:
+        raise HTTPException(status_code=409, detail={"code": "pediatric_patient_birth_date_unavailable"})
+    birth_start = datetime.combine(
+        patient.date_of_birth, datetime.min.time(), tzinfo=timezone.utc
+    )
+    if event_at.astimezone(timezone.utc) < birth_start:
+        raise HTTPException(status_code=422, detail={"code": "pediatric_event_cannot_precede_birth"})
+
 def _record_detail(db: Session, record: PediatricCareRecord) -> dict:
     return {
         "record": record,
@@ -312,6 +328,7 @@ def add_pediatric_growth_observation(
     user, hospital_id = context
     record = _get_record(db, hospital_id=hospital_id, record_id=record_id, lock=True)
     _require_record_access(db, user_id=user.id, hospital_id=hospital_id, record=record)
+    _require_after_birth(db, record=record, event_at=payload.observed_at)
     observation = PediatricGrowthObservation(
         hospital_id=hospital_id, care_record_id=record.id,
         recorded_by_user_id=user.id, **payload.model_dump(),
@@ -342,6 +359,7 @@ def add_developmental_screening(
     user, hospital_id = context
     record = _get_record(db, hospital_id=hospital_id, record_id=record_id, lock=True)
     _require_record_access(db, user_id=user.id, hospital_id=hospital_id, record=record)
+    _require_after_birth(db, record=record, event_at=payload.screened_at)
     screening = PediatricDevelopmentalScreening(
         hospital_id=hospital_id, care_record_id=record.id,
         recorded_by_user_id=user.id, **payload.model_dump(),
@@ -372,6 +390,8 @@ def add_immunization_history(
     user, hospital_id = context
     record = _get_record(db, hospital_id=hospital_id, record_id=record_id, lock=True)
     _require_record_access(db, user_id=user.id, hospital_id=hospital_id, record=record)
+    if payload.administered_at is not None:
+        _require_after_birth(db, record=record, event_at=payload.administered_at)
     history = PediatricImmunizationHistory(
         hospital_id=hospital_id, care_record_id=record.id,
         recorded_by_user_id=user.id, **payload.model_dump(),
