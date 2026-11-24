@@ -57,6 +57,7 @@ class SurgicalCase(Base):
             name="fk_surgical_case_theatre",
         ),
         UniqueConstraint("hospital_id", "id", name="uq_surgical_case_hospital_id_id"),
+        UniqueConstraint("hospital_id", "id", "patient_id", name="uq_surgical_case_hospital_id_patient"),
         CheckConstraint(
             "urgency IN ('elective', 'urgent', 'emergency')",
             name="ck_surgical_case_urgency",
