@@ -29,7 +29,6 @@ from app.schemas.radiology import (
     ImagingOrderCreate,
     ImagingOrderDetailRead,
     ImagingOrderRead,
-    ImagingPatientSummary,
     ImagingQueueItemRead,
     ImagingProcedureDefinitionCreate,
     ImagingProcedureDefinitionRead,
