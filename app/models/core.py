@@ -127,6 +127,7 @@ class Encounter(TimestampMixin, Base):
     __table_args__ = (
         Index("ix_encounter_hospital_patient", "hospital_id", "patient_id"),
         UniqueConstraint("hospital_id", "id", name="uq_encounter_hospital_id_id"),
+        UniqueConstraint("hospital_id", "id", "patient_id", name="uq_encounter_hospital_id_patient"),
     )
 
     id: Mapped[uuid.UUID] = mapped_column(Uuid(as_uuid=True), primary_key=True, default=uuid.uuid4)
