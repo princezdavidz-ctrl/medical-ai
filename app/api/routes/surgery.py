@@ -76,6 +76,11 @@ def _membership(db: Session, *, user_id: UUID, hospital_id: UUID):
     )
 
 
+def membership_department(db: Session, user_id: UUID, hospital_id: UUID) -> UUID | None:
+    membership = _membership(db, user_id=user_id, hospital_id=hospital_id)
+    return membership.department_id if membership is not None else None
+
+
 def _role_name(db: Session, membership: HospitalMembership | None) -> str:
     role = db.get(Role, membership.role_id) if membership else None
     return role.name.strip().casefold().replace(" ", "_") if role else ""
@@ -266,9 +271,13 @@ def list_theatres(
         allowed=_SURGEON_ROLES | _ANESTHESIA_ROLES | _THEATRE_NURSE_ROLES,
     )
     query = select(TheatreRoom).where(TheatreRoom.hospital_id == hospital_id)
-    if role_name in _THEATRE_MANAGER_ROLES:
+    if role_name in _ADMIN_ROLES:
         if department_id is not None:
             query = query.where(TheatreRoom.department_id == department_id)
+    elif role_name in _THEATRE_MANAGER_ROLES:
+        if department_id is not None and department_id != membership.department_id:
+            raise HTTPException(status_code=403, detail={"code": "surgery_department_scope_required"})
+        query = query.where(TheatreRoom.department_id == membership.department_id)
     elif role_name not in _SURGEON_ROLES | _ANESTHESIA_ROLES | {"theatre_nurse", "scrub_nurse", "circulating_nurse"}:
         if department_id is not None and department_id != membership.department_id:
             raise HTTPException(status_code=403, detail={"code": "surgery_department_scope_required"})
@@ -292,10 +301,6 @@ def assign_lead_surgeon_to_encounter(
     db: Session = Depends(get_db),
 ) -> dict:
     user, hospital_id = context
-    _require_role(
-        db, user_id=user.id, hospital_id=hospital_id,
-        allowed=set(), department_id=None,
-    )
     encounter = db.scalar(select(Encounter).where(
         Encounter.id == encounter_id,
         Encounter.hospital_id == hospital_id,
@@ -309,6 +314,10 @@ def assign_lead_surgeon_to_encounter(
     ).with_for_update())
     if theatre is None:
         raise HTTPException(status_code=404, detail={"code": "active_theatre_not_found"})
+    _require_role(
+        db, user_id=user.id, hospital_id=hospital_id,
+        allowed=set(), department_id=theatre.department_id,
+    )
     surgeon_membership = _membership(db, user_id=payload.surgeon_user_id, hospital_id=hospital_id)
     surgeon_role = _role_name(db, surgeon_membership)
     if (
@@ -480,7 +489,14 @@ def list_surgical_cases(
         allowed=_TEAM_ROLES,
     )
     query = select(SurgicalCase).where(SurgicalCase.hospital_id == hospital_id)
-    if role_name not in _THEATRE_MANAGER_ROLES:
+    if role_name in _ADMIN_ROLES:
+        pass
+    elif role_name in _THEATRE_MANAGER_ROLES:
+        query = query.join(TheatreRoom, and_(
+            TheatreRoom.id == SurgicalCase.theatre_room_id,
+            TheatreRoom.hospital_id == SurgicalCase.hospital_id,
+        )).where(TheatreRoom.department_id == membership.department_id)
+    else:
         now = datetime.now(timezone.utc)
         assigned_encounters = select(PatientCareAssignment.encounter_id).where(
             PatientCareAssignment.hospital_id == hospital_id,
@@ -543,6 +559,9 @@ def assign_surgical_team_member(
         db, user_id=user.id, hospital_id=hospital_id,
         allowed=_SURGEON_ROLES,
     )
+    if actor_role in _THEATRE_MANAGER_ROLES and actor_role not in _ADMIN_ROLES:
+        if theatre is None or membership_department(db, user.id, hospital_id) != theatre.department_id:
+            raise HTTPException(status_code=403, detail={"code": "theatre_manager_department_scope_required"})
     if actor_role not in _THEATRE_MANAGER_ROLES and (
         surgical_case.surgeon_user_id != user.id
         or not _has_assignment(db, user_id=user.id, hospital_id=hospital_id, case=surgical_case)
@@ -866,7 +885,13 @@ def cancel_surgical_case(
     surgical_case = _get_case(db, hospital_id=hospital_id, case_id=case_id, lock=True)
     membership = _membership(db, user_id=user.id, hospital_id=hospital_id)
     role_name = _role_name(db, membership)
-    if role_name in _THEATRE_MANAGER_ROLES:
+    theatre = db.scalar(select(TheatreRoom).where(
+        TheatreRoom.id == surgical_case.theatre_room_id,
+        TheatreRoom.hospital_id == hospital_id,
+    ))
+    if role_name in _ADMIN_ROLES:
+        pass
+    elif role_name in _THEATRE_MANAGER_ROLES and theatre is not None and membership.department_id == theatre.department_id:
         pass
     elif role_name in _SURGEON_ROLES and surgical_case.surgeon_user_id == user.id:
         if not _has_assignment(db, user_id=user.id, hospital_id=hospital_id, case=surgical_case):
