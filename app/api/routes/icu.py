@@ -454,10 +454,10 @@ def request_icu_stepdown(
     user, hospital_id = context
     stay = _get_stay(db, hospital_id=hospital_id, stay_id=stay_id, lock=True)
     _require_stay_access(
-    _require_active_inpatient_admission(db, hospital_id=hospital_id, stay=stay)
         db, user_id=user.id, hospital_id=hospital_id, stay=stay,
         allowed=_ICU_CLINICIAN_ROLES,
     )
+    _require_active_inpatient_admission(db, hospital_id=hospital_id, stay=stay)
     if stay.status != "active":
         raise HTTPException(status_code=409, detail={"code": "icu_stay_not_active"})
     stay.status = "stepdown_requested"
