@@ -88,7 +88,8 @@ Every module milestone must include:
 | Maternity & Newborn Care | Phase 3.8 | Implemented; Phase 5 verification pending | PR #34 (merged) |
 | Pediatrics & Child Health | Phase 3.9 | Implemented; Phase 5 verification pending | PR #35 (merged) |
 | Laboratory & Diagnostics | Phase 3.10 | Implemented; Phase 5 verification pending | PR #36 (merged) |
-| Radiology & Medical Imaging | Phase 3.11 | In implementation | Current branch |
+| Radiology & Medical Imaging | Phase 3.11 | Implemented; Phase 5 verification pending | PR #37 (merged) |
+| Pharmacy & Medication Management | Phase 3.12 | In implementation | Current branch |
 
 Patient Registration & Management extends the Phase 1 patient foundation with governed duplicate review, identity/document metadata, contact and next-of-kin details, consent/lawful-basis recording, patient status and audit history. Automatic patient merging is prohibited.
 
