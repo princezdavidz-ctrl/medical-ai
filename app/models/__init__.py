@@ -28,6 +28,7 @@ from app.models.ai_operations import AIHospitalControl
 from app.models.patient_context import PatientCareAssignment
 from app.models.opd import OPDVisit, OPDTriageAssessment, OPDConsultationNote, OPDDiagnosis
 from app.models.inpatient import Ward, HospitalBed, InpatientAdmission, BedAssignment
+from app.models.emergency import EmergencyVisit, EmergencyTriageAssessment, EmergencyCareEvent, EmergencyNote
 from app.models.nursing import (
     NursingAssessment,
     NursingObservation,
@@ -93,6 +94,10 @@ __all__ = [
     "HospitalBed",
     "InpatientAdmission",
     "BedAssignment",
+    "EmergencyVisit",
+    "EmergencyTriageAssessment",
+    "EmergencyCareEvent",
+    "EmergencyNote",
     "NursingAssessment",
     "NursingObservation",
     "NursingNote",
