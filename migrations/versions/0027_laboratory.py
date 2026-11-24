@@ -253,7 +253,8 @@ def upgrade() -> None:
             name="ck_lab_result_critical_note",
         ),
         sa.CheckConstraint(
-            "abnormality != 'critical' OR critical_flag = true",
+            "(abnormality = 'critical' AND critical_flag = true) OR "
+            "(abnormality != 'critical' AND critical_flag = false)",
             name="ck_lab_result_critical_abnormality_flag",
         ),
     )
