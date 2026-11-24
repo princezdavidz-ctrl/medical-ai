@@ -39,6 +39,13 @@ from app.models.pediatrics import (
     PediatricImmunizationHistory,
     PediatricClinicalNote,
 )
+from app.models.laboratory import (
+    LaboratoryTestDefinition,
+    LaboratoryOrder,
+    LaboratorySpecimen,
+    LaboratoryResult,
+    LaboratoryCriticalAcknowledgement,
+)
 from app.models.nursing import (
     NursingAssessment,
     NursingObservation,
@@ -132,6 +139,11 @@ __all__ = [
     "PediatricDevelopmentalScreening",
     "PediatricImmunizationHistory",
     "PediatricClinicalNote",
+    "LaboratoryTestDefinition",
+    "LaboratoryOrder",
+    "LaboratorySpecimen",
+    "LaboratoryResult",
+    "LaboratoryCriticalAcknowledgement",
     "NursingAssessment",
     "NursingObservation",
     "NursingNote",
