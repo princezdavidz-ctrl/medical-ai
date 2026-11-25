@@ -265,6 +265,15 @@ These corrections are included in the current development branch; they have not 
 - [ ] HR tenant isolation: RLS for employee profiles, credentials and leave requests; composite hospital-to-department/employee foreign keys; cross-hospital user, department, manager and employee identifiers rejected.
 - [ ] HR privacy and scope: no payroll, tax, biometric, shift roster or automated regulator verification data is collected; audit events avoid credential numbers and evidence contents.
 
+
+- [ ] Phase 3.16 vendor governance: hospital-scoped vendor-code uniqueness, supported vendor types, draft-only creation, independent approval, active-only PO selection and cross-hospital vendor ID substitution denial.
+- [ ] Department requisitions: active department membership, same-hospital department linkage, required line items, positive quantities, date validation, currency/estimated-cost validation and unique requisition numbers.
+- [ ] Requisition lifecycle: draft-only submission by requester, submitted-only decision, independent procurement approver, decision actor/time/note integrity, duplicate decision rejection and no mutation after submission.
+- [ ] Purchase-order creation: approved requisition only, active same-hospital vendor, exactly one PO per requisition, one price for every requisition line, currency consistency, server-calculated line/order totals and nonnegative price limits.
+- [ ] Purchase-order issuance: draft-only issue, independent authorized issuer, actor/time state integrity, no unauthorized issue or post-issue editing, unique order number and immutable procurement events.
+- [ ] Procurement tenant/security: RLS across vendor/requisition/line/order/event tables; composite tenant foreign keys; department role boundaries; cross-hospital vendor, department, requisition and line identifier substitution denial.
+- [ ] Procurement integration boundaries: no stock receipt, stock-on-hand, batch/lot tracking, budget ledger, tax calculation, supplier registry, banking or payment settlement until their planned modules/integrations.
+
 - [ ] Module-to-API integration and cross-module workflows.
 - [ ] Kenya SHA and private insurer claims workflows.
 - [ ] Pharmacy, laboratory, radiology, medical devices, messaging and payment integrations.
