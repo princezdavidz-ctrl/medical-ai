@@ -383,3 +383,5 @@ No item is considered passed until evidence, environment, build SHA, reviewer an
 - [ ] Patient portal access audit: each sensitive read creates immutable event with correct link/user/patient/action/count, event rows are hospital-scoped and UPDATE/DELETE denied.
 - [ ] Patient portal RLS: link and access-event tables hospital-isolated; composite link/patient FK integrity; patient record queries tenant filtered; no cross-hospital UUID substitution.
 - [ ] Patient portal account boundaries: no implicit user signup, no MRN/DOB-only identity matching, no unsupported MFA bypass, no secure messaging/appointment/payment/record-sharing claims.
+
+- [ ] Patient portal re-linking: one pending/active link per hospital-patient-user, duplicate open link denied, revoked link history retained and new request permitted after revocation.
