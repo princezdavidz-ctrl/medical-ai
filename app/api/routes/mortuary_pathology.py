@@ -335,7 +335,7 @@ def release_mortuary_case(case_id: UUID, payload: MortuaryRelease, context: tupl
 def add_mortuary_property(case_id: UUID, payload: MortuaryPropertyCreate, context: tuple = Depends(get_current_context), db: Session = Depends(get_db)):
     user, hospital_id = context
     _require(db, user.id, hospital_id, _MORTUARY_STAFF)
-    case = _mortuary_case(db, case_id, hospital_id)
+    case = _mortuary_case(db, case_id, hospital_id, lock=True)
     if case.status in ("released", "transferred"):
         raise HTTPException(status_code=409, detail={"code": "terminal_mortuary_case"})
     item = MortuaryPropertyItem(
