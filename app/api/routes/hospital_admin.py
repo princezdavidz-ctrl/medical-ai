@@ -65,6 +65,13 @@ def _audit(db: Session, hospital_id: UUID, user_id: UUID, action: str, resource:
     )
 
 
+def _lock_hospital(db: Session, hospital_id: UUID):
+    hospital = db.scalar(select(Hospital).where(Hospital.id == hospital_id).with_for_update())
+    if hospital is None:
+        raise HTTPException(status_code=404, detail={"code": "hospital_not_found"})
+    return hospital
+
+
 def _department(db: Session, department_id: UUID, hospital_id: UUID, *, lock: bool = False):
     query = select(Department).where(
         Department.id == department_id, Department.hospital_id == hospital_id,
@@ -124,6 +131,11 @@ def _ensure_department_can_deactivate(db: Session, hospital_id: UUID, department
         HospitalMembership.department_id == department_id,
         HospitalMembership.status == "active",
     ).limit(1))
+    active_child = db.scalar(select(Department.id).where(
+        Department.hospital_id == hospital_id,
+        Department.parent_department_id == department_id,
+        Department.status == "active",
+    ).limit(1))
     active_ward = db.scalar(select(Ward.id).where(
         Ward.hospital_id == hospital_id, Ward.department_id == department_id,
         Ward.status == "active",
@@ -132,8 +144,8 @@ def _ensure_department_can_deactivate(db: Session, hospital_id: UUID, department
         Encounter.hospital_id == hospital_id, Encounter.department_id == department_id,
         Encounter.status.in_(["scheduled", "in_progress"]),
     ).limit(1))
-    if active_membership or active_ward or active_encounter:
-        raise HTTPException(status_code=409, detail={"code": "department_has_active_staff_wards_or_encounters"})
+    if active_membership or active_child or active_ward or active_encounter:
+        raise HTTPException(status_code=409, detail={"code": "department_has_active_staff_children_wards_or_encounters"})
 
 
 @router.get("/profile", response_model=HospitalProfileRead)
@@ -150,13 +162,12 @@ def get_hospital_profile(context: tuple = Depends(get_current_context), db: Sess
 def upsert_hospital_profile(payload: HospitalProfileUpdate, context: tuple = Depends(get_current_context), db: Session = Depends(get_db)):
     user, hospital_id = context
     _require_admin(db, user.id, hospital_id)
+    hospital = _lock_hospital(db, hospital_id)
     try:
         ZoneInfo(payload.timezone)
     except ZoneInfoNotFoundError:
         raise HTTPException(status_code=422, detail={"code": "unknown_timezone"})
-    hospital = db.get(Hospital, hospital_id)
-    if hospital is None:
-        raise HTTPException(status_code=404, detail={"code": "hospital_not_found"})
+    hospital = _lock_hospital(db, hospital_id)
     profile = db.scalar(select(HospitalAdminProfile).where(
         HospitalAdminProfile.hospital_id == hospital_id,
     ).with_for_update())
@@ -187,6 +198,7 @@ def upsert_hospital_profile(payload: HospitalProfileUpdate, context: tuple = Dep
 def get_hospital_settings(context: tuple = Depends(get_current_context), db: Session = Depends(get_db)):
     user, hospital_id = context
     _require_admin(db, user.id, hospital_id)
+    _lock_hospital(db, hospital_id)
     settings = db.scalar(select(HospitalOperationalSettings).where(
         HospitalOperationalSettings.hospital_id == hospital_id,
     ))
@@ -238,6 +250,7 @@ def get_operating_hours(context: tuple = Depends(get_current_context), db: Sessi
 def replace_operating_hours(payload: OperatingHoursReplace, context: tuple = Depends(get_current_context), db: Session = Depends(get_db)):
     user, hospital_id = context
     _require_admin(db, user.id, hospital_id)
+    _lock_hospital(db, hospital_id)
     days = [item.day_of_week for item in payload.hours]
     if set(days) != set(range(7)) or len(set(days)) != 7:
         raise HTTPException(status_code=422, detail={"code": "exactly_one_schedule_per_weekday_required"})
@@ -274,6 +287,7 @@ def list_departments(context: tuple = Depends(get_current_context), db: Session 
 def create_department(payload: DepartmentCreate, context: tuple = Depends(get_current_context), db: Session = Depends(get_db)):
     user, hospital_id = context
     _require_admin(db, user.id, hospital_id)
+    _lock_hospital(db, hospital_id)
     _validate_department_manager(db, hospital_id, payload.manager_user_id)
     _validate_parent_department(db, hospital_id, payload.parent_department_id)
     department = Department(hospital_id=hospital_id, status="active", **payload.model_dump())
@@ -295,6 +309,7 @@ def create_department(payload: DepartmentCreate, context: tuple = Depends(get_cu
 def update_department(department_id: UUID, payload: DepartmentUpdate, context: tuple = Depends(get_current_context), db: Session = Depends(get_db)):
     user, hospital_id = context
     _require_admin(db, user.id, hospital_id)
+    _lock_hospital(db, hospital_id)
     department = _department(db, department_id, hospital_id, lock=True)
     changes = payload.model_dump(exclude_unset=True)
     if not changes:
