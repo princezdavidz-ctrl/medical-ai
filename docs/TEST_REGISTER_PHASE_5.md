@@ -400,3 +400,8 @@ No item is considered passed until evidence, environment, build SHA, reviewer an
 - [ ] Staff portal events: credential, care-team, task and patient overview events recorded; event table hospital RLS and UPDATE/DELETE denied by append-only trigger.
 - [ ] Staff portal tenant security: all four tables hospital RLS, composite patient/encounter/department/employee relationships, active membership checks and cross-hospital access denial.
 - [ ] Phase 4 integration: existing clinical APIs enforce verified care-team assignments before universal care-team authorization is claimed; existing note/order/prescription workflows remain authoritative.
+
+- [ ] Staff portal suspension cascade: suspending a verified clinical profile atomically revokes all active patient care-team assignments with actor, timestamp and reason; reinstatement does not reactivate old assignments.
+- [ ] Patient-linked staff task read/update: task list and task status mutation require a current active care-team assignment and task-specific scope; expired, future-start, revoked or suspended-profile assignments block access.
+- [ ] Staff worklist timing: assigned patient lists, care-team views and dashboard counts exclude future-start and expired assignments.
+- [ ] Clinical admin patient privacy: hospital/HR/medical administrators may govern credential profiles but cannot browse arbitrary patient charts or patient worklists without verified active clinical assignment.
