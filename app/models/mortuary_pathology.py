@@ -145,7 +145,6 @@ class PathologySpecimen(Base):
         UniqueConstraint("hospital_id", "accession_number", name="uq_pathology_specimen_accession"),
         CheckConstraint("status IN ('collected', 'received', 'processing', 'processed', 'archived', 'rejected')", name="ck_pathology_specimen_status"),
         CheckConstraint("specimen_condition IN ('acceptable', 'damaged', 'leaking', 'unlabelled', 'other')", name="ck_pathology_specimen_condition"),
-        CheckConstraint("status IN ('collected', 'received', 'processing', 'processed', 'archived', 'rejected')", name="ck_pathology_specimen_status"),
         CheckConstraint("status NOT IN ('received', 'processing', 'processed', 'archived') OR (received_at IS NOT NULL AND received_by_user_id IS NOT NULL)", name="ck_pathology_specimen_receipt_state"),
         Index("ix_pathology_specimen_case", "hospital_id", "pathology_case_id", "status"),
     )
