@@ -227,15 +227,43 @@ def register_record_document(payload: RecordDocumentCreate, context: tuple = Dep
 
 
 @router.get("/patients/{patient_id}/documents", response_model=list[RecordDocumentRead])
-def list_patient_record_documents(patient_id: UUID, context: tuple = Depends(get_current_context), db: Session = Depends(get_db)):
+def list_patient_record_documents(
+    patient_id: UUID,
+    record_type: str | None = None,
+    source_module: str | None = None,
+    search: str | None = None,
+    start_date: datetime | None = None,
+    end_date: datetime | None = None,
+    context: tuple = Depends(get_current_context),
+    db: Session = Depends(get_db),
+):
     user, hospital_id = context
     _patient(db, hospital_id, patient_id)
     scopes = _require_patient_record_access(db, user.id, hospital_id, patient_id)
     is_him = scopes is None
+    if record_type is not None and record_type not in set(_RECORD_SCOPE):
+        raise HTTPException(status_code=422, detail={"code": "unsupported_record_type_filter"})
+    if source_module is not None and source_module not in {"opd", "nursing", "inpatient", "emergency", "icu", "surgery", "maternity", "pediatrics", "laboratory", "radiology", "pharmacy", "billing", "insurance", "external", "other"}:
+        raise HTTPException(status_code=422, detail={"code": "unsupported_source_module_filter"})
+    for value in (start_date, end_date):
+        if value is not None and value.tzinfo is None:
+            raise HTTPException(status_code=422, detail={"code": "document_date_filter_must_be_timezone_aware"})
+    if start_date and end_date and end_date < start_date:
+        raise HTTPException(status_code=422, detail={"code": "document_date_range_invalid"})
     query = select(PatientRecordDocument).where(
         PatientRecordDocument.hospital_id == hospital_id,
         PatientRecordDocument.patient_id == patient_id,
     )
+    if record_type is not None:
+        query = query.where(PatientRecordDocument.record_type == record_type)
+    if source_module is not None:
+        query = query.where(PatientRecordDocument.source_module == source_module)
+    if search:
+        query = query.where(PatientRecordDocument.title.ilike("%" + search.strip()[:120] + "%"))
+    if start_date is not None:
+        query = query.where(PatientRecordDocument.document_date >= start_date)
+    if end_date is not None:
+        query = query.where(PatientRecordDocument.document_date <= end_date)
     if not is_him:
         query = query.where(PatientRecordDocument.status == "verified")
     rows = db.scalars(query.order_by(PatientRecordDocument.document_date.desc()).limit(500)).all()
