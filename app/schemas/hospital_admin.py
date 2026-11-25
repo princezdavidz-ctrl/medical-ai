@@ -75,8 +75,8 @@ class HospitalOperationalSettingsRead(BaseModel):
     default_appointment_duration_minutes: int
     appointment_booking_advance_days: int
     updated_by_user_id: UUID
-    created_at: datetime
-    updated_at: datetime
+    created_at: datetime | None = None
+    updated_at: datetime | None = None
 
 
 class OperatingHourInput(BaseModel):
