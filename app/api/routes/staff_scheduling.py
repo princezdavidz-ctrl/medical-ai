@@ -168,17 +168,22 @@ def _ensure_no_attendance(db: Session, hospital_id: UUID, shift_id: UUID) -> Non
 @router.post("/templates", response_model=ShiftTemplateRead, status_code=status.HTTP_201_CREATED)
 def create_shift_template(payload: ShiftTemplateCreate, context: tuple = Depends(get_current_context), db: Session = Depends(get_db)):
     user, hospital_id = context
-    _require_manager(db, user.id, hospital_id)
+    role = _require_manager(db, user.id, hospital_id)
+    manager_department_id = _manager_department(db, user.id, hospital_id, role)
+    department_id = payload.department_id or manager_department_id
+    _enforce_manager_department(manager_department_id, department_id)
     if payload.start_time == payload.end_time:
         raise HTTPException(status_code=422, detail={"code": "shift_template_times_must_differ"})
-    if payload.department_id is not None:
+    if department_id is not None:
         department = db.scalar(select(Department.id).where(
-            Department.id == payload.department_id, Department.hospital_id == hospital_id,
+            Department.id == department_id, Department.hospital_id == hospital_id,
             Department.status == "active",
         ))
         if department is None:
             raise HTTPException(status_code=404, detail={"code": "active_department_not_found"})
-    template = StaffShiftTemplate(hospital_id=hospital_id, created_by_user_id=user.id, **payload.model_dump())
+    template_values = payload.model_dump()
+    template_values["department_id"] = department_id
+    template = StaffShiftTemplate(hospital_id=hospital_id, created_by_user_id=user.id, **template_values)
     db.add(template)
     try:
         db.flush()
@@ -196,21 +201,37 @@ def create_shift_template(payload: ShiftTemplateCreate, context: tuple = Depends
 @router.get("/templates", response_model=list[ShiftTemplateRead])
 def list_shift_templates(context: tuple = Depends(get_current_context), db: Session = Depends(get_db)):
     user, hospital_id = context
-    return db.scalars(select(StaffShiftTemplate).where(
+    role = _role(db, user.id, hospital_id)
+    employee = db.scalar(select(EmployeeProfile).where(
+        EmployeeProfile.hospital_id == hospital_id, EmployeeProfile.user_id == user.id,
+        EmployeeProfile.employment_status == "active",
+    ))
+    department_id = employee.department_id if employee else None
+    query = select(StaffShiftTemplate).where(
         StaffShiftTemplate.hospital_id == hospital_id,
         StaffShiftTemplate.status == "active",
-    ).order_by(StaffShiftTemplate.name)).all()
+    )
+    if role in {"department_head", "nurse_manager"}:
+        department_id = _manager_department(db, user.id, hospital_id, role)
+        query = query.where(or_(StaffShiftTemplate.department_id == department_id, StaffShiftTemplate.department_id.is_(None)))
+    elif department_id is not None:
+        query = query.where(or_(StaffShiftTemplate.department_id == department_id, StaffShiftTemplate.department_id.is_(None)))
+    else:
+        query = query.where(StaffShiftTemplate.department_id.is_(None))
+    return db.scalars(query.order_by(StaffShiftTemplate.name)).all()
 
 
 @router.patch("/templates/{template_id}", response_model=ShiftTemplateRead)
 def update_shift_template(template_id: UUID, payload: ShiftTemplateUpdate, context: tuple = Depends(get_current_context), db: Session = Depends(get_db)):
     user, hospital_id = context
-    _require_manager(db, user.id, hospital_id)
+    role = _require_manager(db, user.id, hospital_id)
+    manager_department_id = _manager_department(db, user.id, hospital_id, role)
     template = db.scalar(select(StaffShiftTemplate).where(
         StaffShiftTemplate.id == template_id, StaffShiftTemplate.hospital_id == hospital_id,
     ).with_for_update())
     if template is None:
         raise HTTPException(status_code=404, detail={"code": "shift_template_not_found"})
+    _enforce_manager_department(manager_department_id, template.department_id)
     changes = payload.model_dump(exclude_unset=True)
     if not changes:
         raise HTTPException(status_code=422, detail={"code": "shift_template_update_requires_changes"})
@@ -237,7 +258,8 @@ def update_shift_template(template_id: UUID, payload: ShiftTemplateUpdate, conte
 @router.post("/shifts", response_model=ShiftAssignmentRead, status_code=status.HTTP_201_CREATED)
 def create_shift_assignment(payload: ShiftAssignmentCreate, context: tuple = Depends(get_current_context), db: Session = Depends(get_db)):
     user, hospital_id = context
-    _require_manager(db, user.id, hospital_id)
+    role = _require_manager(db, user.id, hospital_id)
+    manager_department_id = _manager_department(db, user.id, hospital_id, role)
     _validate_shift_times(payload.starts_at, payload.ends_at)
     employee = _active_employee(db, hospital_id, payload.employee_profile_id, lock=True)
     template = db.scalar(select(StaffShiftTemplate).where(
@@ -252,6 +274,7 @@ def create_shift_assignment(payload: ShiftAssignmentCreate, context: tuple = Dep
         raise HTTPException(status_code=422, detail={"code": "shift_template_department_mismatch"})
     if template.department_id is not None and employee.department_id is not None and employee.department_id != template.department_id:
         raise HTTPException(status_code=422, detail={"code": "employee_not_in_template_department"})
+    _enforce_manager_department(manager_department_id, department_id)
     if department_id is not None:
         department = db.scalar(select(Department.id).where(
             Department.id == department_id, Department.hospital_id == hospital_id,
@@ -302,7 +325,12 @@ def list_my_shifts(start_at: datetime | None = None, end_at: datetime | None = N
 @router.get("/shifts", response_model=list[ShiftAssignmentRead])
 def list_shifts(start_at: datetime | None = None, end_at: datetime | None = None, department_id: UUID | None = None, context: tuple = Depends(get_current_context), db: Session = Depends(get_db)):
     user, hospital_id = context
-    _require_manager(db, user.id, hospital_id)
+    role = _require_manager(db, user.id, hospital_id)
+    manager_department_id = _manager_department(db, user.id, hospital_id, role)
+    if manager_department_id is not None:
+        if department_id is not None and department_id != manager_department_id:
+            raise HTTPException(status_code=403, detail={"code": "department_schedule_scope_denied"})
+        department_id = manager_department_id
     query = select(StaffShiftAssignment).where(StaffShiftAssignment.hospital_id == hospital_id)
     if department_id is not None:
         query = query.where(StaffShiftAssignment.department_id == department_id)
@@ -320,8 +348,10 @@ def list_shifts(start_at: datetime | None = None, end_at: datetime | None = None
 @router.patch("/shifts/{shift_id}", response_model=ShiftAssignmentRead)
 def update_shift_assignment(shift_id: UUID, payload: ShiftAssignmentUpdate, context: tuple = Depends(get_current_context), db: Session = Depends(get_db)):
     user, hospital_id = context
-    _require_manager(db, user.id, hospital_id)
+    role = _require_manager(db, user.id, hospital_id)
+    manager_department_id = _manager_department(db, user.id, hospital_id, role)
     shift = _shift(db, hospital_id, shift_id, lock=True)
+    _enforce_manager_department(manager_department_id, shift.department_id)
     if shift.status in ("completed", "cancelled"):
         raise HTTPException(status_code=409, detail={"code": "terminal_shift_status"})
     _ensure_no_attendance(db, hospital_id, shift.id)
