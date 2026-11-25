@@ -336,3 +336,5 @@ No item is considered passed until evidence, environment, build SHA, reviewer an
 - [ ] Transport boundary: no actual inpatient bed reservation/occupancy, no automatic clinical fitness/triage decision, no patient record sharing, no live GPS/ETA/dispatch integration until Phase 4.
 
 - [ ] Receiving offer progression: offered → bed_accepted → vehicle_assigned → en_route → arrived; receiving arrival confirmation before dispatch denied, rejected/cancelled offers cannot be assigned, and offer destination must match the transfer's receiving_hospital_id.
+
+- [ ] Ambulance crew worklist: active assigned driver/crew only, origin-hospital scope, active trip statuses only, minimized route details and no patient/encounter IDs or clinical reason exposed.
