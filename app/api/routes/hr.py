@@ -165,8 +165,8 @@ def decide_credential(credential_id: UUID, payload: CredentialDecision, context:
     ).with_for_update())
     if item is None or item.verification_status != "reported":
         raise HTTPException(status_code=404, detail={"code": "reported_credential_not_found"})
-    if payload.outcome == "verified" and item.created_by_user_id == user.id:
-        raise HTTPException(status_code=409, detail={"code": "independent_credential_verification_required"})
+    if item.created_by_user_id == user.id:
+        raise HTTPException(status_code=409, detail={"code": "independent_credential_review_required"})
     item.verification_status = payload.outcome
     if payload.outcome == "verified":
         item.verified_by_user_id, item.verified_at = user.id, datetime.now(timezone.utc)
