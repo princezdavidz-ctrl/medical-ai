@@ -30,6 +30,10 @@ def upgrade() -> None:
         sa.Column("storage_location", sa.String(180), nullable=False),
         sa.Column("status", sa.String(32), nullable=False, server_default="received"),
         sa.Column("legal_hold", sa.Boolean(), nullable=False, server_default=sa.false()),
+        sa.Column("legal_hold_reason", sa.String(1000)),
+        sa.Column("legal_hold_reference", sa.String(160)),
+        sa.Column("legal_hold_set_by_user_id", sa.Uuid(), sa.ForeignKey("users.id")),
+        sa.Column("legal_hold_set_at", sa.DateTime(timezone=True)),
         sa.Column("released_to_name", sa.String(180)),
         sa.Column("released_to_identity_reference", sa.String(160)),
         sa.Column("released_by_user_id", sa.Uuid(), sa.ForeignKey("users.id")),
@@ -44,6 +48,7 @@ def upgrade() -> None:
         sa.CheckConstraint("length(trim(storage_location)) >= 2", name="ck_mortuary_storage_location"),
         sa.CheckConstraint("(status = 'released' AND released_to_name IS NOT NULL AND released_to_identity_reference IS NOT NULL AND released_by_user_id IS NOT NULL AND released_at IS NOT NULL) OR (status != 'released' AND released_to_name IS NULL AND released_to_identity_reference IS NULL AND released_by_user_id IS NULL AND released_at IS NULL)", name="ck_mortuary_release_state"),
         sa.CheckConstraint("legal_hold = false OR status NOT IN ('release_pending', 'released', 'transferred')", name="ck_mortuary_legal_hold"),
+        sa.CheckConstraint("(legal_hold = false AND legal_hold_reason IS NULL AND legal_hold_set_by_user_id IS NULL AND legal_hold_set_at IS NULL) OR (legal_hold = true AND legal_hold_reason IS NOT NULL AND legal_hold_set_by_user_id IS NOT NULL AND legal_hold_set_at IS NOT NULL)", name="ck_mortuary_legal_hold_evidence"),
     )
     op.create_index("ix_mortuary_case_queue", "mortuary_cases", ["hospital_id", "status", "received_at"])
     op.create_table(
