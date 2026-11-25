@@ -72,6 +72,7 @@ from app.models.inventory import InventoryItem, InventoryWarehouse, GoodsReceipt
 from app.models.facilities import FacilityLocation, MaintenanceWorkOrder, MaintenanceEvent
 from app.models.transport import AmbulanceVehicle, TransportRequest, TransportReceivingOffer, TransportEvent
 from app.models.mortuary_pathology import MortuaryCase, MortuaryAuthorization, MortuaryMovement, MortuaryPropertyItem, PathologyCase, PathologySpecimen, PathologyReport, PathologyEvent
+from app.models.hospital_admin import HospitalAdminProfile, HospitalOperationalSettings, HospitalOperatingHour, HospitalAdminEvent
 from app.models.nursing import (
     NursingAssessment,
     NursingObservation,
@@ -190,6 +191,7 @@ __all__ = [
     "EmployeeProfile",
     "StaffCredential",
     "StaffLeaveRequest",
+    "HospitalAdminProfile", "HospitalOperationalSettings", "HospitalOperatingHour", "HospitalAdminEvent",
     "MortuaryCase", "MortuaryAuthorization", "MortuaryMovement", "MortuaryPropertyItem",
     "PathologyCase", "PathologySpecimen", "PathologyReport", "PathologyEvent",
     "AmbulanceVehicle", "TransportRequest", "TransportReceivingOffer", "TransportEvent",

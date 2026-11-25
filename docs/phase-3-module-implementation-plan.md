@@ -116,3 +116,6 @@ Ambulance & Transport adds consent-gated interfacility transfer requests, minimi
 
 
 Mortuary & Pathology adds hospital-scoped mortuary intake, body identification and storage movements, legal holds, independently verified release authority, personal-effects custody and controlled release. Pathology adds case registration, autopsy/forensic authority verification, specimen accession and processing states, assigned pathologists, versioned reports and immutable signed finals. It does not determine cause of death, issue death certificates, provide AI pathology interpretation or establish legal sufficiency; external statutory and registry integrations remain out of scope. Phase 5 verification is pending.
+
+
+Hospital Administration Console adds hospital profile and branding, operational settings, weekly operating hours, department hierarchy/manager/contact governance, aggregate administration dashboard and immutable administrative event history. Appointment booking, patient self-registration and public-directory flags remain configuration values until Phase 4 connects enforcement to their respective workflows. Record sharing remains request-based and consent-gated.

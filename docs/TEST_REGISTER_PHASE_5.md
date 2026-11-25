@@ -355,3 +355,16 @@ No item is considered passed until evidence, environment, build SHA, reviewer an
 - [ ] Pathology case lifecycle: opened/specimens_received/in_progress/report_draft/finalized/closed/cancelled transitions, no specimen mutation during reporting/finalized/closed states, audit and append-only pathology event history.
 - [ ] Mortuary/pathology RLS: all eight tables hospital-isolated, composite patient/encounter/case foreign keys, cross-hospital UUID substitution denied and no cross-hospital report/authorization visibility.
 - [ ] Mortuary/pathology privacy/safety: no automated cause-of-death determination, death certification, pathology diagnosis, AI image interpretation, external coroner/registrar exchange or unsupported legal sufficiency claim.
+
+
+- [ ] Phase 3.21 administrator authorization: hospital_admin/hospital_owner active membership required; non-admin, revoked and cross-hospital memberships denied.
+- [ ] Hospital profile: upsert and read, required legal/display name/address/contact fields, country/currency format, valid timezone, locale, facility type, URL/logo reference validation and synchronization with canonical hospital display name/country.
+- [ ] Operational settings: default values, appointment duration bounds 5–240 minutes, advance-booking horizon 0–365 days, boolean flags and hospital tenant scope.
+- [ ] Operating hours: exactly seven unique weekdays, Monday=0 through Sunday=6, closed days have no times, open days require valid ordered times, replacement is atomic and cross-hospital rows are inaccessible.
+- [ ] Department create/update: hospital-scoped code uniqueness, required name/code, manager must be active same-hospital department manager/head/admin, parent must be active same-hospital department and self-parent denied.
+- [ ] Department hierarchy: recursive parent cycle detection for ancestor/descendant changes, cross-hospital parent substitution denied, parent deactivation/child handling and concurrent hierarchy updates.
+- [ ] Department deactivation: blocked while active memberships, active wards or scheduled/in-progress encounters remain; historical references preserved after deactivation.
+- [ ] Hospital dashboard: aggregate counts match tenant-scoped source rows for patients, departments, beds, admissions, employees, maintenance and transport; no patient-level details returned.
+- [ ] Hospital administration events: every profile/settings/hours/department change audited, event history is hospital-scoped and UPDATE/DELETE denied by database trigger.
+- [ ] Hospital admin RLS: all four new administration tables isolated by hospital; existing department RLS remains effective; cross-hospital UUID substitution denied.
+- [ ] Phase 4 enforcement dependency: appointment booking, self-registration and public-directory settings are connected to their respective workflows before enforcement is claimed; request-based consent-gated record sharing remains immutable.
