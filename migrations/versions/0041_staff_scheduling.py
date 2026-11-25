@@ -130,7 +130,7 @@ def upgrade() -> None:
         sa.Column("event_metadata", sa.JSON(), nullable=False, server_default=sa.text("'{}'::json")),
         sa.Column("created_at", sa.DateTime(timezone=True), server_default=sa.func.now(), nullable=False),
         sa.UniqueConstraint("hospital_id", "id", name="uq_staff_schedule_event_hospital_id"),
-        sa.CheckConstraint("event_type IN ('shift_template_created', 'shift_template_updated', 'shift_assigned', 'shift_updated', 'shift_cancelled', 'swap_requested', 'swap_accepted', 'swap_approved', 'swap_rejected', 'attendance_checked_in', 'attendance_checked_out', 'attendance_approved', 'attendance_rejected')", name="ck_staff_schedule_event_type"),
+        sa.CheckConstraint("event_type IN ('shift_template_created', 'shift_template_updated', 'shift_assigned', 'shift_updated', 'shift_cancelled', 'swap_requested', 'swap_accepted', 'swap_approved', 'swap_rejected', 'swap_cancelled', 'attendance_checked_in', 'attendance_checked_out', 'attendance_approved', 'attendance_rejected')", name="ck_staff_schedule_event_type"),
     )
     op.create_index("ix_staff_schedule_event_history", "staff_schedule_events", ["hospital_id", "created_at"])
     for table in TABLES:
