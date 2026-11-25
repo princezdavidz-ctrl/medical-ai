@@ -142,14 +142,18 @@ def _active_telemedicine_consent(db: Session, hospital_id: UUID, patient_id: UUI
         PatientConsent.patient_id == patient_id,
         PatientConsent.id == consent_id,
     ))
+    scope = consent.scope if consent is not None and isinstance(consent.scope, dict) else {}
+    categories = scope.get("data_categories", [])
+    permitted_uses = scope.get("permitted_uses", [])
     if (
         consent is None or consent.purpose != "telemedicine" or consent.status != "granted"
         or consent.basis_code is None or consent.granted_at is None or consent.granted_at > now
         or consent.withdrawn_at is not None
         or (consent.expires_at is not None and consent.expires_at <= now)
-        or not isinstance(consent.scope, dict)
-        or "clinical_records" not in consent.scope.get("data_categories", [])
-        or "telemedicine" not in consent.scope.get("permitted_uses", [])
+        or not isinstance(categories, list) or not isinstance(permitted_uses, list)
+        or not all(isinstance(value, str) for value in categories + permitted_uses)
+        or "clinical_records" not in categories
+        or "telemedicine" not in permitted_uses
         or not has_active_patient_authorization(
             db, hospital_id=hospital_id, patient_id=patient_id,
             purpose="telemedicine", data_categories={"clinical_records"},
