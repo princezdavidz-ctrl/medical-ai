@@ -9,7 +9,7 @@ from sqlalchemy.orm import Session
 from app.api.audit import write_audit_event
 from app.api.deps import get_current_context
 from app.db.session import get_db
-from app.models import Department, HospitalMembership, Role
+from app.models import Department, HospitalMembership, Role, User
 from app.models.hr import EmployeeProfile, StaffLeaveRequest
 from app.models.staff_scheduling import (
     StaffShiftTemplate, StaffShiftAssignment, StaffShiftSwapRequest,
@@ -43,6 +43,23 @@ def _require_manager(db: Session, user_id: UUID, hospital_id: UUID) -> str:
     if role not in _MANAGER_ROLES:
         raise HTTPException(status_code=403, detail={"code": "staff_roster_manager_role_required"})
     return role
+
+def _manager_department(db: Session, user_id: UUID, hospital_id: UUID, role: str) -> UUID | None:
+    if role not in {"department_head", "nurse_manager"}:
+        return None
+    employee = db.scalar(select(EmployeeProfile).where(
+        EmployeeProfile.hospital_id == hospital_id,
+        EmployeeProfile.user_id == user_id,
+        EmployeeProfile.employment_status == "active",
+    ))
+    if employee is None or employee.department_id is None:
+        raise HTTPException(status_code=403, detail={"code": "active_manager_department_required"})
+    return employee.department_id
+
+
+def _enforce_manager_department(manager_department_id: UUID | None, target_department_id: UUID | None) -> None:
+    if manager_department_id is not None and target_department_id != manager_department_id:
+        raise HTTPException(status_code=403, detail={"code": "department_schedule_scope_denied"})
 
 
 def _restore_context(db: Session, user_id: UUID, hospital_id: UUID) -> None:
@@ -83,6 +100,9 @@ def _active_employee(db: Session, hospital_id: UUID, employee_profile_id: UUID, 
     ).limit(1))
     if membership is None:
         raise HTTPException(status_code=403, detail={"code": "active_hospital_membership_required"})
+    user = db.get(User, employee.user_id)
+    if user is None or not user.is_active:
+        raise HTTPException(status_code=403, detail={"code": "active_user_account_required"})
     return employee
 
 
