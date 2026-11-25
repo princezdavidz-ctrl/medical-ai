@@ -70,7 +70,7 @@ from app.models.hr import EmployeeProfile, StaffCredential, StaffLeaveRequest
 from app.models.procurement import ProcurementVendor, PurchaseRequisition, PurchaseRequisitionLine, PurchaseOrder, PurchaseOrderLine, ProcurementEvent
 from app.models.inventory import InventoryItem, InventoryWarehouse, GoodsReceipt, GoodsReceiptLine, InventoryStockBalance, InventoryMovement, AssetRecord
 from app.models.facilities import FacilityLocation, MaintenanceWorkOrder, MaintenanceEvent
-from app.models.transport import AmbulanceVehicle, TransportRequest, TransportEvent
+from app.models.transport import AmbulanceVehicle, TransportRequest, TransportReceivingOffer, TransportEvent
 from app.models.nursing import (
     NursingAssessment,
     NursingObservation,
@@ -189,7 +189,7 @@ __all__ = [
     "EmployeeProfile",
     "StaffCredential",
     "StaffLeaveRequest",
-    "AmbulanceVehicle", "TransportRequest", "TransportEvent",
+    "AmbulanceVehicle", "TransportRequest", "TransportReceivingOffer", "TransportEvent",
     "FacilityLocation", "MaintenanceWorkOrder", "MaintenanceEvent",
     "InventoryItem", "InventoryWarehouse", "GoodsReceipt", "GoodsReceiptLine", "InventoryStockBalance", "InventoryMovement", "AssetRecord",
     "ProcurementVendor",
