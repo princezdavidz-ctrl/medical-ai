@@ -374,7 +374,7 @@ def release_vehicle(request_id: UUID, context: tuple = Depends(get_current_conte
     if vehicle is None or vehicle.status != "assigned":
         raise HTTPException(status_code=409, detail={"code": "assigned_vehicle_not_found"})
     vehicle.status = "available"
-    _event(db, hospital_id, user.id, request, "vehicle_released", "Ambulance released back to origin fleet")
+    _event(db, hospital_id, user.id, request.id, "vehicle_released", "Ambulance released back to origin fleet")
     _audit(db, hospital_id, user.id, "transport.vehicle.released", "transport_request", request.id)
     db.commit()
     _restore_context(db, user.id, hospital_id)
