@@ -79,7 +79,13 @@ def get_settings(context: tuple = Depends(get_current_context), db: Session = De
     _require_admin(db, user.id, hospital_id)
     settings = db.scalar(select(HospitalAdminSettings).where(HospitalAdminSettings.hospital_id == hospital_id))
     if settings is None:
-        raise HTTPException(status_code=404, detail={"code": "hospital_settings_not_configured"})
+        hospital = db.get(Hospital, hospital_id)
+        return {
+            "address": None, "contact_email": None, "contact_phone": None, "website_url": None,
+            "timezone_name": "Africa/Nairobi", "locale": "en-KE",
+            "currency_code": "KES", "country_code": hospital.country_code,
+            "updated_by_user_id": user.id, "updated_at": hospital.updated_at,
+        }
     return settings
 
 
@@ -88,8 +94,16 @@ def update_settings(payload: HospitalSettingsUpdate, context: tuple = Depends(ge
     user, hospital_id = context
     _require_admin(db, user.id, hospital_id)
     values = payload.model_dump()
-    if values.get("website_url") is not None:
-        values["website_url"] = str(values["website_url"])
+    email = values.get("contact_email")
+    if email and ("@" not in email or "." not in email.rsplit("@", 1)[-1] or " " in email):
+        raise HTTPException(status_code=422, detail={"code": "invalid_contact_email"})
+    website = values.get("website_url")
+    if website and not website.startswith(("https://", "http://")):
+        raise HTTPException(status_code=422, detail={"code": "invalid_website_url"})
+    values["currency_code"] = values["currency_code"].upper()
+    values["country_code"] = values["country_code"].upper()
+    hospital = db.get(Hospital, hospital_id)
+    hospital.country_code = values["country_code"]
     settings = db.scalar(select(HospitalAdminSettings).where(
         HospitalAdminSettings.hospital_id == hospital_id,
     ).with_for_update())
