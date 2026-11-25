@@ -321,7 +321,6 @@ def dispatch_vehicle(request_id: UUID, context: tuple = Depends(get_current_cont
     request = _request_by_id(db, request_id, hospital_id, lock=True)
     if request.status != "vehicle_assigned":
         raise HTTPException(status_code=409, detail={"code": "assigned_vehicle_required"})
-    request.status = "en_route"
     offer = db.scalar(select(TransportReceivingOffer).where(
         TransportReceivingOffer.transport_request_id == request.id,
         TransportReceivingOffer.origin_hospital_id == hospital_id,
@@ -329,6 +328,7 @@ def dispatch_vehicle(request_id: UUID, context: tuple = Depends(get_current_cont
     if offer is None or offer.status != "vehicle_assigned":
         raise HTTPException(status_code=409, detail={"code": "receiving_offer_not_ready_for_dispatch"})
     offer.status = "en_route"
+    request.status = "en_route"
     request.dispatched_by_user_id = user.id
     request.dispatched_at = datetime.now(timezone.utc)
     _event(db, hospital_id, user.id, request.id, "departed")
