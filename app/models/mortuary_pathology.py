@@ -3,8 +3,6 @@ from datetime import datetime
 from sqlalchemy import Boolean, CheckConstraint, DateTime, ForeignKey, ForeignKeyConstraint, Index, String, Text, UniqueConstraint, Uuid, func
 from sqlalchemy.orm import Mapped, mapped_column
 from app.db.base import Base
-
-
 class MortuaryCase(Base):
     __tablename__ = "mortuary_cases"
     __table_args__ = (
@@ -37,8 +35,6 @@ class MortuaryCase(Base):
     released_by_user_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("users.id"))
     released_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
-
-
 class MortuaryAuthorization(Base):
     __tablename__ = "mortuary_authorizations"
     __table_args__ = (
@@ -47,7 +43,7 @@ class MortuaryAuthorization(Base):
         CheckConstraint("authority_type IN ('next_of_kin_consent', 'court_order', 'coroner_directive', 'public_health_order', 'other_lawful_basis')", name="ck_mortuary_authority_type"),
         CheckConstraint("status IN ('pending', 'verified', 'rejected', 'revoked')", name="ck_mortuary_authorization_status"),
         CheckConstraint("(status = 'verified' AND verified_by_user_id IS NOT NULL AND verified_at IS NOT NULL AND evidence_reference IS NOT NULL) OR (status != 'verified' AND verified_by_user_id IS NULL AND verified_at IS NULL)", name="ck_mortuary_authorization_verification"),
-        CheckConstraint("evidence_reference IS NULL OR evidence_reference ~ '^vault://[0-9a-fA-F-]{36}
+        CheckConstraint("evidence_reference IS NULL OR (evidence_reference ~ '^vault://[0-9a-fA-F-]+$' AND length(evidence_reference) = 44)", name="ck_mortuary_authorization_evidence"),
         Index("ix_mortuary_authorization_case", "hospital_id", "mortuary_case_id", "status"),
     )
     id: Mapped[uuid.UUID] = mapped_column(Uuid(as_uuid=True), primary_key=True, default=uuid.uuid4)
@@ -61,8 +57,6 @@ class MortuaryAuthorization(Base):
     verified_by_user_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("users.id"))
     verified_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
-
-
 class MortuaryMovement(Base):
     __tablename__ = "mortuary_movements"
     __table_args__ = (
@@ -81,8 +75,6 @@ class MortuaryMovement(Base):
     actor_user_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id"), nullable=False)
     note: Mapped[str | None] = mapped_column(String(1000))
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
-
-
 class MortuaryPropertyItem(Base):
     __tablename__ = "mortuary_property_items"
     __table_args__ = (
@@ -105,8 +97,6 @@ class MortuaryPropertyItem(Base):
     released_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     received_by_user_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id"), nullable=False)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
-
-
 class PathologyCase(Base):
     __tablename__ = "pathology_cases"
     __table_args__ = (
@@ -119,7 +109,7 @@ class PathologyCase(Base):
         CheckConstraint("(case_type NOT IN ('autopsy', 'forensic')) OR (authority_type IS NOT NULL AND authority_reference IS NOT NULL)", name="ck_pathology_authority_required"),
         CheckConstraint("authority_type IS NULL OR authority_type IN ('patient_consent', 'next_of_kin_consent', 'court_order', 'coroner_directive', 'public_health_order', 'other_lawful_basis')", name="ck_pathology_authority_type"),
         CheckConstraint("case_type != 'forensic' OR authority_type IN ('court_order', 'coroner_directive', 'public_health_order')", name="ck_pathology_forensic_authority"),
-        CheckConstraint("authority_evidence_reference IS NULL OR authority_evidence_reference ~ '^vault://[0-9a-fA-F-]{36}
+        CheckConstraint("authority_evidence_reference IS NULL OR (authority_evidence_reference ~ '^vault://[0-9a-fA-F-]+$' AND length(authority_evidence_reference) = 44)", name="ck_pathology_authority_evidence"),
         CheckConstraint("(authority_verified_by_user_id IS NULL AND authority_verified_at IS NULL AND authority_evidence_reference IS NULL) OR (authority_verified_by_user_id IS NOT NULL AND authority_verified_at IS NOT NULL AND authority_evidence_reference IS NOT NULL)", name="ck_pathology_authority_verification"),
         CheckConstraint("authority_verified_by_user_id IS NULL OR case_type IN ('autopsy', 'forensic')", name="ck_pathology_authority_verification_scope"),
         Index("ix_pathology_case_queue", "hospital_id", "status", "created_at"),
@@ -141,8 +131,6 @@ class PathologyCase(Base):
     assigned_pathologist_user_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("users.id"))
     opened_by_user_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id"), nullable=False)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
-
-
 class PathologySpecimen(Base):
     __tablename__ = "pathology_specimens"
     __table_args__ = (
@@ -166,8 +154,6 @@ class PathologySpecimen(Base):
     received_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     received_by_user_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("users.id"))
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
-
-
 class PathologyReport(Base):
     __tablename__ = "pathology_reports"
     __table_args__ = (
@@ -191,8 +177,6 @@ class PathologyReport(Base):
     signed_by_user_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("users.id"))
     signed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
-
-
 class PathologyEvent(Base):
     __tablename__ = "pathology_events"
     __table_args__ = (
