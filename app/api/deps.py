@@ -7,7 +7,7 @@ from sqlalchemy import or_, select, text
 from sqlalchemy.orm import Session
 from app.core.security import decode_access_token
 from app.db.session import get_db
-from app.models import HospitalMembership, User
+from app.models import Hospital, HospitalMembership, User
 from app.models.patient_portal import PatientPortalLink
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/v1/auth/token")
@@ -87,6 +87,9 @@ def get_current_patient_context(
     user = db.scalar(select(User).where(User.id == user_id, User.is_active.is_(True)))
     if user is None:
         raise credentials_error
+    hospital = db.get(Hospital, token_hospital_id)
+    if hospital is None or hospital.status != "active":
+        raise HTTPException(status_code=403, detail="Hospital is not active")
     now = datetime.now(timezone.utc)
     active_link = db.scalar(select(PatientPortalLink.id).where(
         PatientPortalLink.hospital_id == token_hospital_id,
