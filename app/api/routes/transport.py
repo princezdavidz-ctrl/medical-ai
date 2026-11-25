@@ -9,7 +9,7 @@ from sqlalchemy.orm import Session
 from app.api.audit import write_audit_event
 from app.api.deps import get_current_context
 from app.db.session import get_db
-from app.models import Encounter, Hospital, HospitalMembership, Patient, Role
+from app.models import Encounter, Hospital, HospitalMembership, Patient, PatientConsent, Role
 from app.models.transport import AmbulanceVehicle, TransportEvent, TransportRequest
 from app.schemas.transport import (
     VehicleCreate, VehicleRead, TransportRequestCreate, TransportRequestRead,
@@ -130,11 +130,27 @@ def create_transport_request(payload: TransportRequestCreate, context: tuple = D
     ))
     if patient is None or encounter is None:
         raise HTTPException(status_code=404, detail={"code": "active_patient_encounter_not_found"})
-    if not has_active_patient_authorization(
-        db, hospital_id=hospital_id, patient_id=patient.id,
-        purpose="inter_hospital_transfer",
-        data_categories={"identity", "clinical_summary"},
-        permitted_use="transfer_of_care",
+    consent = db.scalar(select(PatientConsent).where(
+        PatientConsent.id == payload.consent_id,
+        PatientConsent.hospital_id == hospital_id,
+        PatientConsent.patient_id == patient.id,
+        PatientConsent.purpose == "inter_hospital_transfer",
+        PatientConsent.status == "granted",
+        PatientConsent.basis_code.is_not(None),
+        PatientConsent.granted_at.is_not(None),
+        PatientConsent.granted_at <= datetime.now(timezone.utc),
+        PatientConsent.withdrawn_at.is_(None),
+    ))
+    scope = consent.scope if consent is not None and isinstance(consent.scope, dict) else {}
+    categories = scope.get("data_categories", []) if isinstance(scope, dict) else []
+    permitted_uses = scope.get("permitted_uses", []) if isinstance(scope, dict) else []
+    if (
+        consent is None
+        or (consent.expires_at is not None and consent.expires_at <= datetime.now(timezone.utc))
+        or not isinstance(categories, list)
+        or not isinstance(permitted_uses, list)
+        or not {"identity", "clinical_summary"}.issubset(set(categories))
+        or "transfer_of_care" not in permitted_uses
     ):
         raise HTTPException(status_code=403, detail={"code": "active_transfer_of_care_authorization_required"})
     if payload.transport_type == "interfacility":
@@ -282,7 +298,9 @@ def record_tracking_update(request_id: UUID, payload: TrackingUpdate, context: t
     request = _request_by_id(db, request_id, hospital_id, lock=True)
     if request.status != "en_route" or user.id not in (request.assigned_driver_user_id, request.assigned_crew_user_id):
         raise HTTPException(status_code=403, detail={"code": "assigned_transport_crew_en_route_required"})
-    if payload.latitude is None and payload.longitude is None and not payload.note:
+    if (payload.latitude is None) != (payload.longitude is None):
+        raise HTTPException(status_code=422, detail={"code": "latitude_and_longitude_must_be_paired"})
+    if payload.latitude is None and not payload.note:
         raise HTTPException(status_code=422, detail={"code": "tracking_update_requires_location_or_note"})
     _event(db, hospital_id, user.id, request, "location_update", payload.note, payload.latitude, payload.longitude)
     _audit(db, hospital_id, user.id, "transport.tracking.updated", "transport_request", request.id)
