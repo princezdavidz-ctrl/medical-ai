@@ -75,6 +75,7 @@ from app.models.mortuary_pathology import MortuaryCase, MortuaryAuthorization, M
 from app.models.hospital_admin import HospitalAdminProfile, HospitalOperationalSettings, HospitalOperatingHour, HospitalAdminEvent
 from app.models.patient_records import PatientRecordDocument, PatientRecordReleaseRequest, PatientRecordAmendmentRequest, PatientRecordEvent
 from app.models.patient_portal import PatientPortalLink, PatientPortalAccessEvent
+from app.models.telemedicine import TelemedicineSession, TelemedicineClinicalNote, TelemedicineEvent
 from app.models.staff_portal import ClinicalStaffProfile, PatientCareTeamAssignment, StaffWorkQueueTask, StaffPortalEvent
 from app.models.staff_scheduling import StaffShiftTemplate, StaffShiftAssignment, StaffShiftSwapRequest, StaffShiftAttendance, StaffScheduleEvent
 from app.models.nursing import (
@@ -231,4 +232,7 @@ __all__ = [
     "PatientRecordReleaseRequest",
     "PatientRecordAmendmentRequest",
     "PatientRecordEvent",
+    "TelemedicineSession",
+    "TelemedicineClinicalNote",
+    "TelemedicineEvent",
 ]
