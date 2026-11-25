@@ -66,9 +66,9 @@ def _patient(db: Session, hospital_id: UUID, patient_id: UUID) -> Patient:
     return patient
 
 
-def _require_patient_record_access(db: Session, user_id: UUID, hospital_id: UUID, patient_id: UUID, record_type: str) -> None:
+def _require_patient_record_access(db: Session, user_id: UUID, hospital_id: UUID, patient_id: UUID, record_type: str | None = None) -> set[str] | None:
     if _role(db, user_id, hospital_id) in _HIM_ROLES:
-        return
+        return None
     now = datetime.now(timezone.utc)
     membership = db.scalar(select(HospitalMembership.id).where(
         HospitalMembership.hospital_id == hospital_id,
@@ -95,13 +95,15 @@ def _require_patient_record_access(db: Session, user_id: UUID, hospital_id: UUID
         PatientCareTeamAssignment.starts_at <= now,
         or_(PatientCareTeamAssignment.ends_at.is_(None), PatientCareTeamAssignment.ends_at > now),
     ))
-    required_scope = _RECORD_SCOPE.get(record_type, "encounters")
+    scopes = set(assignment.access_scope or []) if assignment is not None else set()
+    required_scope = _RECORD_SCOPE.get(record_type, "encounters") if record_type is not None else None
     if (
         membership is None or employee is None or profile is None or user is None
         or not user.is_active or assignment is None
-        or required_scope not in (assignment.access_scope or [])
+        or (required_scope is not None and required_scope not in scopes)
     ):
         raise HTTPException(status_code=403, detail={"code": "active_scoped_care_team_access_required"})
+    return scopes
 
 
 def _restore_context(db: Session, user_id: UUID, hospital_id: UUID) -> None:
@@ -124,7 +126,21 @@ def _audit(db: Session, hospital_id: UUID, user_id: UUID, action: str, resource_
     )
 
 
-def _active_release_consent(db: Session, hospital_id: UUID, patient_id: UUID, consent_id: UUID, categories: list[str]):
+_CATEGORY_SCOPE = {
+    "demographics": "profile", "contact_details": "profile",
+    "clinical_records": "encounters", "lab_results": "lab_results",
+    "imaging": "encounters", "medications": "medications",
+    "billing": "profile", "insurance": "profile", "other": "encounters",
+}
+_RELEASE_USE = {
+    "record_sharing": "record_sharing", "care_coordination": "care_coordination",
+    "referral": "referral", "patient_portal": "patient_portal",
+    "insurance_claim": "insurance_claim", "legal_requirement": "record_sharing",
+    "other": "other_lawful_use",
+}
+
+
+def _active_release_consent(db: Session, hospital_id: UUID, patient_id: UUID, consent_id: UUID, categories: list[str], release_purpose: str):
     now = datetime.now(timezone.utc)
     consent = db.scalar(select(PatientConsent).where(
         PatientConsent.hospital_id == hospital_id,
@@ -146,10 +162,16 @@ def _active_release_consent(db: Session, hospital_id: UUID, patient_id: UUID, co
         or not all(isinstance(value, str) for value in allowed_categories + permitted_uses)
         or not set(categories).issubset(set(allowed_categories))
         or "record_sharing" not in permitted_uses
+        or _RELEASE_USE.get(release_purpose, "other_lawful_use") not in permitted_uses
         or not has_active_patient_authorization(
             db, hospital_id=hospital_id, patient_id=patient_id,
             purpose="record_sharing", data_categories=set(categories),
             permitted_use="record_sharing", now=now,
+        )
+        or not has_active_patient_authorization(
+            db, hospital_id=hospital_id, patient_id=patient_id,
+            purpose="record_sharing", data_categories=set(categories),
+            permitted_use=_RELEASE_USE.get(release_purpose, "other_lawful_use"), now=now,
         )
     ):
         raise HTTPException(status_code=403, detail={"code": "record_sharing_scope_not_authorized"})
@@ -205,7 +227,8 @@ def list_patient_record_documents(patient_id: UUID, context: tuple = Depends(get
     user, hospital_id = context
     _patient(db, hospital_id, patient_id)
     _require_patient_record_access(db, user.id, hospital_id, patient_id, "clinical_note")
-    is_him = _role(db, user.id, hospital_id) in _HIM_ROLES
+    scopes = _require_patient_record_access(db, user.id, hospital_id, patient_id)
+    is_him = scopes is None
     query = select(PatientRecordDocument).where(
         PatientRecordDocument.hospital_id == hospital_id,
         PatientRecordDocument.patient_id == patient_id,
@@ -213,6 +236,8 @@ def list_patient_record_documents(patient_id: UUID, context: tuple = Depends(get
     if not is_him:
         query = query.where(PatientRecordDocument.status == "verified")
     rows = db.scalars(query.order_by(PatientRecordDocument.document_date.desc()).limit(500)).all()
+    if not is_him:
+        rows = [row for row in rows if _RECORD_SCOPE.get(row.record_type, "encounters") in scopes]
     _audit(db, hospital_id, user.id, "medical_records.patient_documents_viewed", "patient", patient_id, {"result_count": len(rows)})
     db.commit()
     _restore_context(db, user.id, hospital_id)
@@ -281,9 +306,13 @@ def decide_record_document(document_id: UUID, payload: RecordDocumentDecision, c
 def create_record_release_request(payload: RecordReleaseCreate, context: tuple = Depends(get_current_context), db: Session = Depends(get_db)):
     user, hospital_id = context
     _patient(db, hospital_id, payload.patient_id)
+    if payload.requester_type in {"patient", "legal_representative"}:
+        raise HTTPException(status_code=403, detail={"code": "patient_proxy_identity_workflow_not_connected"})
     if _role(db, user.id, hospital_id) not in _HIM_ROLES:
-        _require_patient_record_access(db, user.id, hospital_id, payload.patient_id, "clinical_note")
-    _active_release_consent(db, hospital_id, payload.patient_id, payload.consent_id, payload.data_categories)
+        scopes = _require_patient_record_access(db, user.id, hospital_id, payload.patient_id)
+        if any(_CATEGORY_SCOPE.get(category, "encounters") not in scopes for category in payload.data_categories):
+            raise HTTPException(status_code=403, detail={"code": "release_categories_exceed_staff_access_scope"})
+    _active_release_consent(db, hospital_id, payload.patient_id, payload.consent_id, payload.data_categories, payload.purpose)
     request = PatientRecordReleaseRequest(
         hospital_id=hospital_id, requester_user_id=user.id,
         status="pending", **payload.model_dump(),
@@ -321,7 +350,7 @@ def decide_record_release_request(request_id: UUID, payload: RecordReleaseDecisi
         raise HTTPException(status_code=404, detail={"code": "pending_record_release_not_found"})
     if request.requester_user_id == user.id:
         raise HTTPException(status_code=409, detail={"code": "independent_record_release_review_required"})
-    _active_release_consent(db, hospital_id, request.patient_id, request.consent_id, request.data_categories)
+    _active_release_consent(db, hospital_id, request.patient_id, request.consent_id, request.data_categories, request.purpose)
     request.reviewed_by_user_id = user.id
     request.reviewed_at = datetime.now(timezone.utc)
     if payload.decision == "approve":
@@ -379,6 +408,8 @@ def create_record_amendment_request(payload: RecordAmendmentCreate, context: tup
         ))
         if document is None:
             raise HTTPException(status_code=404, detail={"code": "verified_patient_record_document_not_found"})
+        if _role(db, user.id, hospital_id) not in _HIM_ROLES:
+            _require_patient_record_access(db, user.id, hospital_id, payload.patient_id, document.record_type)
     request = PatientRecordAmendmentRequest(
         hospital_id=hospital_id, requested_by_user_id=user.id,
         status="pending", **payload.model_dump(),
