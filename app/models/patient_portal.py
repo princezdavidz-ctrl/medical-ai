@@ -14,6 +14,7 @@ class PatientPortalLink(Base):
         CheckConstraint("relationship_type IN ('self', 'parent_guardian', 'caregiver', 'legal_representative')", name="ck_patient_portal_relationship"),
         CheckConstraint("status IN ('pending', 'active', 'revoked')", name="ck_patient_portal_link_status"),
         CheckConstraint("json_typeof(access_scope) = 'array'", name="ck_patient_portal_access_scope_array"),
+        CheckConstraint("verification_method IS NULL OR verification_method IN ('in_person', 'identity_document', 'verified_email', 'verified_phone', 'guardian_document', 'court_order')", name="ck_patient_portal_verification_method"),
         CheckConstraint("relationship_type = 'self' OR (authority_reference IS NOT NULL AND expires_at IS NOT NULL)", name="ck_patient_portal_proxy_authority"),
         CheckConstraint("(status = 'active' AND verification_method IS NOT NULL AND evidence_reference IS NOT NULL AND verified_by_user_id IS NOT NULL AND verified_at IS NOT NULL) OR (status != 'active' AND verified_by_user_id IS NULL AND verified_at IS NULL)", name="ck_patient_portal_verification_state"),
         CheckConstraint("evidence_reference IS NULL OR evidence_reference ~ '^vault://[0-9a-fA-F-]{36}$'", name="ck_patient_portal_evidence_reference"),
@@ -47,6 +48,7 @@ class PatientPortalAccessEvent(Base):
         ForeignKeyConstraint(["hospital_id", "portal_link_id", "patient_id"], ["patient_portal_links.hospital_id", "patient_portal_links.id", "patient_portal_links.patient_id"], name="fk_patient_portal_event_link"),
         UniqueConstraint("hospital_id", "id", name="uq_patient_portal_event_hospital_id"),
         CheckConstraint("action IN ('viewed_profile', 'viewed_encounters', 'viewed_lab_results', 'viewed_medications', 'viewed_invoices', 'viewed_consents')", name="ck_patient_portal_event_action"),
+        CheckConstraint("resource_count >= 0", name="ck_patient_portal_event_resource_count"),
         Index("ix_patient_portal_access_history", "hospital_id", "patient_id", "created_at"),
     )
     id: Mapped[uuid.UUID] = mapped_column(Uuid(as_uuid=True), primary_key=True, default=uuid.uuid4)
