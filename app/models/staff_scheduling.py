@@ -1,6 +1,6 @@
 import uuid
 from datetime import datetime, time
-from sqlalchemy import CheckConstraint, DateTime, ForeignKey, ForeignKeyConstraint, Index, Integer, String, Text, Time, UniqueConstraint, Uuid, func
+from sqlalchemy import CheckConstraint, DateTime, ForeignKey, ForeignKeyConstraint, Index, Integer, String, Text, Time, UniqueConstraint, Uuid, func, text
 from sqlalchemy.orm import Mapped, mapped_column
 from app.db.base import Base
 
@@ -71,6 +71,7 @@ class StaffShiftSwapRequest(Base):
         CheckConstraint("status IN ('pending_target', 'accepted', 'declined', 'approved', 'rejected', 'cancelled')", name="ck_shift_swap_status"),
         CheckConstraint("requester_user_id != target_user_id", name="ck_shift_swap_not_self"),
         CheckConstraint("(status = 'pending_target' AND responded_by_user_id IS NULL AND responded_at IS NULL AND decided_by_user_id IS NULL AND decided_at IS NULL) OR (status IN ('accepted', 'declined') AND responded_by_user_id = target_user_id AND responded_at IS NOT NULL AND decided_by_user_id IS NULL AND decided_at IS NULL) OR (status IN ('approved', 'rejected') AND responded_by_user_id = target_user_id AND responded_at IS NOT NULL AND decided_by_user_id IS NOT NULL AND decided_at IS NOT NULL) OR status = 'cancelled'", name="ck_shift_swap_decision_state"),
+        Index("uq_staff_shift_swap_open", "hospital_id", "shift_assignment_id", unique=True, postgresql_where=text("status IN ('pending_target', 'accepted')")),
         Index("ix_shift_swap_target_queue", "hospital_id", "target_user_id", "status", "created_at"),
         Index("ix_shift_swap_shift", "hospital_id", "shift_assignment_id", "status"),
     )
