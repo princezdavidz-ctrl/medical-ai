@@ -73,10 +73,10 @@ def _patient(db: Session, hospital_id: UUID, patient_id: UUID, lock: bool = Fals
     return patient
 
 
-def _active_provider(db: Session, hospital_id: UUID, provider_user_id: UUID, lock: bool = False):
+def _active_clinician(db: Session, hospital_id: UUID, clinician_user_id: UUID, lock: bool = False):
     employee_query = select(EmployeeProfile).where(
         EmployeeProfile.hospital_id == hospital_id,
-        EmployeeProfile.user_id == provider_user_id,
+        EmployeeProfile.user_id == clinician_user_id,
         EmployeeProfile.employment_status == "active",
     )
     if lock:
@@ -84,25 +84,30 @@ def _active_provider(db: Session, hospital_id: UUID, provider_user_id: UUID, loc
     employee = db.scalar(employee_query)
     membership = db.scalar(select(HospitalMembership).where(
         HospitalMembership.hospital_id == hospital_id,
-        HospitalMembership.user_id == provider_user_id,
+        HospitalMembership.user_id == clinician_user_id,
         HospitalMembership.status == "active",
     ))
     profile = db.scalar(select(ClinicalStaffProfile).where(
         ClinicalStaffProfile.hospital_id == hospital_id,
-        ClinicalStaffProfile.user_id == provider_user_id,
+        ClinicalStaffProfile.user_id == clinician_user_id,
         ClinicalStaffProfile.status == "verified",
     ))
-    user = db.get(User, provider_user_id)
+    user = db.get(User, clinician_user_id)
     now = datetime.now(timezone.utc)
     if (
         employee is None or membership is None or profile is None or user is None
         or not user.is_active or profile.employee_profile_id != employee.id
-        or profile.clinical_role not in _PROVIDER_ROLES
         or (profile.license_expires_at is not None and profile.license_expires_at <= now)
     ):
-        raise HTTPException(status_code=403, detail={"code": "active_verified_telemedicine_provider_required"})
+        raise HTTPException(status_code=403, detail={"code": "active_verified_clinician_required"})
     return employee, profile
 
+
+def _active_provider(db: Session, hospital_id: UUID, provider_user_id: UUID, lock: bool = False):
+    employee, profile = _active_clinician(db, hospital_id, provider_user_id, lock=lock)
+    if profile.clinical_role not in _PROVIDER_ROLES:
+        raise HTTPException(status_code=403, detail={"code": "active_verified_telemedicine_provider_required"})
+    return employee, profile
 
 def _active_telemedicine_consent(db: Session, hospital_id: UUID, patient_id: UUID, consent_id: UUID):
     now = datetime.now(timezone.utc)
@@ -130,6 +135,7 @@ def _active_telemedicine_consent(db: Session, hospital_id: UUID, patient_id: UUI
 
 
 def _require_care_team(db: Session, hospital_id: UUID, patient_id: UUID, provider_user_id: UUID):
+    employee, profile = _active_clinician(db, hospital_id, provider_user_id)
     now = datetime.now(timezone.utc)
     assignment = db.scalar(select(PatientCareTeamAssignment).where(
         PatientCareTeamAssignment.hospital_id == hospital_id,
@@ -139,7 +145,10 @@ def _require_care_team(db: Session, hospital_id: UUID, patient_id: UUID, provide
         PatientCareTeamAssignment.starts_at <= now,
         or_(PatientCareTeamAssignment.ends_at.is_(None), PatientCareTeamAssignment.ends_at > now),
     ))
-    if assignment is None or "encounters" not in (assignment.access_scope or []):
+    if (
+        assignment is None or "encounters" not in (assignment.access_scope or [])
+        or (assignment.department_id is not None and assignment.department_id != employee.department_id)
+    ):
         raise HTTPException(status_code=403, detail={"code": "active_patient_care_team_assignment_required"})
     return assignment
 
