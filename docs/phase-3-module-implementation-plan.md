@@ -127,3 +127,6 @@ Patient Portal adds staff-verified links between existing user accounts and pati
 
 
 Doctor & Medical Staff Portal adds independently verified clinical staff profiles, scoped patient care-team assignments, a role-aware patient overview and an assigned work queue. Existing clinical endpoints still require Phase 4 integration of care-team authorization before these assignments become a universal patient access boundary.
+
+
+Phase 3.23 access hardening: suspending clinical credentials now revokes active care-team assignments; patient-linked task reads and updates require current assignment and task-specific scope; future-start assignments are excluded from active worklists and dashboard counts. Phase 5 verification remains pending.
