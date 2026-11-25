@@ -203,6 +203,42 @@ def decide_mortuary_authorization(authorization_id: UUID, payload: MortuaryAutho
     return {"id": item.id, "status": item.status, "verified_at": item.verified_at}
 
 
+@router.get("/cases/{case_id}/authorizations")
+def list_mortuary_authorizations(case_id: UUID, context: tuple = Depends(get_current_context), db: Session = Depends(get_db)):
+    user, hospital_id = context
+    _require(db, user.id, hospital_id, _MORTUARY_STAFF)
+    _mortuary_case(db, case_id, hospital_id)
+    rows = db.scalars(select(MortuaryAuthorization).where(
+        MortuaryAuthorization.hospital_id == hospital_id,
+        MortuaryAuthorization.mortuary_case_id == case_id,
+    ).order_by(MortuaryAuthorization.created_at)).all()
+    return [{
+        "id": row.id, "authority_type": row.authority_type, "authority_reference": row.authority_reference,
+        "evidence_reference": row.evidence_reference, "status": row.status,
+        "submitted_by_user_id": row.submitted_by_user_id, "verified_by_user_id": row.verified_by_user_id,
+        "verified_at": row.verified_at, "created_at": row.created_at,
+    } for row in rows]
+
+
+@router.post("/authorizations/{authorization_id}/revoke")
+def revoke_mortuary_authorization(authorization_id: UUID, context: tuple = Depends(get_current_context), db: Session = Depends(get_db)):
+    user, hospital_id = context
+    _require(db, user.id, hospital_id, _MORTUARY_MANAGERS)
+    item = db.scalar(select(MortuaryAuthorization).where(
+        MortuaryAuthorization.id == authorization_id,
+        MortuaryAuthorization.hospital_id == hospital_id,
+    ).with_for_update())
+    if item is None or item.status != "verified":
+        raise HTTPException(status_code=409, detail={"code": "verified_mortuary_authorization_required"})
+    item.status = "revoked"
+    item.verified_by_user_id = None
+    item.verified_at = None
+    _audit(db, hospital_id, user.id, "mortuary.authorization.revoked", "mortuary_authorization", item.id)
+    db.commit()
+    _restore_context(db, user.id, hospital_id)
+    return {"id": item.id, "status": item.status}
+
+
 @router.post("/cases/{case_id}/movements", response_model=MortuaryCaseRead)
 def record_mortuary_movement(case_id: UUID, payload: MortuaryMovementCreate, context: tuple = Depends(get_current_context), db: Session = Depends(get_db)):
     user, hospital_id = context
@@ -333,6 +369,24 @@ def update_mortuary_property(property_id: UUID, payload: MortuaryPropertyRelease
     return {"id": item.id, "status": item.status, "released_to_name": item.released_to_name}
 
 
+@router.get("/cases/{case_id}/property")
+def list_mortuary_property(case_id: UUID, context: tuple = Depends(get_current_context), db: Session = Depends(get_db)):
+    user, hospital_id = context
+    _require(db, user.id, hospital_id, _MORTUARY_STAFF)
+    _mortuary_case(db, case_id, hospital_id)
+    rows = db.scalars(select(MortuaryPropertyItem).where(
+        MortuaryPropertyItem.hospital_id == hospital_id,
+        MortuaryPropertyItem.mortuary_case_id == case_id,
+    ).order_by(MortuaryPropertyItem.created_at)).all()
+    return [{
+        "id": row.id, "property_description": row.property_description,
+        "property_reference": row.property_reference, "sealed": row.sealed,
+        "status": row.status, "released_to_name": row.released_to_name,
+        "released_by_user_id": row.released_by_user_id, "released_at": row.released_at,
+        "received_by_user_id": row.received_by_user_id, "created_at": row.created_at,
+    } for row in rows]
+
+
 @router.get("/cases/{case_id}/movements")
 def list_mortuary_movements(case_id: UUID, context: tuple = Depends(get_current_context), db: Session = Depends(get_db)):
     user, hospital_id = context
@@ -428,6 +482,8 @@ def assign_pathologist(case_id: UUID, payload: PathologyAssignment, context: tup
     user, hospital_id = context
     _require(db, user.id, hospital_id, _PATHOLOGY_MANAGERS)
     case = _pathology_case(db, case_id, hospital_id, lock=True)
+    if case.status in ("finalized", "closed", "cancelled"):
+        raise HTTPException(status_code=409, detail={"code": "pathology_case_assignment_locked"})
     membership = db.scalar(select(HospitalMembership).join(
         Role, Role.id == HospitalMembership.role_id,
     ).where(
@@ -452,7 +508,7 @@ def add_pathology_specimen(case_id: UUID, payload: PathologySpecimenCreate, cont
     user, hospital_id = context
     _require(db, user.id, hospital_id, _PATHOLOGY_STAFF)
     case = _pathology_case(db, case_id, hospital_id, lock=True)
-    if case.status in ("finalized", "closed", "cancelled"):
+    if case.status in ("report_draft", "finalized", "closed", "cancelled"):
         raise HTTPException(status_code=409, detail={"code": "pathology_case_not_open"})
     if case.case_type in ("autopsy", "forensic") and case.authority_verified_at is None:
         raise HTTPException(status_code=403, detail={"code": "verified_autopsy_authority_required"})
@@ -492,6 +548,8 @@ def update_pathology_specimen_status(specimen_id: UUID, payload: PathologySpecim
     if payload.status not in allowed.get(specimen.status, set()):
         raise HTTPException(status_code=409, detail={"code": "invalid_specimen_transition"})
     case = _pathology_case(db, specimen.pathology_case_id, hospital_id, lock=True)
+    if case.status in ("report_draft", "finalized", "closed", "cancelled"):
+        raise HTTPException(status_code=409, detail={"code": "pathology_case_locked_for_reporting"})
     if payload.status == "received":
         specimen.received_at = datetime.now(timezone.utc)
         specimen.received_by_user_id = user.id
@@ -577,6 +635,28 @@ def finalize_pathology_report(report_id: UUID, context: tuple = Depends(get_curr
     _restore_context(db, user.id, hospital_id)
     db.refresh(report)
     return report
+
+
+@router.get("/pathology/cases/{case_id}/specimens", response_model=list[PathologySpecimenRead])
+def list_pathology_specimens(case_id: UUID, context: tuple = Depends(get_current_context), db: Session = Depends(get_db)):
+    user, hospital_id = context
+    _require(db, user.id, hospital_id, _PATHOLOGY_STAFF)
+    _pathology_case(db, case_id, hospital_id)
+    return db.scalars(select(PathologySpecimen).where(
+        PathologySpecimen.hospital_id == hospital_id,
+        PathologySpecimen.pathology_case_id == case_id,
+    ).order_by(PathologySpecimen.created_at)).all()
+
+
+@router.get("/pathology/cases/{case_id}/reports", response_model=list[PathologyReportRead])
+def list_pathology_reports(case_id: UUID, context: tuple = Depends(get_current_context), db: Session = Depends(get_db)):
+    user, hospital_id = context
+    _require(db, user.id, hospital_id, _PATHOLOGY_STAFF)
+    _pathology_case(db, case_id, hospital_id)
+    return db.scalars(select(PathologyReport).where(
+        PathologyReport.hospital_id == hospital_id,
+        PathologyReport.pathology_case_id == case_id,
+    ).order_by(PathologyReport.version)).all()
 
 
 @router.post("/pathology/cases/{case_id}/close", response_model=PathologyCaseRead)
