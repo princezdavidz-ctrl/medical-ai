@@ -6,7 +6,7 @@ A role-aware clinical staff workspace for verified professional profiles, patien
 ## Clinical identity
 - Staff submit a clinical profile linked to their own active HR employee record.
 - A hospital administrator, medical director or HR manager independently verifies or rejects credentials using protected vault evidence.
-- Verified profiles may be suspended with a recorded reason. A suspended, unverified or expired-license profile cannot be assigned to a patient or use care-team patient views.
+- Verified profiles may be suspended with a recorded reason and reinstated only after independent administrator review with new evidence. Expired-license profiles may be resubmitted and must pass credential verification again. A suspended, unverified or expired-license profile cannot be assigned to a patient or use care-team patient views.
 - Registration numbers are unique within a hospital. Regulator verification is manual; no external licensing authority is queried.
 
 ## Patient care team
