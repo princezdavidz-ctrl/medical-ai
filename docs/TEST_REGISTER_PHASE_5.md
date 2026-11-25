@@ -343,7 +343,7 @@ No item is considered passed until evidence, environment, build SHA, reviewer an
 - [ ] Phase 3.20 mortuary intake: patient/optional encounter same-hospital linkage, unique case/body references, death timestamp timezone/future validation, received actor/time and RLS.
 - [ ] Mortuary authorization: allowed authority types, protected vault evidence reference, independent verifier (submitter cannot verify), rejected/revoked authority no longer permits release and cross-case authorization substitution denied.
 - [ ] Mortuary custody: received/stored/relocated/release-pending/retained/released transitions, correct from/to locations, append-only movement ledger and concurrent movement serialization.
-- [ ] Mortuary legal hold: hold blocks release-pending/release/transfer, manager-only application/lift, retained-by-authority state and audit evidence.
+- [ ] Mortuary legal hold: hold blocks release-pending/release/transfer, manager-only application/lift, mandatory reason/authority reference, actor/time evidence, retained-by-authority state and audit evidence.
 - [ ] Mortuary release: release-pending state, active verified authorization, no legal hold, recipient name/identity, manager authorization, personal-effects reconciliation, body released timestamp/actor and repeat release denial.
 - [ ] Mortuary property: property inventory, sealed-state consistency, hospital-scoped references, independent release authority, recipient attribution and no release while legal hold is active.
 - [ ] Pathology case integrity: patient/encounter tenant linkage, unique case number, allowed case types/statuses, autopsy authority required and forensic legal authority type restrictions.
