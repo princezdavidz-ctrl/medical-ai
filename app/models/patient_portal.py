@@ -27,7 +27,7 @@ class PatientPortalLink(Base):
     patient_id: Mapped[uuid.UUID] = mapped_column(Uuid(as_uuid=True), nullable=False)
     portal_user_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id"), nullable=False)
     relationship_type: Mapped[str] = mapped_column(String(24), nullable=False, default="self")
-    access_scope: Mapped[list] = mapped_column(JSON, nullable=False, default=lambda: ["profile", "encounters", "lab_results", "medications", "invoices", "consents"])
+    access_scope: Mapped[list] = mapped_column(JSON, nullable=False, default=lambda: ["profile", "encounters"])
     authority_reference: Mapped[str | None] = mapped_column(String(160))
     expires_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     status: Mapped[str] = mapped_column(String(24), nullable=False, default="pending")
