@@ -10,6 +10,7 @@ class EmployeeProfile(Base):
     __table_args__ = (
         UniqueConstraint("hospital_id", "id", name="uq_employee_profile_hospital_id"),
         UniqueConstraint("hospital_id", "user_id", name="uq_employee_profile_user"),
+        UniqueConstraint("hospital_id", "id", "user_id", name="uq_employee_profile_hospital_employee_user"),
         UniqueConstraint("hospital_id", "employee_number", name="uq_employee_profile_number"),
         ForeignKeyConstraint(["hospital_id", "department_id"], ["departments.hospital_id", "departments.id"], name="fk_employee_profile_department"),
         CheckConstraint("employment_status IN ('active', 'on_leave', 'suspended', 'terminated')", name="ck_employee_profile_status"),
