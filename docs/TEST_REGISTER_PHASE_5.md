@@ -256,7 +256,16 @@ These corrections are included in the current development branch; they have not 
 - [ ] Claim payments: adjudicated claim only, payment cannot exceed approved outstanding balance, concurrent payment locking, partial/full settlement transitions and immutable payment event history.
 - [ ] Insurance tenant/privacy: RLS on insurer, coverage, claim and claim-event tables; composite hospital/patient/encounter/coverage/invoice foreign keys; audit metadata minimization and role separation.
 - [ ] Insurance boundaries: no live SHA/private insurer API, eligibility verification, preauthorization, e-claim submission, adjudication, remittance, benefit-limit calculation or actual payment settlement until Phase 4 partner integration.
-\n- [ ] Module-to-API integration and cross-module workflows.
+\n
+- [ ] Phase 3.15 employee directory: one profile per hospital/user, employee-number uniqueness per hospital, active user requirement, department and manager same-hospital linkage, employment type/status/date constraints and cross-hospital ID substitution denial.
+- [ ] HR authorization: only HR administrator roles create/update employee records; HR staff can list only their hospital; ordinary users cannot enumerate staff directory; role revocation takes effect immediately.
+- [ ] Professional credentials: reported-only initial state, validity-date checks, independent reviewer requirement, reviewer/verification timestamp attribution, decision state transitions and sensitive credential/evidence data minimization in audit logs.
+- [ ] Leave self-service: only active employee profiles submit; user can view own requests; HR staff can view hospital queue; non-HR users cannot view colleagues' requests; invalid/reversed date ranges rejected.
+- [ ] Leave approval: only HR administrators decide pending requests; requester cannot approve own request; duplicate decisions and post-decision mutation rejected; decision actor/time/reason consistency enforced at database level.
+- [ ] HR tenant isolation: RLS for employee profiles, credentials and leave requests; composite hospital-to-department/employee foreign keys; cross-hospital user, department, manager and employee identifiers rejected.
+- [ ] HR privacy and scope: no payroll, tax, biometric, shift roster or automated regulator verification data is collected; audit events avoid credential numbers and evidence contents.
+
+- [ ] Module-to-API integration and cross-module workflows.
 - [ ] Kenya SHA and private insurer claims workflows.
 - [ ] Pharmacy, laboratory, radiology, medical devices, messaging and payment integrations.
 - [ ] Performance/load, resilience, failover, backup restore and multi-hospital scale.
