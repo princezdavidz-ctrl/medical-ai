@@ -9,11 +9,11 @@ Record purpose-specific patient processing authorization with a narrow data scop
 Each request records:
 - purpose code: care delivery, care coordination, referral, billing, insurance claim, patient portal, record sharing or other;
 - explicit data categories (demographics, contact details, clinical records, lab results, imaging, medications, billing, insurance or other);
-- explicit permitted uses;
+- explicit permitted uses, including record_sharing when disclosure is requested;
 - declared basis code;
 - optional timezone-aware expiry.
 
-The declared purpose must be included in permitted uses. Research use is not enabled by this workflow.
+The declared purpose must be included in permitted uses. The record_sharing purpose must also include the actual release use (for example referral or care coordination) in permitted uses. Research use is not enabled by this workflow.
 
 ## Declared basis codes
 
