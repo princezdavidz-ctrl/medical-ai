@@ -73,6 +73,7 @@ from app.models.facilities import FacilityLocation, MaintenanceWorkOrder, Mainte
 from app.models.transport import AmbulanceVehicle, TransportRequest, TransportReceivingOffer, TransportEvent
 from app.models.mortuary_pathology import MortuaryCase, MortuaryAuthorization, MortuaryMovement, MortuaryPropertyItem, PathologyCase, PathologySpecimen, PathologyReport, PathologyEvent
 from app.models.hospital_admin import HospitalAdminProfile, HospitalOperationalSettings, HospitalOperatingHour, HospitalAdminEvent
+from app.models.patient_portal import PatientPortalLink, PatientPortalAccessEvent
 from app.models.nursing import (
     NursingAssessment,
     NursingObservation,
@@ -191,6 +192,7 @@ __all__ = [
     "EmployeeProfile",
     "StaffCredential",
     "StaffLeaveRequest",
+    "PatientPortalLink", "PatientPortalAccessEvent",
     "HospitalAdminProfile", "HospitalOperationalSettings", "HospitalOperatingHour", "HospitalAdminEvent",
     "MortuaryCase", "MortuaryAuthorization", "MortuaryMovement", "MortuaryPropertyItem",
     "PathologyCase", "PathologySpecimen", "PathologyReport", "PathologyEvent",
