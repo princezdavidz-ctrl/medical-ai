@@ -55,6 +55,14 @@ def _role(db: Session, user_id: UUID, hospital_id: UUID) -> str:
 def _require_him(db: Session, user_id: UUID, hospital_id: UUID) -> None:
     if _role(db, user_id, hospital_id) not in _HIM_ROLES:
         raise HTTPException(status_code=403, detail={"code": "medical_records_officer_role_required"})
+    employee = db.scalar(select(EmployeeProfile).where(
+        EmployeeProfile.hospital_id == hospital_id,
+        EmployeeProfile.user_id == user_id,
+        EmployeeProfile.employment_status == "active",
+    ))
+    user = db.get(User, user_id)
+    if employee is None or user is None or not user.is_active:
+        raise HTTPException(status_code=403, detail={"code": "active_records_officer_employment_required"})
 
 
 def _patient(db: Session, hospital_id: UUID, patient_id: UUID) -> Patient:
