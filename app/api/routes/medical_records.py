@@ -76,6 +76,7 @@ def _patient(db: Session, hospital_id: UUID, patient_id: UUID) -> Patient:
 
 def _require_patient_record_access(db: Session, user_id: UUID, hospital_id: UUID, patient_id: UUID, record_type: str | None = None) -> set[str] | None:
     if _role(db, user_id, hospital_id) in _HIM_ROLES:
+        _require_him(db, user_id, hospital_id)
         return None
     now = datetime.now(timezone.utc)
     membership = db.scalar(select(HospitalMembership.id).where(
@@ -350,6 +351,8 @@ def create_record_release_request(payload: RecordReleaseCreate, context: tuple =
     if payload.requester_type in {"patient", "legal_representative"}:
         raise HTTPException(status_code=403, detail={"code": "patient_proxy_identity_workflow_not_connected"})
     is_him = _role(db, user.id, hospital_id) in _HIM_ROLES
+    if is_him:
+        _require_him(db, user.id, hospital_id)
     if payload.requester_type != "treating_provider" and not is_him:
         raise HTTPException(status_code=403, detail={"code": "external_requester_must_be_registered_by_records_officer"})
     if not is_him:
@@ -375,7 +378,9 @@ def create_record_release_request(payload: RecordReleaseCreate, context: tuple =
 def list_record_release_requests(patient_id: UUID | None = None, context: tuple = Depends(get_current_context), db: Session = Depends(get_db)):
     user, hospital_id = context
     query = select(PatientRecordReleaseRequest).where(PatientRecordReleaseRequest.hospital_id == hospital_id)
-    if _role(db, user.id, hospital_id) not in _HIM_ROLES:
+    if _role(db, user.id, hospital_id) in _HIM_ROLES:
+        _require_him(db, user.id, hospital_id)
+    else:
         query = query.where(PatientRecordReleaseRequest.requester_user_id == user.id)
     if patient_id is not None:
         query = query.where(PatientRecordReleaseRequest.patient_id == patient_id)
@@ -459,11 +464,14 @@ def complete_record_release(request_id: UUID, payload: RecordReleaseComplete, co
 def create_record_amendment_request(payload: RecordAmendmentCreate, context: tuple = Depends(get_current_context), db: Session = Depends(get_db)):
     user, hospital_id = context
     _patient(db, hospital_id, payload.patient_id)
-    if _role(db, user.id, hospital_id) not in _HIM_ROLES:
+    is_him = _role(db, user.id, hospital_id) in _HIM_ROLES
+    if not is_him:
         scopes = _require_patient_record_access(db, user.id, hospital_id, payload.patient_id)
         required_scope = {"demographic": "profile", "identity": "profile", "clinical_content": "encounters", "metadata": "encounters"}[payload.amendment_type]
         if required_scope not in scopes:
             raise HTTPException(status_code=403, detail={"code": "amendment_scope_not_authorized"})
+    if is_him:
+        _require_him(db, user.id, hospital_id)
     if payload.document_id is not None:
         document = db.scalar(select(PatientRecordDocument).where(
             PatientRecordDocument.hospital_id == hospital_id,
@@ -493,7 +501,9 @@ def create_record_amendment_request(payload: RecordAmendmentCreate, context: tup
 def list_record_amendment_requests(patient_id: UUID | None = None, context: tuple = Depends(get_current_context), db: Session = Depends(get_db)):
     user, hospital_id = context
     query = select(PatientRecordAmendmentRequest).where(PatientRecordAmendmentRequest.hospital_id == hospital_id)
-    if _role(db, user.id, hospital_id) not in _HIM_ROLES:
+    if _role(db, user.id, hospital_id) in _HIM_ROLES:
+        _require_him(db, user.id, hospital_id)
+    else:
         query = query.where(PatientRecordAmendmentRequest.requested_by_user_id == user.id)
     if patient_id is not None:
         query = query.where(PatientRecordAmendmentRequest.patient_id == patient_id)
