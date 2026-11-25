@@ -1,6 +1,6 @@
 import uuid
 from datetime import datetime, time
-from sqlalchemy import CheckConstraint, DateTime, ForeignKey, ForeignKeyConstraint, Index, Integer, String, Text, Time, UniqueConstraint, Uuid, func, text
+from sqlalchemy import JSON, CheckConstraint, DateTime, ForeignKey, ForeignKeyConstraint, Index, Integer, String, Text, Time, UniqueConstraint, Uuid, func, text
 from sqlalchemy.orm import Mapped, mapped_column
 from app.db.base import Base
 
