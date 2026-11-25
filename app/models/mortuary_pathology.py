@@ -129,6 +129,7 @@ class PathologyCase(Base):
     order_reference: Mapped[str | None] = mapped_column(String(160))
     authority_type: Mapped[str | None] = mapped_column(String(32))
     authority_reference: Mapped[str | None] = mapped_column(String(160))
+    authority_evidence_reference: Mapped[str | None] = mapped_column(String(100))
     authority_verified_by_user_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("users.id"))
     authority_verified_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     status: Mapped[str] = mapped_column(String(24), nullable=False, default="opened")
