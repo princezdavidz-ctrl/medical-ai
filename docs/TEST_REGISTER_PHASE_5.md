@@ -429,7 +429,7 @@ No item is considered passed until evidence, environment, build SHA, reviewer an
 ## Phase 3.25 — Medical Records & Health Information
 
 - [ ] Record document registration: records officer only; same-hospital patient and optional encounter; vault reference format and SHA-256 checksum validated; no raw file bytes or direct identifiers accepted.
-- [ ] Document version chain: first version has no predecessor; later version requires a verified predecessor for the same patient/source module/source record and exactly next version number; cross-patient/cross-hospital predecessor denied.
+- [ ] Document version chain: first version has no predecessor; later version requires a verified predecessor for the same patient/source module/source record and exactly next version number; rejected versions do not block corrected re-registration; cross-patient/cross-hospital predecessor denied.
 - [ ] Independent document verification: creator cannot verify/reject own document; rejection requires reason; pending to verified/rejected lifecycle enforced; superseded predecessor and verified replacement update atomically.
 - [ ] Document immutability: no document delete endpoint; database trigger rejects delete and content mutation after registration; verified documents can only transition to superseded; event ledger rejects UPDATE/DELETE.
 - [ ] Clinical document reads: require active employee, active hospital membership, active user, verified clinical profile, current patient care-team assignment and record-type-specific scope; expired/future/revoked assignments and expired licenses denied.
