@@ -154,6 +154,8 @@ def _active_release_consent(db: Session, hospital_id: UUID, patient_id: UUID, co
         or (consent.expires_at is not None and consent.expires_at <= now)
     ):
         raise HTTPException(status_code=403, detail={"code": "active_record_sharing_authorization_required"})
+    if release_purpose == "legal_requirement" and consent.basis_code != "legal_requirement":
+        raise HTTPException(status_code=403, detail={"code": "legal_requirement_basis_must_be_declared"})
     scope = consent.scope if isinstance(consent.scope, dict) else {}
     allowed_categories = scope.get("data_categories", [])
     permitted_uses = scope.get("permitted_uses", [])
@@ -201,6 +203,8 @@ def register_record_document(payload: RecordDocumentCreate, context: tuple = Dep
             previous is None or previous.status != "verified"
             or previous.source_module != payload.source_module
             or previous.source_record_id != payload.source_record_id
+            or previous.record_type != payload.record_type
+            or previous.encounter_id != payload.encounter_id
             or payload.version_number != previous.version_number + 1
         ):
             raise HTTPException(status_code=409, detail={"code": "valid_verified_previous_document_version_required"})
