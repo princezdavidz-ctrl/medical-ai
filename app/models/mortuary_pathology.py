@@ -114,7 +114,9 @@ class PathologyCase(Base):
         UniqueConstraint("hospital_id", "case_number", name="uq_pathology_case_number"),
         CheckConstraint("case_type IN ('biopsy', 'surgical', 'autopsy', 'forensic')", name="ck_pathology_case_type"),
         CheckConstraint("status IN ('opened', 'specimens_received', 'in_progress', 'report_draft', 'finalized', 'closed', 'cancelled')", name="ck_pathology_case_status"),
-        CheckConstraint("(case_type NOT IN ('autopsy', 'forensic')) OR (authority_type IS NOT NULL AND authority_reference IS NOT NULL AND authority_verified_by_user_id IS NOT NULL AND authority_verified_at IS NOT NULL)", name="ck_pathology_authority_required"),
+        CheckConstraint("(case_type NOT IN ('autopsy', 'forensic')) OR (authority_type IS NOT NULL AND authority_reference IS NOT NULL)", name="ck_pathology_authority_required"),
+        CheckConstraint("authority_type IS NULL OR authority_type IN ('patient_consent', 'next_of_kin_consent', 'court_order', 'coroner_directive', 'public_health_order', 'other_lawful_basis')", name="ck_pathology_authority_type"),
+        CheckConstraint("(authority_verified_by_user_id IS NULL AND authority_verified_at IS NULL) OR (authority_verified_by_user_id IS NOT NULL AND authority_verified_at IS NOT NULL)", name="ck_pathology_authority_verification"),
         Index("ix_pathology_case_queue", "hospital_id", "status", "created_at"),
     )
     id: Mapped[uuid.UUID] = mapped_column(Uuid(as_uuid=True), primary_key=True, default=uuid.uuid4)
@@ -143,6 +145,8 @@ class PathologySpecimen(Base):
         UniqueConstraint("hospital_id", "accession_number", name="uq_pathology_specimen_accession"),
         CheckConstraint("status IN ('collected', 'received', 'processing', 'processed', 'archived', 'rejected')", name="ck_pathology_specimen_status"),
         CheckConstraint("specimen_condition IN ('acceptable', 'damaged', 'leaking', 'unlabelled', 'other')", name="ck_pathology_specimen_condition"),
+        CheckConstraint("status IN ('collected', 'received', 'processing', 'processed', 'archived', 'rejected')", name="ck_pathology_specimen_status"),
+        CheckConstraint("status NOT IN ('received', 'processing', 'processed', 'archived') OR (received_at IS NOT NULL AND received_by_user_id IS NOT NULL)", name="ck_pathology_specimen_receipt_state"),
         Index("ix_pathology_specimen_case", "hospital_id", "pathology_case_id", "status"),
     )
     id: Mapped[uuid.UUID] = mapped_column(Uuid(as_uuid=True), primary_key=True, default=uuid.uuid4)
@@ -181,4 +185,21 @@ class PathologyReport(Base):
     authored_by_user_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id"), nullable=False)
     signed_by_user_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("users.id"))
     signed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+
+
+class PathologyEvent(Base):
+    __tablename__ = "pathology_events"
+    __table_args__ = (
+        ForeignKeyConstraint(["hospital_id", "pathology_case_id"], ["pathology_cases.hospital_id", "pathology_cases.id"], name="fk_pathology_event_case"),
+        UniqueConstraint("hospital_id", "id", name="uq_pathology_event_hospital_id"),
+        CheckConstraint("event_type IN ('case_opened', 'authority_verified', 'specimen_added', 'specimen_received', 'specimen_status_changed', 'report_drafted', 'report_finalized', 'case_closed', 'case_cancelled')", name="ck_pathology_event_type"),
+        Index("ix_pathology_event_case_time", "hospital_id", "pathology_case_id", "created_at"),
+    )
+    id: Mapped[uuid.UUID] = mapped_column(Uuid(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    hospital_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("hospitals.id"), nullable=False)
+    pathology_case_id: Mapped[uuid.UUID] = mapped_column(Uuid(as_uuid=True), nullable=False)
+    event_type: Mapped[str] = mapped_column(String(40), nullable=False)
+    actor_user_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id"), nullable=False)
+    note: Mapped[str | None] = mapped_column(String(1000))
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
