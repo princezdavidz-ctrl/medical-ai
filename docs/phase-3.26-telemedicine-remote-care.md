@@ -13,7 +13,7 @@ Provide the hospital-side workflow for scheduling and conducting a remote clinic
 - Recheck the exact telemedicine consent at scheduling, patient readiness and session start. The consent must be granted, unexpired, not withdrawn, declare a lawful basis, include clinical_records and permit telemedicine use.
 - Start only within the appointment window, with a verified active provider, active roster coverage and active patient care-team assignment. Starting creates a telemedicine encounter.
 - Create signed, append-only consultation, assessment, plan, follow-up, safety-plan and referral notes linked to the encounter. Only the assigned provider can author session notes.
-- Complete a session only after at least one signed note exists; close the linked encounter at the same time.
+- Complete a session only after at least one signed consultation or assessment note exists; close the linked encounter at the same time.
 - Cancel pre-start sessions with a reason and mark sessions no-show only after the scheduled end time.
 - Keep an append-only session event ledger and audit sensitive session/note reads.
 
