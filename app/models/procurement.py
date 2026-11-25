@@ -6,7 +6,7 @@ from sqlalchemy import (
     CheckConstraint, DateTime, ForeignKey, ForeignKeyConstraint, Index,
     Numeric, String, Text, UniqueConstraint, Uuid, func,
 )
-from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.base import Base
 
@@ -19,6 +19,7 @@ class ProcurementVendor(Base):
         CheckConstraint("status IN ('draft', 'active', 'suspended', 'retired')", name="ck_procurement_vendor_status"),
         CheckConstraint("vendor_type IN ('company', 'individual', 'nonprofit', 'government', 'other')", name="ck_procurement_vendor_type"),
         CheckConstraint("approved_by_user_id IS NULL OR approved_by_user_id != created_by_user_id", name="ck_procurement_vendor_independent_approval"),
+        CheckConstraint("(status = 'draft' AND approved_by_user_id IS NULL AND approved_at IS NULL) OR (status IN ('active', 'suspended', 'retired') AND approved_by_user_id IS NOT NULL AND approved_at IS NOT NULL)", name="ck_procurement_vendor_approval_state"),
         Index("ix_procurement_vendor_status", "hospital_id", "status"),
     )
     id: Mapped[uuid.UUID] = mapped_column(Uuid(as_uuid=True), primary_key=True, default=uuid.uuid4)
@@ -47,6 +48,7 @@ class PurchaseRequisition(Base):
         CheckConstraint("status IN ('draft', 'submitted', 'approved', 'rejected', 'converted', 'cancelled')", name="ck_purchase_requisition_status"),
         CheckConstraint("required_by IS NULL OR required_by >= created_at", name="ck_purchase_requisition_required_date"),
         CheckConstraint("approved_by_user_id IS NULL OR approved_by_user_id != requested_by_user_id", name="ck_purchase_requisition_independent_approval"),
+        CheckConstraint("(status = 'draft' AND submitted_at IS NULL AND approved_by_user_id IS NULL AND approved_at IS NULL) OR (status = 'submitted' AND submitted_at IS NOT NULL AND approved_by_user_id IS NULL AND approved_at IS NULL) OR (status IN ('approved', 'rejected', 'converted') AND submitted_at IS NOT NULL AND approved_by_user_id IS NOT NULL AND approved_at IS NOT NULL) OR status = 'cancelled'", name="ck_purchase_requisition_lifecycle"),
         Index("ix_purchase_requisition_queue", "hospital_id", "status", "created_at"),
         Index("ix_purchase_requisition_department", "hospital_id", "department_id", "status"),
     )
@@ -63,6 +65,7 @@ class PurchaseRequisition(Base):
     approved_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     decision_note: Mapped[str | None] = mapped_column(Text)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+    lines: Mapped[list["PurchaseRequisitionLine"]] = relationship(back_populates="requisition", cascade="all, delete-orphan")
 
 
 class PurchaseRequisitionLine(Base):
@@ -83,6 +86,7 @@ class PurchaseRequisitionLine(Base):
     estimated_unit_cost: Mapped[Decimal | None] = mapped_column(Numeric(16, 2))
     currency: Mapped[str] = mapped_column(String(3), nullable=False, default="KES")
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+    requisition: Mapped["PurchaseRequisition"] = relationship(back_populates="lines")
 
 
 class PurchaseOrder(Base):
@@ -94,6 +98,7 @@ class PurchaseOrder(Base):
         UniqueConstraint("hospital_id", "order_number", name="uq_purchase_order_number"),
         UniqueConstraint("hospital_id", "requisition_id", name="uq_purchase_order_requisition"),
         CheckConstraint("status IN ('draft', 'issued', 'partially_received', 'received', 'cancelled')", name="ck_purchase_order_status"),
+        CheckConstraint("(status = 'draft' AND issued_by_user_id IS NULL AND issued_at IS NULL) OR (status IN ('issued', 'partially_received', 'received', 'cancelled') AND issued_by_user_id IS NOT NULL AND issued_at IS NOT NULL)", name="ck_purchase_order_issue_state"),
         CheckConstraint("total_amount >= 0 AND currency ~ '^[A-Z]{3}$'", name="ck_purchase_order_amount_currency"),
         Index("ix_purchase_order_queue", "hospital_id", "status", "created_at"),
     )
