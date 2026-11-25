@@ -70,6 +70,7 @@ def upgrade() -> None:
         sa.CheckConstraint("status IN ('pending', 'verified', 'rejected', 'revoked')", name="ck_mortuary_authorization_status"),
         sa.CheckConstraint("(status = 'verified' AND verified_by_user_id IS NOT NULL AND verified_at IS NOT NULL AND evidence_reference IS NOT NULL) OR (status != 'verified' AND verified_by_user_id IS NULL AND verified_at IS NULL)", name="ck_mortuary_authorization_verification"),
         sa.CheckConstraint("evidence_reference IS NULL OR (evidence_reference ~ '^vault://[0-9a-fA-F-]+
+        sa.CheckConstraint("evidence_reference IS NULL OR (evidence_reference ~ '^vault://[0-9a-fA-F-]+
     )
     op.create_index("ix_mortuary_authorization_case", "mortuary_authorizations", ["hospital_id", "mortuary_case_id", "status"])
     op.create_table(
@@ -234,18 +235,8 @@ def upgrade() -> None:
 
 
 
-def downgrade() -> None:
-    op.execute("DROP TRIGGER IF EXISTS trg_pathology_reports_immutable ON pathology_reports")
-    op.execute("DROP FUNCTION IF EXISTS prevent_final_pathology_report_mutation()")
-    op.execute("DROP TRIGGER IF EXISTS trg_pathology_events_immutable ON pathology_events")
-    op.execute("DROP FUNCTION IF EXISTS prevent_pathology_event_mutation()")
-    op.execute("DROP TRIGGER IF EXISTS trg_mortuary_movements_immutable ON mortuary_movements")
-    op.execute("DROP FUNCTION IF EXISTS prevent_mortuary_movement_mutation()")
-    for table in reversed(TABLES):
-        op.execute(sa.text(f'DROP POLICY IF EXISTS "{table}_hospital_isolation" ON "{table}"'))
-        op.execute(sa.text(f'ALTER TABLE "{table}" DISABLE ROW LEVEL SECURITY'))
-        op.drop_table(table)
  AND length(evidence_reference) = 44)", name="ck_mortuary_authorization_evidence"),
+        sa.CheckConstraint("evidence_reference IS NULL OR (evidence_reference ~ '^vault://[0-9a-fA-F-]+
     )
     op.create_index("ix_mortuary_authorization_case", "mortuary_authorizations", ["hospital_id", "mortuary_case_id", "status"])
     op.create_table(
@@ -406,9 +397,6 @@ def downgrade() -> None:
         $$ LANGUAGE plpgsql
     """)
     op.execute("CREATE TRIGGER trg_pathology_reports_immutable BEFORE UPDATE OR DELETE ON pathology_reports FOR EACH ROW EXECUTE FUNCTION prevent_final_pathology_report_mutation()")
-
-
-
 
 def downgrade() -> None:
     op.execute("DROP TRIGGER IF EXISTS trg_pathology_reports_immutable ON pathology_reports")
