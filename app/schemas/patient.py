@@ -296,7 +296,7 @@ class PatientConsentCreate(BaseModel):
     ]] = Field(min_length=1, max_length=20)
     permitted_uses: list[Literal[
         "care_delivery", "care_coordination", "referral", "billing",
-        "insurance_claim", "patient_portal", "other_lawful_use",
+        "insurance_claim", "patient_portal", "record_sharing", "other_lawful_use",
     ]] = Field(min_length=1, max_length=20)
     basis_code: Literal[
         "patient_consent", "guardian_consent", "healthcare_provision",
