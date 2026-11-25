@@ -425,7 +425,7 @@ def create_telemedicine_note(session_id: UUID, payload: TelemedicineNoteCreate, 
     )
     db.add(note)
     db.flush()
-    _event(db, hospital_id, session, user.id, "note_signed", {"note_type": note.note_type})
+    _event(db, hospital_id, session, user.id, "note_signed", {"note_id": str(note.id), "note_type": note.note_type})
     _audit(db, hospital_id, user.id, "telemedicine.note_signed", "telemedicine_clinical_note", note.id)
     db.commit()
     _restore_context(db, user.id, hospital_id)
