@@ -1,4 +1,5 @@
 from uuid import UUID
+from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy import func, select, text
 from sqlalchemy.exc import IntegrityError
@@ -100,6 +101,10 @@ def update_settings(payload: HospitalSettingsUpdate, context: tuple = Depends(ge
     website = values.get("website_url")
     if website and not website.startswith(("https://", "http://")):
         raise HTTPException(status_code=422, detail={"code": "invalid_website_url"})
+    try:
+        ZoneInfo(values["timezone_name"])
+    except (ZoneInfoNotFoundError, ValueError):
+        raise HTTPException(status_code=422, detail={"code": "invalid_timezone"})
     values["currency_code"] = values["currency_code"].upper()
     values["country_code"] = values["country_code"].upper()
     hospital = db.get(Hospital, hospital_id)
