@@ -402,6 +402,7 @@ def create_shift_swap_request(shift_id: UUID, payload: ShiftSwapRequestCreate, c
     ).with_for_update())
     if target is None:
         raise HTTPException(status_code=404, detail={"code": "active_swap_target_not_found"})
+    target = _active_employee(db, hospital_id, target.id, lock=True)
     membership = db.scalar(select(HospitalMembership.id).where(
         HospitalMembership.hospital_id == hospital_id,
         HospitalMembership.user_id == target.user_id,
@@ -469,6 +470,7 @@ def respond_to_shift_swap(request_id: UUID, payload: ShiftSwapResponse, context:
         ).with_for_update())
         if target is None:
             raise HTTPException(status_code=403, detail={"code": "active_employee_profile_required"})
+        target = _active_employee(db, hospital_id, target.id, lock=True)
         _validate_employee_for_shift(db, hospital_id, target, shift.department_id, shift.starts_at, shift.ends_at)
         request.status = "accepted"
         event_type = "swap_accepted"
@@ -507,6 +509,7 @@ def decide_shift_swap(request_id: UUID, payload: ShiftSwapDecision, context: tup
         ).with_for_update())
         if target is None:
             raise HTTPException(status_code=409, detail={"code": "swap_target_no_longer_active"})
+        target = _active_employee(db, hospital_id, target.id, lock=True)
         _validate_employee_for_shift(db, hospital_id, target, shift.department_id, shift.starts_at, shift.ends_at)
         shift.employee_profile_id = target.id
         shift.staff_user_id = target.user_id
@@ -536,6 +539,7 @@ def check_in_to_shift(shift_id: UUID, context: tuple = Depends(get_current_conte
     shift = _shift(db, hospital_id, shift_id, lock=True)
     if shift.staff_user_id != user.id or shift.status not in ("scheduled", "confirmed"):
         raise HTTPException(status_code=403, detail={"code": "assigned_active_shift_required"})
+    _active_employee(db, hospital_id, shift.employee_profile_id)
     now = datetime.now(timezone.utc)
     if now < shift.starts_at - timedelta(hours=2) or now > shift.ends_at:
         raise HTTPException(status_code=409, detail={"code": "outside_shift_check_in_window"})
@@ -579,6 +583,8 @@ def check_out_of_shift(shift_id: UUID, payload: AttendanceCheckOut, context: tup
     ).with_for_update())
     if attendance is None:
         raise HTTPException(status_code=404, detail={"code": "open_shift_attendance_not_found"})
+    shift = _shift(db, hospital_id, attendance.shift_assignment_id)
+    _active_employee(db, hospital_id, shift.employee_profile_id)
     now = datetime.now(timezone.utc)
     if now <= attendance.check_in_at:
         raise HTTPException(status_code=409, detail={"code": "check_out_must_follow_check_in"})
@@ -635,8 +641,12 @@ def resubmit_rejected_attendance(attendance_id: UUID, payload: AttendanceResubmi
     ).with_for_update())
     if attendance is None:
         raise HTTPException(status_code=404, detail={"code": "rejected_attendance_not_found"})
+    shift = _shift(db, hospital_id, attendance.shift_assignment_id, lock=True)
+    _active_employee(db, hospital_id, shift.employee_profile_id)
     if payload.check_in_at.tzinfo is None or payload.check_out_at.tzinfo is None or payload.check_out_at <= payload.check_in_at:
         raise HTTPException(status_code=422, detail={"code": "valid_timezone_aware_attendance_times_required"})
+    if payload.check_in_at < shift.starts_at - timedelta(hours=2) or payload.check_out_at > shift.ends_at or shift.status not in ("scheduled", "confirmed"):
+        raise HTTPException(status_code=422, detail={"code": "resubmitted_attendance_must_fit_scheduled_shift"})
     attendance.check_in_at = payload.check_in_at
     attendance.check_out_at = payload.check_out_at
     attendance.note = payload.note
