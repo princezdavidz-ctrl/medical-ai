@@ -316,3 +316,21 @@ No item is considered passed until evidence, environment, build SHA, reviewer an
 - [ ] Facilities tenant isolation: RLS on all three facilities tables; composite hospital foreign keys for location parent, work-order location/asset and event/work-order; cross-hospital UUID substitution rejected.
 - [ ] Facilities concurrency: simultaneous approvals, assignments, start/cancel, completion/cancel, location close versus new work-order creation and duplicate work-order numbers.
 - [ ] Facilities safety boundary: no automatic medical-device certification, calibration approval, clinical equipment availability change, preventive maintenance scheduling, vendor dispatch or IoT/BMS action.
+
+
+- [ ] Phase 3.19 transfer authorization: exact patient consent ID belongs to same hospital/patient, purpose is inter_hospital_transfer, granted/basis present, not withdrawn/expired, and scope contains identity + clinical_summary + transfer_of_care; wrong consent ID, withdrawn consent and expired consent denied.
+- [ ] Transfer request integrity: active patient, matching active encounter, different active receiving hospital, interfacility-only type, unique transfer number, origin/destination descriptions and composite tenant/consent foreign keys.
+- [ ] Receiving offer privacy: receiving hospital can list/read only minimized offer fields; patient ID, encounter ID, clinical reason, consent ID and patient demographics are not accessible through receiving APIs or RLS; origin hospital can reconcile offer status.
+- [ ] Receiving bed acceptance: authorized receiving-hospital role only, offer belongs to current destination, bed reference required, duplicate acceptance denied, acceptance timestamp/actor persisted and append-only event emitted.
+- [ ] Receiving rejection: authorized receiving role, reason required, only offered status, cross-hospital offer substitution denied, rejection visible to origin and immutable event/audit recorded.
+- [ ] Ambulance fleet: vehicle-code and registration uniqueness per hospital, vehicle type/capacity/status constraints, cross-hospital vehicle denial and unavailable vehicle cannot be assigned.
+- [ ] Crew assignment: available origin-hospital vehicle, active same-hospital driver role, optional distinct active crew, wrong-role/inactive/cross-hospital crew rejected, concurrent vehicle double-assignment prevented.
+- [ ] Dispatch: receiving bed acceptance required before vehicle assignment; vehicle assignment required before dispatch; duplicate dispatch and invalid status transitions denied.
+- [ ] Tracking: assigned driver/crew only, en-route state only, paired latitude/longitude, coordinate bounds, note-only updates allowed, invalid coordinates denied and append-only event timeline.
+- [ ] Arrival confirmation: receiving hospital role only, matching offer, bed-accepted state, one arrival confirmation, receiving actor/time persisted and origin event timeline updated without exposing patient records.
+- [ ] Fleet release: origin fleet manager only, receiving arrival required, assigned vehicle status reconciled to available, transfer retains historical vehicle/crew references and repeated release denied.
+- [ ] Cancellation: origin role only, only pre-dispatch states, assigned vehicle returned to available when applicable, receiving offer cancelled when still pending/accepted and cancellation after dispatch denied.
+- [ ] Transport RLS: vehicles origin-hospital-only; transfer records origin-hospital-only; receiving offer visible only to origin and destination hospitals; event timeline visible only to transfer participants; cross-hospital UUID substitution denied.
+- [ ] Transport event ledger: all state transitions and tracking events recorded; UPDATE/DELETE denied at DB trigger; actor attribution and audit metadata avoid patient clinical content.
+- [ ] Transport concurrency: simultaneous receiving acceptance/rejection, vehicle assignment races, dispatch versus cancel, arrival versus duplicate confirmation, and release versus new assignment.
+- [ ] Transport boundary: no actual inpatient bed reservation/occupancy, no automatic clinical fitness/triage decision, no patient record sharing, no live GPS/ETA/dispatch integration until Phase 4.
