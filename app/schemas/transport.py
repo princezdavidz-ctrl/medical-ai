@@ -73,3 +73,7 @@ class TrackingUpdate(BaseModel):
 class RejectionInput(BaseModel):
     model_config = ConfigDict(extra="forbid")
     reason: str = Field(min_length=3, max_length=1000)
+
+class VehicleStatusUpdate(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    status: str = Field(pattern="^(available|maintenance|out_of_service)$")
