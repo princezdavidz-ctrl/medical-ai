@@ -413,7 +413,6 @@ def create_telemedicine_note(session_id: UUID, payload: TelemedicineNoteCreate, 
         raise HTTPException(status_code=403, detail={"code": "assigned_active_telemedicine_provider_required"})
     _active_provider(db, hospital_id, user.id)
     _require_care_team(db, hospital_id, session.patient_id, user.id)
-    _active_telemedicine_consent(db, hospital_id, session.patient_id, session.consent_id)
     note = TelemedicineClinicalNote(
         hospital_id=hospital_id, session_id=session.id,
         encounter_id=session.encounter_id, patient_id=session.patient_id,
@@ -458,7 +457,6 @@ def complete_telemedicine_session(session_id: UUID, context: tuple = Depends(get
         raise HTTPException(status_code=403, detail={"code": "assigned_active_telemedicine_provider_required"})
     _active_provider(db, hospital_id, user.id)
     _require_care_team(db, hospital_id, session.patient_id, user.id)
-    _active_telemedicine_consent(db, hospital_id, session.patient_id, session.consent_id)
     note_count = db.scalar(select(TelemedicineClinicalNote.id).where(
         TelemedicineClinicalNote.hospital_id == hospital_id,
         TelemedicineClinicalNote.session_id == session.id,
