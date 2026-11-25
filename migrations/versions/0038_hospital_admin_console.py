@@ -74,7 +74,6 @@ def upgrade() -> None:
         sa.Column("appointment_booking_enabled", sa.Boolean(), nullable=False, server_default=sa.true()),
         sa.Column("patient_self_registration_enabled", sa.Boolean(), nullable=False, server_default=sa.true()),
         sa.Column("public_directory_enabled", sa.Boolean(), nullable=False, server_default=sa.false()),
-        sa.Column("maintenance_mode", sa.Boolean(), nullable=False, server_default=sa.false()),
         sa.Column("default_appointment_duration_minutes", sa.Integer(), nullable=False, server_default="20"),
         sa.Column("appointment_booking_advance_days", sa.Integer(), nullable=False, server_default="60"),
         sa.Column("updated_by_user_id", sa.Uuid(), sa.ForeignKey("users.id"), nullable=False),
