@@ -304,6 +304,11 @@ def cancel_work_order(order_id: UUID, context: tuple = Depends(get_current_conte
     if order is None or order.status not in ("requested", "approved", "assigned"):
         raise HTTPException(status_code=409, detail={"code": "cancellable_work_order_required"})
     order.status = "cancelled"
+    order.approved_by_user_id = None
+    order.approved_at = None
+    order.assigned_to_user_id = None
+    order.assigned_by_user_id = None
+    order.assigned_at = None
     _event(db, hospital_id, user.id, order.id, "cancelled")
     _audit(db, hospital_id, user.id, "facilities.work_order.cancelled", "maintenance_work_order", order.id)
     db.commit()
