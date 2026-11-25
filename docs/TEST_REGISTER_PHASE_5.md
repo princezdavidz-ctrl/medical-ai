@@ -334,3 +334,5 @@ No item is considered passed until evidence, environment, build SHA, reviewer an
 - [ ] Transport event ledger: all state transitions and tracking events recorded; UPDATE/DELETE denied at DB trigger; actor attribution and audit metadata avoid patient clinical content.
 - [ ] Transport concurrency: simultaneous receiving acceptance/rejection, vehicle assignment races, dispatch versus cancel, arrival versus duplicate confirmation, and release versus new assignment.
 - [ ] Transport boundary: no actual inpatient bed reservation/occupancy, no automatic clinical fitness/triage decision, no patient record sharing, no live GPS/ETA/dispatch integration until Phase 4.
+
+- [ ] Receiving offer progression: offered → bed_accepted → vehicle_assigned → en_route → arrived; receiving arrival confirmation before dispatch denied, rejected/cancelled offers cannot be assigned, and offer destination must match the transfer's receiving_hospital_id.
