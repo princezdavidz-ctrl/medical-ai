@@ -11,6 +11,7 @@ from app.api.deps import get_current_context
 from app.db.session import get_db
 from app.models import Department, HospitalMembership, Role, User
 from app.models.hr import EmployeeProfile, StaffCredential, StaffLeaveRequest
+from app.models.staff_scheduling import StaffShiftAssignment
 from app.schemas.hr import (
     EmployeeCreate, EmployeeRead, EmployeeStatusUpdate,
     CredentialCreate, CredentialDecision, CredentialRead,
@@ -232,6 +233,17 @@ def decide_leave_request(request_id: UUID, payload: LeaveDecision, context: tupl
     ).with_for_update())
     if item is None or item.status != "pending":
         raise HTTPException(status_code=404, detail={"code": "pending_leave_request_not_found"})
+    employee = _employee(db, hospital_id, item.employee_profile_id, lock=True)
+    if payload.outcome == "approved":
+        conflict = db.scalar(select(StaffShiftAssignment.id).where(
+            StaffShiftAssignment.hospital_id == hospital_id,
+            StaffShiftAssignment.employee_profile_id == employee.id,
+            StaffShiftAssignment.status.in_(["scheduled", "confirmed"]),
+            StaffShiftAssignment.starts_at < item.end_at,
+            StaffShiftAssignment.ends_at > item.start_at,
+        ).limit(1))
+        if conflict is not None:
+            raise HTTPException(status_code=409, detail={"code": "approved_leave_conflicts_with_scheduled_shift"})
     if item.requested_by_user_id == user.id:
         raise HTTPException(status_code=409, detail={"code": "independent_leave_approval_required"})
     item.status = payload.outcome
