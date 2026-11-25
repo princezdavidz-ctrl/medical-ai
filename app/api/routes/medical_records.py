@@ -265,7 +265,7 @@ def list_patient_record_documents(
     if end_date is not None:
         query = query.where(PatientRecordDocument.document_date <= end_date)
     if not is_him:
-        query = query.where(PatientRecordDocument.status == "verified")
+        query = query.where(PatientRecordDocument.status.in_(["verified", "superseded"]))
     rows = db.scalars(query.order_by(PatientRecordDocument.document_date.desc()).limit(500)).all()
     if not is_him:
         rows = [row for row in rows if _RECORD_SCOPE.get(row.record_type, "encounters") in scopes]
@@ -285,7 +285,7 @@ def get_record_document(document_id: UUID, context: tuple = Depends(get_current_
     if document is None:
         raise HTTPException(status_code=404, detail={"code": "record_document_not_found"})
     _require_patient_record_access(db, user.id, hospital_id, document.patient_id, document.record_type)
-    if document.status != "verified" and _role(db, user.id, hospital_id) not in _HIM_ROLES:
+    if document.status not in {"verified", "superseded"} and _role(db, user.id, hospital_id) not in _HIM_ROLES:
         raise HTTPException(status_code=404, detail={"code": "record_document_not_found"})
     _audit(db, hospital_id, user.id, "medical_records.document_viewed", "patient_record_document", document.id)
     db.commit()
