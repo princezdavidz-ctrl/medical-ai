@@ -597,7 +597,7 @@ def create_staff_task(payload: StaffTaskCreate, context: tuple = Depends(get_cur
             "follow_up": "encounters",
             "referral": "encounters",
             "care_coordination": "encounters",
-        }.get(payload.task_type)
+        }.get(payload.task_type, "encounters")
         if required_scope and required_scope not in (assignment.access_scope or []):
             raise HTTPException(status_code=403, detail={"code": "task_requires_patient_access_scope"})
     if payload.encounter_id is not None:
@@ -648,9 +648,32 @@ def list_staff_tasks(status_filter: str | None = Query(default=None, alias="stat
         if status_filter not in {"open", "in_progress", "completed", "cancelled"}:
             raise HTTPException(status_code=422, detail={"code": "invalid_task_status_filter"})
         query = query.where(StaffWorkQueueTask.status == status_filter)
-    return db.scalars(query.order_by(
+    tasks = db.scalars(query.order_by(
         StaffWorkQueueTask.priority.desc(), StaffWorkQueueTask.due_at.asc().nulls_last(),
     ).limit(300)).all()
+    now = datetime.now(timezone.utc)
+    required_scopes = {
+        "review_lab_result": "lab_results", "medication_review": "medications",
+        "sign_note": "encounters", "discharge_planning": "encounters",
+        "follow_up": "encounters", "referral": "encounters",
+        "care_coordination": "encounters", "other": "encounters",
+    }
+    visible = []
+    for task in tasks:
+        if task.patient_id is None:
+            visible.append(task)
+            continue
+        assignment = db.scalar(select(PatientCareTeamAssignment).where(
+            PatientCareTeamAssignment.hospital_id == hospital_id,
+            PatientCareTeamAssignment.patient_id == task.patient_id,
+            PatientCareTeamAssignment.staff_user_id == user.id,
+            PatientCareTeamAssignment.status == "active",
+            PatientCareTeamAssignment.starts_at <= now,
+            or_(PatientCareTeamAssignment.ends_at.is_(None), PatientCareTeamAssignment.ends_at > now),
+        ))
+        if assignment is not None and required_scopes.get(task.task_type, "encounters") in (assignment.access_scope or []):
+            visible.append(task)
+    return visible
 
 
 @router.patch("/tasks/{task_id}", response_model=StaffTaskRead)
@@ -669,6 +692,24 @@ def update_staff_task(task_id: UUID, payload: StaffTaskUpdate, context: tuple = 
         raise HTTPException(status_code=403, detail={"code": "task_assignee_only"})
     if task.status in ("completed", "cancelled"):
         raise HTTPException(status_code=409, detail={"code": "terminal_task_status"})
+    if task.patient_id is not None:
+        now = datetime.now(timezone.utc)
+        assignment = db.scalar(select(PatientCareTeamAssignment).where(
+            PatientCareTeamAssignment.hospital_id == hospital_id,
+            PatientCareTeamAssignment.patient_id == task.patient_id,
+            PatientCareTeamAssignment.staff_user_id == task.assigned_to_user_id,
+            PatientCareTeamAssignment.status == "active",
+            PatientCareTeamAssignment.starts_at <= now,
+            or_(PatientCareTeamAssignment.ends_at.is_(None), PatientCareTeamAssignment.ends_at > now),
+        ))
+        required_scope = {
+            "review_lab_result": "lab_results", "medication_review": "medications",
+            "sign_note": "encounters", "discharge_planning": "encounters",
+            "follow_up": "encounters", "referral": "encounters",
+            "care_coordination": "encounters", "other": "encounters",
+        }.get(task.task_type, "encounters")
+        if assignment is None or required_scope not in (assignment.access_scope or []):
+            raise HTTPException(status_code=403, detail={"code": "active_task_patient_access_required"})
     task.status = payload.status
     if payload.status == "completed":
         if not payload.completion_note or len(payload.completion_note.strip()) < 5:
