@@ -10,7 +10,7 @@ class PatientPortalLink(Base):
     __table_args__ = (
         ForeignKeyConstraint(["hospital_id", "patient_id"], ["patients.hospital_id", "patients.id"], name="fk_patient_portal_link_patient"),
         UniqueConstraint("hospital_id", "id", "patient_id", name="uq_patient_portal_link_hospital_patient"),
-        UniqueConstraint("hospital_id", "patient_id", "portal_user_id", name="uq_patient_portal_link_user_patient"),
+        Index("uq_patient_portal_link_open", "hospital_id", "patient_id", "portal_user_id", unique=True, postgresql_where=text("status IN ('pending', 'active')")),
         CheckConstraint("relationship_type IN ('self', 'parent_guardian', 'caregiver', 'legal_representative')", name="ck_patient_portal_relationship"),
         CheckConstraint("status IN ('pending', 'active', 'revoked')", name="ck_patient_portal_link_status"),
         CheckConstraint("json_typeof(access_scope) = 'array'", name="ck_patient_portal_access_scope_array"),
