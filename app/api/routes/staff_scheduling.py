@@ -688,13 +688,14 @@ def resubmit_rejected_attendance(attendance_id: UUID, payload: AttendanceResubmi
 def get_staff_scheduling_dashboard(context: tuple = Depends(get_current_context), db: Session = Depends(get_db)):
     user, hospital_id = context
     role = _role(db, user.id, hospital_id)
+    now = datetime.now(timezone.utc)
     if role not in _MANAGER_ROLES:
         return {
             "upcoming_shifts": db.scalar(select(func.count()).select_from(StaffShiftAssignment).where(
                 StaffShiftAssignment.hospital_id == hospital_id,
                 StaffShiftAssignment.staff_user_id == user.id,
                 StaffShiftAssignment.status.in_(["scheduled", "confirmed"]),
-                StaffShiftAssignment.starts_at >= datetime.now(timezone.utc),
+                StaffShiftAssignment.starts_at >= now,
             )) or 0,
             "pending_swap_responses": db.scalar(select(func.count()).select_from(StaffShiftSwapRequest).where(
                 StaffShiftSwapRequest.hospital_id == hospital_id,
@@ -702,18 +703,34 @@ def get_staff_scheduling_dashboard(context: tuple = Depends(get_current_context)
                 StaffShiftSwapRequest.status == "pending_target",
             )) or 0,
         }
+    manager_department_id = _manager_department(db, user.id, hospital_id, role)
+    shifts = select(func.count()).select_from(StaffShiftAssignment).where(
+        StaffShiftAssignment.hospital_id == hospital_id,
+        StaffShiftAssignment.status.in_(["scheduled", "confirmed"]),
+        StaffShiftAssignment.starts_at >= now,
+    )
+    swaps = select(func.count()).select_from(StaffShiftSwapRequest).join(
+        StaffShiftAssignment,
+        and_(StaffShiftAssignment.hospital_id == StaffShiftSwapRequest.hospital_id,
+             StaffShiftAssignment.id == StaffShiftSwapRequest.shift_assignment_id),
+    ).where(
+        StaffShiftSwapRequest.hospital_id == hospital_id,
+        StaffShiftSwapRequest.status == "accepted",
+    )
+    attendance = select(func.count()).select_from(StaffShiftAttendance).join(
+        StaffShiftAssignment,
+        and_(StaffShiftAssignment.hospital_id == StaffShiftAttendance.hospital_id,
+             StaffShiftAssignment.id == StaffShiftAttendance.shift_assignment_id),
+    ).where(
+        StaffShiftAttendance.hospital_id == hospital_id,
+        StaffShiftAttendance.status == "submitted",
+    )
+    if manager_department_id is not None:
+        shifts = shifts.where(StaffShiftAssignment.department_id == manager_department_id)
+        swaps = swaps.where(StaffShiftAssignment.department_id == manager_department_id)
+        attendance = attendance.where(StaffShiftAssignment.department_id == manager_department_id)
     return {
-        "upcoming_shifts": db.scalar(select(func.count()).select_from(StaffShiftAssignment).where(
-            StaffShiftAssignment.hospital_id == hospital_id,
-            StaffShiftAssignment.status.in_(["scheduled", "confirmed"]),
-            StaffShiftAssignment.starts_at >= datetime.now(timezone.utc),
-        )) or 0,
-        "pending_swap_decisions": db.scalar(select(func.count()).select_from(StaffShiftSwapRequest).where(
-            StaffShiftSwapRequest.hospital_id == hospital_id,
-            StaffShiftSwapRequest.status == "accepted",
-        )) or 0,
-        "attendance_pending_review": db.scalar(select(func.count()).select_from(StaffShiftAttendance).where(
-            StaffShiftAttendance.hospital_id == hospital_id,
-            StaffShiftAttendance.status == "submitted",
-        )) or 0,
+        "upcoming_shifts": db.scalar(shifts) or 0,
+        "pending_swap_decisions": db.scalar(swaps) or 0,
+        "attendance_pending_review": db.scalar(attendance) or 0,
     }
