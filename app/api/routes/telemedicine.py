@@ -45,6 +45,24 @@ def _require_scheduler(db: Session, user_id: UUID, hospital_id: UUID) -> str:
     return role
 
 
+def _manager_department(db: Session, user_id: UUID, hospital_id: UUID, role: str) -> UUID | None:
+    if role not in {"department_head", "nurse_manager"}:
+        return None
+    employee = db.scalar(select(EmployeeProfile).where(
+        EmployeeProfile.hospital_id == hospital_id,
+        EmployeeProfile.user_id == user_id,
+        EmployeeProfile.employment_status == "active",
+    ))
+    if employee is None or employee.department_id is None:
+        raise HTTPException(status_code=403, detail={"code": "active_manager_department_required"})
+    return employee.department_id
+
+
+def _enforce_department_scope(manager_department_id: UUID | None, target_department_id: UUID) -> None:
+    if manager_department_id is not None and target_department_id != manager_department_id:
+        raise HTTPException(status_code=403, detail={"code": "telemedicine_department_scope_denied"})
+
+
 def _patient(db: Session, hospital_id: UUID, patient_id: UUID, lock: bool = False) -> Patient:
     query = select(Patient).where(Patient.hospital_id == hospital_id, Patient.id == patient_id)
     if lock:
@@ -140,7 +158,7 @@ def _event(db: Session, hospital_id: UUID, session: TelemedicineSession, user_id
     ))
 
 
-def _audit(db: Session, hospital_id: UUID, user_id: UUID, action: str, resource_type: str, resource_id: UUID, metadata=None) -> None:
+def _audit(db: Session, hospital_id: UUID, user_id: UUID, action: str, resource_type: str, resource_id: UUID | None, metadata=None) -> None:
     write_audit_event(
         db, hospital_id=hospital_id, actor_user_id=user_id, action=action,
         resource_type=resource_type, resource_id=str(resource_id), metadata=metadata or {},
@@ -163,7 +181,8 @@ def _session(db: Session, hospital_id: UUID, session_id: UUID, lock: bool = Fals
 def _require_session_access(db: Session, user_id: UUID, hospital_id: UUID, session: TelemedicineSession) -> None:
     role = _role(db, user_id, hospital_id)
     if role in _SCHEDULER_ROLES:
-        _require_scheduler(db, user_id, hospital_id)
+        manager_role = _require_scheduler(db, user_id, hospital_id)
+        _enforce_department_scope(_manager_department(db, user_id, hospital_id, manager_role), session.department_id)
         return
     if session.provider_user_id == user_id:
         _active_provider(db, hospital_id, user_id)
@@ -174,7 +193,9 @@ def _require_session_access(db: Session, user_id: UUID, hospital_id: UUID, sessi
 @router.post("/sessions", response_model=TelemedicineSessionRead, status_code=status.HTTP_201_CREATED)
 def create_telemedicine_session(payload: TelemedicineSessionCreate, context: tuple = Depends(get_current_context), db: Session = Depends(get_db)):
     user, hospital_id = context
-    _require_scheduler(db, user.id, hospital_id)
+    role = _require_scheduler(db, user.id, hospital_id)
+    manager_department_id = _manager_department(db, user.id, hospital_id, role)
+    _enforce_department_scope(manager_department_id, payload.department_id)
     now = datetime.now(timezone.utc)
     if payload.scheduled_start <= now or payload.scheduled_start > now + timedelta(days=365):
         raise HTTPException(status_code=422, detail={"code": "session_must_be_scheduled_within_next_365_days"})
@@ -233,7 +254,10 @@ def list_telemedicine_sessions(
     role = _role(db, user.id, hospital_id)
     query = select(TelemedicineSession).where(TelemedicineSession.hospital_id == hospital_id)
     if role in _SCHEDULER_ROLES:
-        _require_scheduler(db, user.id, hospital_id)
+        manager_role = _require_scheduler(db, user.id, hospital_id)
+        manager_department_id = _manager_department(db, user.id, hospital_id, manager_role)
+        if manager_department_id is not None:
+            query = query.where(TelemedicineSession.department_id == manager_department_id)
         if provider_user_id is not None:
             query = query.where(TelemedicineSession.provider_user_id == provider_user_id)
     else:
@@ -249,7 +273,7 @@ def list_telemedicine_sessions(
     if end_at is not None:
         query = query.where(TelemedicineSession.scheduled_start <= end_at)
     rows = db.scalars(query.order_by(TelemedicineSession.scheduled_start).limit(300)).all()
-    _audit(db, hospital_id, user.id, "telemedicine.session_list_viewed", "telemedicine_session_list", rows[0].id if rows else UUID(int=0), {"result_count": len(rows)})
+    _audit(db, hospital_id, user.id, "telemedicine.session_list_viewed", "telemedicine_session_list", None, {"result_count": len(rows)})
     db.commit()
     _restore_context(db, user.id, hospital_id)
     return rows
@@ -272,8 +296,11 @@ def mark_telemedicine_patient_ready(session_id: UUID, payload: TelemedicinePatie
     session = _session(db, hospital_id, session_id, lock=True)
     role = _role(db, user.id, hospital_id)
     if role in _SCHEDULER_ROLES:
-        _require_scheduler(db, user.id, hospital_id)
-    elif session.provider_user_id != user.id:
+        manager_role = _require_scheduler(db, user.id, hospital_id)
+        _enforce_department_scope(_manager_department(db, user.id, hospital_id, manager_role), session.department_id)
+    elif session.provider_user_id == user.id:
+        _active_provider(db, hospital_id, user.id)
+    else:
         raise HTTPException(status_code=403, detail={"code": "assigned_provider_or_scheduler_required"})
     if session.status != "scheduled":
         raise HTTPException(status_code=409, detail={"code": "scheduled_telemedicine_session_required"})
@@ -415,8 +442,11 @@ def cancel_telemedicine_session(session_id: UUID, payload: TelemedicineCancel, c
     session = _session(db, hospital_id, session_id, lock=True)
     role = _role(db, user.id, hospital_id)
     if role in _SCHEDULER_ROLES:
-        _require_scheduler(db, user.id, hospital_id)
-    elif session.provider_user_id != user.id:
+        manager_role = _require_scheduler(db, user.id, hospital_id)
+        _enforce_department_scope(_manager_department(db, user.id, hospital_id, manager_role), session.department_id)
+    elif session.provider_user_id == user.id:
+        _active_provider(db, hospital_id, user.id)
+    else:
         raise HTTPException(status_code=403, detail={"code": "assigned_provider_or_scheduler_required"})
     if session.status not in ("scheduled", "patient_ready"):
         raise HTTPException(status_code=409, detail={"code": "only_pre_start_sessions_can_be_cancelled"})
@@ -435,8 +465,9 @@ def cancel_telemedicine_session(session_id: UUID, payload: TelemedicineCancel, c
 @router.post("/sessions/{session_id}/no-show", response_model=TelemedicineSessionRead)
 def mark_telemedicine_no_show(session_id: UUID, payload: TelemedicineCancel, context: tuple = Depends(get_current_context), db: Session = Depends(get_db)):
     user, hospital_id = context
-    _require_scheduler(db, user.id, hospital_id)
+    role = _require_scheduler(db, user.id, hospital_id)
     session = _session(db, hospital_id, session_id, lock=True)
+    _enforce_department_scope(_manager_department(db, user.id, hospital_id, role), session.department_id)
     if session.status != "scheduled" or datetime.now(timezone.utc) <= session.scheduled_end:
         raise HTTPException(status_code=409, detail={"code": "scheduled_session_past_end_required_for_no_show"})
     session.status = "no_show"
