@@ -64,6 +64,7 @@ class PatientPortalPatientRead(BaseModel):
 
 
 class PatientPortalEncounterRead(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
     id: UUID
     encounter_type: str
     status: str
