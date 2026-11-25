@@ -104,8 +104,8 @@ def upgrade() -> None:
         sa.ForeignKeyConstraint(["origin_hospital_id", "transport_request_id", "hospital_id"], ["transport_requests.hospital_id", "transport_requests.id", "transport_requests.receiving_hospital_id"], name="fk_transport_offer_request_receiver"),
         sa.UniqueConstraint("hospital_id", "id", name="uq_transport_offer_hospital_id"),
         sa.UniqueConstraint("origin_hospital_id", "transport_request_id", name="uq_transport_offer_request"),
-        sa.CheckConstraint("status IN ('offered', 'bed_accepted', 'rejected', 'arrived', 'cancelled')", name="ck_transport_offer_status"),
-        sa.CheckConstraint("status NOT IN ('bed_accepted', 'arrived') OR (accepted_by_user_id IS NOT NULL AND bed_reference IS NOT NULL AND accepted_at IS NOT NULL)", name="ck_transport_offer_acceptance"),
+        sa.CheckConstraint("status IN ('offered', 'bed_accepted', 'vehicle_assigned', 'en_route', 'rejected', 'arrived', 'cancelled')", name="ck_transport_offer_status"),
+        sa.CheckConstraint("status NOT IN ('bed_accepted', 'vehicle_assigned', 'en_route', 'arrived') OR (accepted_by_user_id IS NOT NULL AND bed_reference IS NOT NULL AND accepted_at IS NOT NULL)", name="ck_transport_offer_acceptance"),
         sa.CheckConstraint("status != 'rejected' OR (rejected_by_user_id IS NOT NULL AND rejection_reason IS NOT NULL)", name="ck_transport_offer_rejection"),
         sa.CheckConstraint("status != 'arrived' OR (arrival_confirmed_by_user_id IS NOT NULL AND arrived_at IS NOT NULL)", name="ck_transport_offer_arrival"),
     )
