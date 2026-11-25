@@ -24,7 +24,7 @@ from app.schemas.patient_records import (
 from app.services.patient_authorization import has_active_patient_authorization
 
 router = APIRouter(prefix="/medical-records", tags=["medical records and health information"])
-_HIM_ROLES = {"medical_records_officer", "health_information_manager", "hospital_admin", "hospital_director"}
+_HIM_ROLES = {"medical_records_officer", "health_information_manager", "medical_records_manager"}
 _RECORD_SCOPE = {
     "lab_report": "lab_results",
     "prescription": "medications",
@@ -130,7 +130,7 @@ _CATEGORY_SCOPE = {
     "demographics": "profile", "contact_details": "profile",
     "clinical_records": "encounters", "lab_results": "lab_results",
     "imaging": "encounters", "medications": "medications",
-    "billing": "profile", "insurance": "profile", "other": "encounters",
+    "billing": "billing", "insurance": "insurance", "other": "other",
 }
 _RELEASE_USE = {
     "record_sharing": "record_sharing", "care_coordination": "care_coordination",
@@ -397,7 +397,10 @@ def create_record_amendment_request(payload: RecordAmendmentCreate, context: tup
     user, hospital_id = context
     _patient(db, hospital_id, payload.patient_id)
     if _role(db, user.id, hospital_id) not in _HIM_ROLES:
-        _require_patient_record_access(db, user.id, hospital_id, payload.patient_id)
+        scopes = _require_patient_record_access(db, user.id, hospital_id, payload.patient_id)
+        required_scope = {"demographic": "profile", "identity": "profile", "clinical_content": "encounters", "metadata": "encounters"}[payload.amendment_type]
+        if required_scope not in scopes:
+            raise HTTPException(status_code=403, detail={"code": "amendment_scope_not_authorized"})
     if payload.document_id is not None:
         document = db.scalar(select(PatientRecordDocument).where(
             PatientRecordDocument.hospital_id == hospital_id,
