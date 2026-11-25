@@ -403,7 +403,7 @@ def cancel_transport_request(request_id: UUID, context: tuple = Depends(get_curr
         if vehicle is not None and vehicle.status == "assigned":
             vehicle.status = "available"
     request.status = "cancelled"
-    _event(db, hospital_id, user.id, request, "cancelled")
+    _event(db, hospital_id, user.id, request.id, "cancelled")
     _audit(db, hospital_id, user.id, "transport.cancelled", "transport_request", request.id)
     db.commit()
     _restore_context(db, user.id, hospital_id)
