@@ -404,7 +404,7 @@ def complete_record_release(request_id: UUID, payload: RecordReleaseComplete, co
         raise HTTPException(status_code=404, detail={"code": "approved_record_release_not_found"})
     if request.reviewed_by_user_id == user.id:
         raise HTTPException(status_code=409, detail={"code": "independent_record_release_completion_required"})
-    _active_release_consent(db, hospital_id, request.patient_id, request.consent_id, request.data_categories)
+    _active_release_consent(db, hospital_id, request.patient_id, request.consent_id, request.data_categories, request.purpose)
     request.status = "released"
     request.released_by_user_id = user.id
     request.released_at = datetime.now(timezone.utc)
