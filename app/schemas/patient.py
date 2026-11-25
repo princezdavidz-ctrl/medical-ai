@@ -288,7 +288,7 @@ class PatientConsentCreate(BaseModel):
 
     purpose: Literal[
         "care_delivery", "care_coordination", "referral", "billing",
-        "insurance_claim", "patient_portal", "other",
+        "insurance_claim", "patient_portal", "record_sharing", "other",
     ]
     data_categories: list[Literal[
         "demographics", "contact_details", "clinical_records", "lab_results",
