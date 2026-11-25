@@ -385,3 +385,6 @@ No item is considered passed until evidence, environment, build SHA, reviewer an
 - [ ] Patient portal account boundaries: no implicit user signup, no MRN/DOB-only identity matching, no unsupported MFA bypass, no secure messaging/appointment/payment/record-sharing claims.
 
 - [ ] Patient portal re-linking: one pending/active link per hospital-patient-user, duplicate open link denied, revoked link history retained and new request permitted after revocation.
+
+- [ ] Patient portal least privilege: omitted access_scope defaults to profile and encounters only; lab, medication, invoice and consent scopes require explicit grant.
+- [ ] Patient portal proxy authority: parent/guardian and caregiver require guardian-document or court-order verification; legal-representative links require court-order verification specifically.
