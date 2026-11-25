@@ -91,7 +91,8 @@ def upgrade() -> None:
         sa.UniqueConstraint("hospital_id", "id", "patient_id", name="uq_record_release_hospital_id_patient"),
         sa.CheckConstraint("requester_type IN ('treating_provider', 'insurer', 'court', 'regulator', 'other')", name="ck_record_release_requester_type"),
         sa.CheckConstraint("recipient_type IN ('hospital', 'clinic', 'provider', 'insurer', 'patient', 'court', 'regulator', 'other')", name="ck_record_release_recipient_type"),
-        sa.CheckConstraint("requester_evidence_reference IS NULL OR requester_evidence_reference ~ '^vault://[0-9a-fA-F-]{36}
+        sa.CheckConstraint("requester_evidence_reference IS NULL OR requester_evidence_reference ~ '^vault://[0-9a-fA-F-]{36}$'", name="ck_record_release_requester_evidence_ref"),
+        sa.CheckConstraint("requester_type = 'treating_provider' OR requester_evidence_reference IS NOT NULL", name="ck_record_release_external_requester_evidence_required"),
         sa.CheckConstraint("status IN ('pending', 'approved', 'rejected', 'released', 'cancelled')", name="ck_record_release_status"),
         sa.CheckConstraint("purpose IN ('record_sharing', 'care_coordination', 'referral', 'patient_portal', 'insurance_claim', 'legal_requirement', 'other')", name="ck_record_release_purpose"),
         sa.CheckConstraint("json_typeof(data_categories) = 'array' AND json_array_length(data_categories) > 0", name="ck_record_release_categories"),
