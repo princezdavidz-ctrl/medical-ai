@@ -65,6 +65,8 @@ class StaffShiftSwapRequest(Base):
     __tablename__ = "staff_shift_swap_requests"
     __table_args__ = (
         ForeignKeyConstraint(["hospital_id", "shift_assignment_id"], ["staff_shift_assignments.hospital_id", "staff_shift_assignments.id"], name="fk_shift_swap_assignment"),
+        ForeignKeyConstraint(["hospital_id", "requester_user_id"], ["hospital_memberships.hospital_id", "hospital_memberships.user_id"], name="fk_shift_swap_requester_membership"),
+        ForeignKeyConstraint(["hospital_id", "target_user_id"], ["hospital_memberships.hospital_id", "hospital_memberships.user_id"], name="fk_shift_swap_target_membership"),
         UniqueConstraint("hospital_id", "id", name="uq_shift_swap_hospital_id"),
         CheckConstraint("status IN ('pending_target', 'accepted', 'declined', 'approved', 'rejected', 'cancelled')", name="ck_shift_swap_status"),
         CheckConstraint("requester_user_id != target_user_id", name="ck_shift_swap_not_self"),
