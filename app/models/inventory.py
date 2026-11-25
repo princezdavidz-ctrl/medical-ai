@@ -59,6 +59,7 @@ class GoodsReceipt(Base):
     __tablename__ = "goods_receipts"
     __table_args__ = (
         ForeignKeyConstraint(["hospital_id", "purchase_order_id"], ["purchase_orders.hospital_id", "purchase_orders.id"], name="fk_goods_receipt_purchase_order"),
+        UniqueConstraint("hospital_id", "id", "purchase_order_id", name="uq_goods_receipt_hospital_order"),
         ForeignKeyConstraint(["hospital_id", "warehouse_id"], ["inventory_warehouses.hospital_id", "inventory_warehouses.id"], name="fk_goods_receipt_warehouse"),
         UniqueConstraint("hospital_id", "id", name="uq_goods_receipt_hospital_id"),
         UniqueConstraint("hospital_id", "receipt_number", name="uq_goods_receipt_number"),
@@ -82,16 +83,18 @@ class GoodsReceipt(Base):
 class GoodsReceiptLine(Base):
     __tablename__ = "goods_receipt_lines"
     __table_args__ = (
-        ForeignKeyConstraint(["hospital_id", "goods_receipt_id"], ["goods_receipts.hospital_id", "goods_receipts.id"], name="fk_goods_receipt_line_receipt"),
-        ForeignKeyConstraint(["hospital_id", "purchase_order_line_id"], ["purchase_order_lines.hospital_id", "purchase_order_lines.id"], name="fk_goods_receipt_line_po_line"),
+        ForeignKeyConstraint(["hospital_id", "goods_receipt_id", "purchase_order_id"], ["goods_receipts.hospital_id", "goods_receipts.id", "goods_receipts.purchase_order_id"], name="fk_goods_receipt_line_receipt_order"),
+        ForeignKeyConstraint(["hospital_id", "purchase_order_id", "purchase_order_line_id"], ["purchase_order_lines.hospital_id", "purchase_order_lines.purchase_order_id", "purchase_order_lines.id"], name="fk_goods_receipt_line_po_line"),
         ForeignKeyConstraint(["hospital_id", "inventory_item_id"], ["inventory_items.hospital_id", "inventory_items.id"], name="fk_goods_receipt_line_item"),
         UniqueConstraint("hospital_id", "id", name="uq_goods_receipt_line_hospital_id"),
         CheckConstraint("quantity_received > 0", name="ck_goods_receipt_line_quantity"),
+        CheckConstraint("unit_cost >= 0", name="ck_goods_receipt_line_unit_cost"),
         Index("ix_goods_receipt_line_parent", "hospital_id", "goods_receipt_id"),
     )
     id: Mapped[uuid.UUID] = mapped_column(Uuid(as_uuid=True), primary_key=True, default=uuid.uuid4)
     hospital_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("hospitals.id"), nullable=False)
     goods_receipt_id: Mapped[uuid.UUID] = mapped_column(Uuid(as_uuid=True), nullable=False)
+    purchase_order_id: Mapped[uuid.UUID] = mapped_column(Uuid(as_uuid=True), nullable=False)
     purchase_order_line_id: Mapped[uuid.UUID] = mapped_column(Uuid(as_uuid=True), nullable=False)
     inventory_item_id: Mapped[uuid.UUID] = mapped_column(Uuid(as_uuid=True), nullable=False)
     quantity_received: Mapped[Decimal] = mapped_column(Numeric(14, 3), nullable=False)
