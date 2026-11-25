@@ -53,7 +53,7 @@ The consent system records a declared basis and scope; it does not determine leg
 ## Storage and integration boundaries
 
 - No raw file bytes, patient identifiers or document narrative are stored in the document metadata tables. Only opaque vault:// references and SHA-256 checksums are retained.
-- The vault provider, object existence/checksum verification, malware scanning, encryption/key management, secure streaming and export packaging are not implemented in this module; they are Phase 4 integrations.
+- The vault provider, object existence/checksum verification, malware scanning, encryption/key management, secure streaming and export packaging are not implemented in this module; they are Phase 4 integrations. Patient/proxy self-service export and portal identity verification are also deferred to Phase 4.
 - No direct patient/proxy document upload or export is exposed until portal identity and representative authority are verified.
 - Existing department modules are not rewritten to duplicate their records. Their document publication into this index is a Phase 4 integration.
 - Retention schedules, legal holds, destruction approvals, national HIE/FHIR exchange and jurisdiction-specific disclosure automation remain later governance/integration work.
