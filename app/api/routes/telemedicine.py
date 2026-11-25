@@ -332,8 +332,10 @@ def mark_telemedicine_patient_ready(session_id: UUID, payload: TelemedicinePatie
         raise HTTPException(status_code=403, detail={"code": "assigned_provider_or_scheduler_required"})
     if session.status != "scheduled":
         raise HTTPException(status_code=409, detail={"code": "scheduled_telemedicine_session_required"})
-    _active_telemedicine_consent(db, hospital_id, session.patient_id, session.consent_id)
     now = datetime.now(timezone.utc)
+    if now < session.scheduled_start - timedelta(minutes=15) or now > session.scheduled_end + timedelta(minutes=15):
+        raise HTTPException(status_code=409, detail={"code": "outside_telemedicine_patient_ready_window"})
+    _active_telemedicine_consent(db, hospital_id, session.patient_id, session.consent_id)
     session.status = "patient_ready"
     session.patient_ready_at = now
     session.patient_ready_by_user_id = user.id
