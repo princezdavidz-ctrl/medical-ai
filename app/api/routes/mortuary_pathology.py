@@ -87,10 +87,10 @@ def _pathology_case(db: Session, case_id: UUID, hospital_id: UUID, *, lock: bool
     return item
 
 
-def _movement(db: Session, hospital_id: UUID, user_id: UUID, case: MortuaryCase, movement_type: str, to_location: str, note=None):
+def _movement(db: Session, hospital_id: UUID, user_id: UUID, case: MortuaryCase, movement_type: str, to_location: str, note=None, from_location=None):
     db.add(MortuaryMovement(
         hospital_id=hospital_id, mortuary_case_id=case.id, movement_type=movement_type,
-        from_location=case.storage_location, to_location=to_location, actor_user_id=user_id, note=note,
+        from_location=from_location if from_location is not None else case.storage_location, to_location=to_location, actor_user_id=user_id, note=note,
     ))
 
 
@@ -114,6 +114,8 @@ def create_mortuary_case(payload: MortuaryCaseCreate, context: tuple = Depends(g
     user, hospital_id = context
     _require(db, user.id, hospital_id, _MORTUARY_STAFF)
     now = datetime.now(timezone.utc)
+    if payload.death_occurred_at.tzinfo is None or payload.death_occurred_at.utcoffset() is None:
+        raise HTTPException(status_code=422, detail={"code": "death_time_must_include_timezone"})
     if payload.death_occurred_at > now:
         raise HTTPException(status_code=422, detail={"code": "death_time_cannot_be_in_future"})
     patient = db.scalar(select(Patient).where(
@@ -206,6 +208,7 @@ def record_mortuary_movement(case_id: UUID, payload: MortuaryMovementCreate, con
     user, hospital_id = context
     _require(db, user.id, hospital_id, _MORTUARY_STAFF)
     case = _mortuary_case(db, case_id, hospital_id, lock=True)
+    previous_location = case.storage_location
     if case.status in ("released", "transferred"):
         raise HTTPException(status_code=409, detail={"code": "terminal_mortuary_case"})
     if case.legal_hold and payload.movement_type == "release_pending":
@@ -225,7 +228,7 @@ def record_mortuary_movement(case_id: UUID, payload: MortuaryMovementCreate, con
         if case.status == "received":
             case.status = "stored"
     case.storage_location = payload.to_location
-    _movement(db, hospital_id, user.id, case, payload.movement_type, payload.to_location, payload.note)
+    _movement(db, hospital_id, user.id, case, payload.movement_type, payload.to_location, payload.note, previous_location)
     _audit(db, hospital_id, user.id, "mortuary.case.moved", "mortuary_case", case.id, {"movement_type": payload.movement_type})
     db.commit()
     _restore_context(db, user.id, hospital_id)
@@ -524,6 +527,13 @@ def create_pathology_report(case_id: UUID, payload: PathologyReportCreate, conte
     ).limit(1))
     if processed is None:
         raise HTTPException(status_code=409, detail={"code": "processed_specimen_required_before_reporting"})
+    open_draft = db.scalar(select(PathologyReport.id).where(
+        PathologyReport.hospital_id == hospital_id,
+        PathologyReport.pathology_case_id == case.id,
+        PathologyReport.status == "draft",
+    ).limit(1))
+    if open_draft is not None:
+        raise HTTPException(status_code=409, detail={"code": "pathology_draft_report_already_exists"})
     version = (db.scalar(select(func.max(PathologyReport.version)).where(
         PathologyReport.hospital_id == hospital_id,
         PathologyReport.pathology_case_id == case.id,
@@ -555,6 +565,8 @@ def finalize_pathology_report(report_id: UUID, context: tuple = Depends(get_curr
     case = _pathology_case(db, report.pathology_case_id, hospital_id, lock=True)
     if case.assigned_pathologist_user_id not in (None, user.id) and role not in _PATHOLOGY_MANAGERS:
         raise HTTPException(status_code=403, detail={"code": "assigned_pathologist_required"})
+    if report.authored_by_user_id != user.id and role not in _PATHOLOGY_MANAGERS:
+        raise HTTPException(status_code=403, detail={"code": "report_author_or_pathology_manager_required"})
     report.status = "final"
     report.signed_by_user_id = user.id
     report.signed_at = datetime.now(timezone.utc)
