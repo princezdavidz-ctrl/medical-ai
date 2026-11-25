@@ -147,7 +147,9 @@ def verify_patient_portal_link(link_id: UUID, payload: PatientPortalLinkVerifica
         raise HTTPException(status_code=409, detail={"code": "independent_patient_identity_verification_required"})
     if link.relationship_type == "self" and payload.verification_method not in _SELF_VERIFICATION:
         raise HTTPException(status_code=422, detail={"code": "self_link_requires_identity_verification"})
-    if link.relationship_type != "self" and payload.verification_method not in _PROXY_VERIFICATION:
+    if link.relationship_type == "legal_representative" and payload.verification_method != "court_order":
+        raise HTTPException(status_code=422, detail={"code": "legal_representative_requires_court_order"})
+    if link.relationship_type in ("parent_guardian", "caregiver") and payload.verification_method not in _PROXY_VERIFICATION:
         raise HTTPException(status_code=422, detail={"code": "proxy_link_requires_guardian_or_legal_document"})
     if link.expires_at is not None and link.expires_at <= datetime.now(timezone.utc):
         raise HTTPException(status_code=409, detail={"code": "patient_portal_link_expired"})
