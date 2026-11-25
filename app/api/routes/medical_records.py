@@ -226,7 +226,6 @@ def register_record_document(payload: RecordDocumentCreate, context: tuple = Dep
 def list_patient_record_documents(patient_id: UUID, context: tuple = Depends(get_current_context), db: Session = Depends(get_db)):
     user, hospital_id = context
     _patient(db, hospital_id, patient_id)
-    _require_patient_record_access(db, user.id, hospital_id, patient_id, "clinical_note")
     scopes = _require_patient_record_access(db, user.id, hospital_id, patient_id)
     is_him = scopes is None
     query = select(PatientRecordDocument).where(
@@ -398,7 +397,7 @@ def create_record_amendment_request(payload: RecordAmendmentCreate, context: tup
     user, hospital_id = context
     _patient(db, hospital_id, payload.patient_id)
     if _role(db, user.id, hospital_id) not in _HIM_ROLES:
-        _require_patient_record_access(db, user.id, hospital_id, payload.patient_id, "clinical_note")
+        _require_patient_record_access(db, user.id, hospital_id, payload.patient_id)
     if payload.document_id is not None:
         document = db.scalar(select(PatientRecordDocument).where(
             PatientRecordDocument.hospital_id == hospital_id,
