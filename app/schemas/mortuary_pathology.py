@@ -54,7 +54,7 @@ class MortuaryAuthorizationDecision(BaseModel):
 
 class MortuaryMovementCreate(BaseModel):
     model_config = ConfigDict(extra="forbid")
-    movement_type: str = Field(pattern="^(stored|relocated|release_pending|retained)$")
+    movement_type: str = Field(pattern="^(stored|relocated|release_pending)$")
     to_location: str = Field(min_length=2, max_length=180)
     note: str | None = Field(default=None, max_length=1000)
 
