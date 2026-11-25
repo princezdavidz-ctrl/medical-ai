@@ -307,7 +307,10 @@ def create_record_release_request(payload: RecordReleaseCreate, context: tuple =
     _patient(db, hospital_id, payload.patient_id)
     if payload.requester_type in {"patient", "legal_representative"}:
         raise HTTPException(status_code=403, detail={"code": "patient_proxy_identity_workflow_not_connected"})
-    if _role(db, user.id, hospital_id) not in _HIM_ROLES:
+    is_him = _role(db, user.id, hospital_id) in _HIM_ROLES
+    if payload.requester_type != "treating_provider" and not is_him:
+        raise HTTPException(status_code=403, detail={"code": "external_requester_must_be_registered_by_records_officer"})
+    if not is_him:
         scopes = _require_patient_record_access(db, user.id, hospital_id, payload.patient_id)
         if any(_CATEGORY_SCOPE.get(category, "encounters") not in scopes for category in payload.data_categories):
             raise HTTPException(status_code=403, detail={"code": "release_categories_exceed_staff_access_scope"})
@@ -335,6 +338,24 @@ def list_record_release_requests(patient_id: UUID | None = None, context: tuple 
     if patient_id is not None:
         query = query.where(PatientRecordReleaseRequest.patient_id == patient_id)
     return db.scalars(query.order_by(PatientRecordReleaseRequest.created_at.desc()).limit(300)).all()
+
+
+@router.post("/release-requests/{request_id}/cancel", response_model=RecordReleaseRead)
+def cancel_record_release_request(request_id: UUID, context: tuple = Depends(get_current_context), db: Session = Depends(get_db)):
+    user, hospital_id = context
+    request = db.scalar(select(PatientRecordReleaseRequest).where(
+        PatientRecordReleaseRequest.hospital_id == hospital_id,
+        PatientRecordReleaseRequest.id == request_id,
+    ).with_for_update())
+    if request is None or request.requester_user_id != user.id or request.status != "pending":
+        raise HTTPException(status_code=404, detail={"code": "cancellable_own_record_release_not_found"})
+    request.status = "cancelled"
+    _event(db, hospital_id, request.patient_id, user.id, "release_cancelled", "patient_record_release_request", request.id)
+    _audit(db, hospital_id, user.id, "medical_records.release_cancelled", "patient_record_release_request", request.id)
+    db.commit()
+    _restore_context(db, user.id, hospital_id)
+    db.refresh(request)
+    return request
 
 
 @router.post("/release-requests/{request_id}/decision", response_model=RecordReleaseRead)
@@ -435,6 +456,24 @@ def list_record_amendment_requests(patient_id: UUID | None = None, context: tupl
     if patient_id is not None:
         query = query.where(PatientRecordAmendmentRequest.patient_id == patient_id)
     return db.scalars(query.order_by(PatientRecordAmendmentRequest.created_at.desc()).limit(300)).all()
+
+
+@router.post("/amendment-requests/{request_id}/cancel", response_model=RecordAmendmentRead)
+def cancel_record_amendment_request(request_id: UUID, context: tuple = Depends(get_current_context), db: Session = Depends(get_db)):
+    user, hospital_id = context
+    request = db.scalar(select(PatientRecordAmendmentRequest).where(
+        PatientRecordAmendmentRequest.hospital_id == hospital_id,
+        PatientRecordAmendmentRequest.id == request_id,
+    ).with_for_update())
+    if request is None or request.requested_by_user_id != user.id or request.status != "pending":
+        raise HTTPException(status_code=404, detail={"code": "cancellable_own_record_amendment_not_found"})
+    request.status = "cancelled"
+    _event(db, hospital_id, request.patient_id, user.id, "amendment_cancelled", "patient_record_amendment_request", request.id)
+    _audit(db, hospital_id, user.id, "medical_records.amendment_cancelled", "patient_record_amendment_request", request.id)
+    db.commit()
+    _restore_context(db, user.id, hospital_id)
+    db.refresh(request)
+    return request
 
 
 @router.post("/amendment-requests/{request_id}/decision", response_model=RecordAmendmentRead)
