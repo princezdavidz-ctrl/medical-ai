@@ -1,4 +1,5 @@
 from app.models.core import AuditEvent, Department, Encounter, Hospital, HospitalMembership, Organization, Patient, PatientConsent, Role, User
+from app.models.hospital_admin import HospitalAdminSettings
 from app.models.knowledge import MedicalKnowledgeChunk, MedicalKnowledgeDocument, MedicalKnowledgeSource
 from app.models.clinical_taxonomy import (
     ClinicalConcept,
@@ -114,7 +115,7 @@ __all__ = [
     "Department",
     "EmergencyEscalationRule",
     "Encounter",
-    "Hospital",
+    "Hospital",\n    "HospitalAdminSettings",
     "HospitalMembership",
     "KnowledgeImportBatch",
     "KnowledgeReviewEvent",
