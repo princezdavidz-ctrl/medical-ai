@@ -93,6 +93,7 @@ Every module milestone must include:
 | Billing & Finance | Phase 3.13 | Implemented; Phase 5 verification pending | PR #39 (merged) |
 | Insurance & Claims | Phase 3.14 | Implemented; Phase 5 verification pending | PR #40 (merged) |
 | Human Resources | Phase 3.15 | Implemented; Phase 5 verification pending | PR #41 (merged) |
+| Staff Management & Scheduling | Phase 3.24 | Implemented; Phase 5 verification pending | PR pending |
 | Procurement & Supply Chain | Phase 3.16 | Implemented; Phase 5 verification pending | PR #42 (merged) |
 | Inventory & Asset Management | Phase 3.17 | Implemented; Phase 5 verification pending | PR #43 (merged) |
 | Facilities & Maintenance | Phase 3.18 | Implemented; Phase 5 verification pending | PR #44 (merged) |
@@ -130,3 +131,6 @@ Doctor & Medical Staff Portal adds independently verified clinical staff profile
 
 
 Phase 3.23 access hardening: suspending clinical credentials now revokes active care-team assignments; patient-linked task reads and updates require current assignment and task-specific scope; future-start assignments are excluded from active worklists and dashboard counts. Phase 5 verification remains pending.
+
+
+Phase 3.24 adds hospital-scoped shift templates and employee assignments, conflict detection against overlapping shifts and approved leave, employee-initiated shift swaps with target acceptance and independent manager approval, manual attendance check-in/check-out with manager review, department-scoped roster access, dashboard counts and an append-only schedule event ledger. HR leave approval now rejects dates that overlap scheduled or confirmed shifts. Automated verification remains deferred to Phase 5.
