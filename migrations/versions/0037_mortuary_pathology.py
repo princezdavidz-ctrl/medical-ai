@@ -42,7 +42,7 @@ def upgrade() -> None:
         sa.UniqueConstraint("hospital_id", "body_reference", name="uq_mortuary_body_reference"),
         sa.CheckConstraint("status IN ('received', 'stored', 'release_pending', 'released', 'transferred', 'retained_by_authority')", name="ck_mortuary_case_status"),
         sa.CheckConstraint("length(trim(storage_location)) >= 2", name="ck_mortuary_storage_location"),
-        sa.CheckConstraint("(status = 'released' AND released_to_name IS NOT NULL AND released_by_user_id IS NOT NULL AND released_at IS NOT NULL) OR (status != 'released' AND released_to_name IS NULL AND released_by_user_id IS NULL AND released_at IS NULL)", name="ck_mortuary_release_state"),
+        sa.CheckConstraint("(status = 'released' AND released_to_name IS NOT NULL AND released_to_identity_reference IS NOT NULL AND released_by_user_id IS NOT NULL AND released_at IS NOT NULL) OR (status != 'released' AND released_to_name IS NULL AND released_to_identity_reference IS NULL AND released_by_user_id IS NULL AND released_at IS NULL)", name="ck_mortuary_release_state"),
         sa.CheckConstraint("legal_hold = false OR status NOT IN ('release_pending', 'released', 'transferred')", name="ck_mortuary_legal_hold"),
     )
     op.create_index("ix_mortuary_case_queue", "mortuary_cases", ["hospital_id", "status", "received_at"])
@@ -102,6 +102,7 @@ def upgrade() -> None:
         sa.ForeignKeyConstraint(["hospital_id", "mortuary_case_id"], ["mortuary_cases.hospital_id", "mortuary_cases.id"], name="fk_mortuary_property_case"),
         sa.UniqueConstraint("hospital_id", "id", name="uq_mortuary_property_hospital_id"),
         sa.CheckConstraint("status IN ('received', 'sealed', 'released', 'retained')", name="ck_mortuary_property_status"),
+        sa.CheckConstraint("status != 'sealed' OR sealed = true", name="ck_mortuary_property_sealed_state"),
         sa.CheckConstraint("(status = 'released' AND released_to_name IS NOT NULL AND released_by_user_id IS NOT NULL AND released_at IS NOT NULL) OR (status != 'released' AND released_to_name IS NULL AND released_by_user_id IS NULL AND released_at IS NULL)", name="ck_mortuary_property_release_state"),
     )
     op.create_index("ix_mortuary_property_case", "mortuary_property_items", ["hospital_id", "mortuary_case_id", "status"])
