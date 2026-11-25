@@ -138,6 +138,7 @@ class RecordReleaseRead(BaseModel):
     requester_user_id: UUID
     requester_type: str
     requester_name: str
+    requester_evidence_reference: str | None
     recipient_name: str
     recipient_type: str
     recipient_contact: str | None
