@@ -281,6 +281,18 @@ def suspend_clinical_profile(profile_id: UUID, payload: ClinicalStaffSuspension,
         raise HTTPException(status_code=404, detail={"code": "verified_clinical_profile_not_found"})
     profile.status = "suspended"
     profile.suspension_reason = payload.reason
+    now = datetime.now(timezone.utc)
+    active_assignments = db.scalars(select(PatientCareTeamAssignment).where(
+        PatientCareTeamAssignment.hospital_id == hospital_id,
+        PatientCareTeamAssignment.staff_user_id == profile.user_id,
+        PatientCareTeamAssignment.status == "active",
+    ).with_for_update()).all()
+    for assignment in active_assignments:
+        assignment.status = "revoked"
+        assignment.ended_by_user_id = user.id
+        assignment.ended_at = now
+        assignment.end_reason = "Clinical credential suspended: " + payload.reason
+        _event(db, hospital_id, user.id, "care_team_ended", "patient_care_team_assignment", assignment.id, {"status": "revoked", "reason": "clinical_profile_suspended"})
     _event(db, hospital_id, user.id, "clinical_profile_suspended", "clinical_staff_profile", profile.id)
     _audit(db, hospital_id, user.id, "staff_portal.clinical_profile_suspended", "clinical_staff_profile", profile.id)
     db.commit()
@@ -404,10 +416,9 @@ def assign_patient_care_team(payload: CareTeamAssignmentCreate, context: tuple =
 @router.get("/patients")
 def list_assigned_patients(context: tuple = Depends(get_current_context), db: Session = Depends(get_db)):
     user, hospital_id = context
-    role = _require_role(db, user.id, hospital_id, _CLINICAL_ROLES | _CLINICAL_ADMIN_ROLES | {"department_head", "nurse_manager"})
-    if role not in _CLINICAL_ADMIN_ROLES:
-        _employee_profile(db, hospital_id, user.id)
-        _verified_clinical_profile(db, hospital_id, user.id)
+    _require_role(db, user.id, hospital_id, _CLINICAL_ROLES)
+    _employee_profile(db, hospital_id, user.id)
+    _verified_clinical_profile(db, hospital_id, user.id)
     now = datetime.now(timezone.utc)
     rows = db.execute(select(PatientCareTeamAssignment, Patient).join(
         Patient, and_(Patient.id == PatientCareTeamAssignment.patient_id, Patient.hospital_id == PatientCareTeamAssignment.hospital_id),
@@ -415,6 +426,7 @@ def list_assigned_patients(context: tuple = Depends(get_current_context), db: Se
         PatientCareTeamAssignment.hospital_id == hospital_id,
         PatientCareTeamAssignment.staff_user_id == user.id,
         PatientCareTeamAssignment.status == "active",
+        PatientCareTeamAssignment.starts_at <= now,
         or_(PatientCareTeamAssignment.ends_at.is_(None), PatientCareTeamAssignment.ends_at > now),
     ).order_by(Patient.family_name, Patient.given_name)).all()
     result = []
@@ -522,6 +534,7 @@ def get_patient_care_team(patient_id: UUID, context: tuple = Depends(get_current
         PatientCareTeamAssignment.hospital_id == hospital_id,
         PatientCareTeamAssignment.patient_id == patient_id,
         PatientCareTeamAssignment.status == "active",
+        PatientCareTeamAssignment.starts_at <= now,
         or_(PatientCareTeamAssignment.ends_at.is_(None), PatientCareTeamAssignment.ends_at > now),
     ).order_by(PatientCareTeamAssignment.starts_at.desc())).all()
 
@@ -584,7 +597,7 @@ def create_staff_task(payload: StaffTaskCreate, context: tuple = Depends(get_cur
             "follow_up": "encounters",
             "referral": "encounters",
             "care_coordination": "encounters",
-        }.get(payload.task_type)
+        }.get(payload.task_type, "encounters")
         if required_scope and required_scope not in (assignment.access_scope or []):
             raise HTTPException(status_code=403, detail={"code": "task_requires_patient_access_scope"})
     if payload.encounter_id is not None:
@@ -635,9 +648,32 @@ def list_staff_tasks(status_filter: str | None = Query(default=None, alias="stat
         if status_filter not in {"open", "in_progress", "completed", "cancelled"}:
             raise HTTPException(status_code=422, detail={"code": "invalid_task_status_filter"})
         query = query.where(StaffWorkQueueTask.status == status_filter)
-    return db.scalars(query.order_by(
+    tasks = db.scalars(query.order_by(
         StaffWorkQueueTask.priority.desc(), StaffWorkQueueTask.due_at.asc().nulls_last(),
     ).limit(300)).all()
+    now = datetime.now(timezone.utc)
+    required_scopes = {
+        "review_lab_result": "lab_results", "medication_review": "medications",
+        "sign_note": "encounters", "discharge_planning": "encounters",
+        "follow_up": "encounters", "referral": "encounters",
+        "care_coordination": "encounters", "other": "encounters",
+    }
+    visible = []
+    for task in tasks:
+        if task.patient_id is None:
+            visible.append(task)
+            continue
+        assignment = db.scalar(select(PatientCareTeamAssignment).where(
+            PatientCareTeamAssignment.hospital_id == hospital_id,
+            PatientCareTeamAssignment.patient_id == task.patient_id,
+            PatientCareTeamAssignment.staff_user_id == user.id,
+            PatientCareTeamAssignment.status == "active",
+            PatientCareTeamAssignment.starts_at <= now,
+            or_(PatientCareTeamAssignment.ends_at.is_(None), PatientCareTeamAssignment.ends_at > now),
+        ))
+        if assignment is not None and required_scopes.get(task.task_type, "encounters") in (assignment.access_scope or []):
+            visible.append(task)
+    return visible
 
 
 @router.patch("/tasks/{task_id}", response_model=StaffTaskRead)
@@ -656,6 +692,24 @@ def update_staff_task(task_id: UUID, payload: StaffTaskUpdate, context: tuple = 
         raise HTTPException(status_code=403, detail={"code": "task_assignee_only"})
     if task.status in ("completed", "cancelled"):
         raise HTTPException(status_code=409, detail={"code": "terminal_task_status"})
+    if task.patient_id is not None:
+        now = datetime.now(timezone.utc)
+        assignment = db.scalar(select(PatientCareTeamAssignment).where(
+            PatientCareTeamAssignment.hospital_id == hospital_id,
+            PatientCareTeamAssignment.patient_id == task.patient_id,
+            PatientCareTeamAssignment.staff_user_id == task.assigned_to_user_id,
+            PatientCareTeamAssignment.status == "active",
+            PatientCareTeamAssignment.starts_at <= now,
+            or_(PatientCareTeamAssignment.ends_at.is_(None), PatientCareTeamAssignment.ends_at > now),
+        ))
+        required_scope = {
+            "review_lab_result": "lab_results", "medication_review": "medications",
+            "sign_note": "encounters", "discharge_planning": "encounters",
+            "follow_up": "encounters", "referral": "encounters",
+            "care_coordination": "encounters", "other": "encounters",
+        }.get(task.task_type, "encounters")
+        if assignment is None or required_scope not in (assignment.access_scope or []):
+            raise HTTPException(status_code=403, detail={"code": "active_task_patient_access_required"})
     task.status = payload.status
     if payload.status == "completed":
         if not payload.completion_note or len(payload.completion_note.strip()) < 5:
@@ -693,6 +747,7 @@ def get_staff_portal_dashboard(context: tuple = Depends(get_current_context), db
             PatientCareTeamAssignment.hospital_id == hospital_id,
             PatientCareTeamAssignment.staff_user_id == user.id,
             PatientCareTeamAssignment.status == "active",
+            PatientCareTeamAssignment.starts_at <= now,
             or_(PatientCareTeamAssignment.ends_at.is_(None), PatientCareTeamAssignment.ends_at > now),
         )) or 0,
         "clinical_profile_status": (db.scalar(select(ClinicalStaffProfile.status).where(
