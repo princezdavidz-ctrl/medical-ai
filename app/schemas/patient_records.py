@@ -88,6 +88,7 @@ class RecordReleaseCreate(BaseModel):
     consent_id: UUID
     requester_type: Literal["patient", "legal_representative", "treating_provider", "insurer", "court", "regulator", "other"]
     requester_name: str = Field(min_length=2, max_length=180)
+    requester_evidence_reference: str | None = Field(default=None, pattern=r"^vault://[0-9a-fA-F-]{36}$", min_length=44, max_length=44)
     recipient_name: str = Field(min_length=2, max_length=180)
     recipient_type: Literal["hospital", "clinic", "provider", "insurer", "patient", "court", "regulator", "other"]
     recipient_contact: str | None = Field(default=None, max_length=320)
@@ -99,6 +100,8 @@ class RecordReleaseCreate(BaseModel):
 
     @model_validator(mode="after")
     def validate_request(self):
+        if self.requester_type in {"insurer", "court", "regulator", "other"} and not self.requester_evidence_reference:
+            raise ValueError("external_requester_evidence_required")
         if len(set(self.data_categories)) != len(self.data_categories):
             raise ValueError("duplicate_record_category")
         for value in (self.period_start, self.period_end):
