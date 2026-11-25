@@ -34,10 +34,11 @@ class StaffShiftTemplate(Base):
 class StaffShiftAssignment(Base):
     __tablename__ = "staff_shift_assignments"
     __table_args__ = (
-        ForeignKeyConstraint(["hospital_id", "employee_profile_id"], ["employee_profiles.hospital_id", "employee_profiles.id"], name="fk_staff_shift_employee"),
+        ForeignKeyConstraint(["hospital_id", "employee_profile_id", "staff_user_id"], ["employee_profiles.hospital_id", "employee_profiles.id", "employee_profiles.user_id"], name="fk_staff_shift_employee_user"),
         ForeignKeyConstraint(["hospital_id", "department_id"], ["departments.hospital_id", "departments.id"], name="fk_staff_shift_department"),
         ForeignKeyConstraint(["hospital_id", "shift_template_id"], ["staff_shift_templates.hospital_id", "staff_shift_templates.id"], name="fk_staff_shift_template"),
         UniqueConstraint("hospital_id", "id", name="uq_staff_shift_hospital_id"),
+        UniqueConstraint("hospital_id", "id", "staff_user_id", name="uq_staff_shift_hospital_user"),
         CheckConstraint("status IN ('scheduled', 'confirmed', 'completed', 'cancelled')", name="ck_staff_shift_status"),
         CheckConstraint("ends_at > starts_at", name="ck_staff_shift_time_range"),
         CheckConstraint("ends_at <= starts_at + interval '24 hours'", name="ck_staff_shift_max_duration"),
@@ -65,9 +66,9 @@ class StaffShiftSwapRequest(Base):
     __table_args__ = (
         ForeignKeyConstraint(["hospital_id", "shift_assignment_id"], ["staff_shift_assignments.hospital_id", "staff_shift_assignments.id"], name="fk_shift_swap_assignment"),
         UniqueConstraint("hospital_id", "id", name="uq_shift_swap_hospital_id"),
-        CheckConstraint("status IN ('pending_target', 'accepted', 'approved', 'rejected', 'cancelled')", name="ck_shift_swap_status"),
+        CheckConstraint("status IN ('pending_target', 'accepted', 'declined', 'approved', 'rejected', 'cancelled')", name="ck_shift_swap_status"),
         CheckConstraint("requester_user_id != target_user_id", name="ck_shift_swap_not_self"),
-        CheckConstraint("(status = 'pending_target' AND responded_by_user_id IS NULL AND responded_at IS NULL AND decided_by_user_id IS NULL AND decided_at IS NULL) OR (status = 'accepted' AND responded_by_user_id = target_user_id AND responded_at IS NOT NULL AND decided_by_user_id IS NULL AND decided_at IS NULL) OR (status IN ('approved', 'rejected') AND responded_by_user_id = target_user_id AND responded_at IS NOT NULL AND decided_by_user_id IS NOT NULL AND decided_at IS NOT NULL) OR status = 'cancelled'", name="ck_shift_swap_decision_state"),
+        CheckConstraint("(status = 'pending_target' AND responded_by_user_id IS NULL AND responded_at IS NULL AND decided_by_user_id IS NULL AND decided_at IS NULL) OR (status IN ('accepted', 'declined') AND responded_by_user_id = target_user_id AND responded_at IS NOT NULL AND decided_by_user_id IS NULL AND decided_at IS NULL) OR (status IN ('approved', 'rejected') AND responded_by_user_id = target_user_id AND responded_at IS NOT NULL AND decided_by_user_id IS NOT NULL AND decided_at IS NOT NULL) OR status = 'cancelled'", name="ck_shift_swap_decision_state"),
         Index("ix_shift_swap_target_queue", "hospital_id", "target_user_id", "status", "created_at"),
         Index("ix_shift_swap_shift", "hospital_id", "shift_assignment_id", "status"),
     )
@@ -89,12 +90,13 @@ class StaffShiftSwapRequest(Base):
 class StaffShiftAttendance(Base):
     __tablename__ = "staff_shift_attendance"
     __table_args__ = (
-        ForeignKeyConstraint(["hospital_id", "shift_assignment_id"], ["staff_shift_assignments.hospital_id", "staff_shift_assignments.id"], name="fk_shift_attendance_assignment"),
+        ForeignKeyConstraint(["hospital_id", "shift_assignment_id", "staff_user_id"], ["staff_shift_assignments.hospital_id", "staff_shift_assignments.id", "staff_shift_assignments.staff_user_id"], name="fk_shift_attendance_assignment_staff"),
         UniqueConstraint("hospital_id", "id", name="uq_shift_attendance_hospital_id"),
         UniqueConstraint("hospital_id", "shift_assignment_id", name="uq_shift_attendance_per_shift"),
         CheckConstraint("status IN ('open', 'submitted', 'approved', 'rejected')", name="ck_shift_attendance_status"),
         CheckConstraint("check_out_at IS NULL OR check_out_at > check_in_at", name="ck_shift_attendance_time_range"),
-        CheckConstraint("(status = 'open' AND check_out_at IS NULL AND decided_by_user_id IS NULL AND decided_at IS NULL) OR (status IN ('submitted', 'rejected') AND check_out_at IS NOT NULL AND decided_by_user_id IS NULL AND decided_at IS NULL) OR (status = 'approved' AND check_out_at IS NOT NULL AND decided_by_user_id IS NOT NULL AND decided_at IS NOT NULL)", name="ck_shift_attendance_decision_state"),
+        CheckConstraint("(status = 'open' AND check_out_at IS NULL AND decided_by_user_id IS NULL AND decided_at IS NULL) OR (status = 'submitted' AND check_out_at IS NOT NULL AND decided_by_user_id IS NULL AND decided_at IS NULL) OR (status IN ('approved', 'rejected') AND check_out_at IS NOT NULL AND decided_by_user_id IS NOT NULL AND decided_at IS NOT NULL)", name="ck_shift_attendance_decision_state"),
+        CheckConstraint("source = 'manual'", name="ck_shift_attendance_manual_source"),
         Index("ix_shift_attendance_review", "hospital_id", "status", "check_in_at"),
     )
     id: Mapped[uuid.UUID] = mapped_column(Uuid(as_uuid=True), primary_key=True, default=uuid.uuid4)
