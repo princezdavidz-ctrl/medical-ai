@@ -144,6 +144,7 @@ class Encounter(TimestampMixin, Base):
 class PatientConsent(TimestampMixin, Base):
     __tablename__ = "patient_consents"
     __table_args__ = (
+        UniqueConstraint("hospital_id", "id", "patient_id", name="uq_patient_consent_hospital_id_patient"),
         Index("ix_consent_hospital_patient_status", "hospital_id", "patient_id", "status"),
         Index("ix_patient_consent_basis_scope", "hospital_id", "patient_id", "basis_code", "status"),
         ForeignKeyConstraint(
