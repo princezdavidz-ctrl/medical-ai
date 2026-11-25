@@ -358,10 +358,15 @@ def update_shift_assignment(shift_id: UUID, payload: ShiftAssignmentUpdate, cont
     changes = payload.model_dump(exclude_unset=True)
     if not changes:
         raise HTTPException(status_code=422, detail={"code": "shift_update_requires_changes"})
+    for field in ("starts_at", "ends_at", "status"):
+        if field in changes and changes[field] is None:
+            raise HTTPException(status_code=422, detail={"code": "shift_update_fields_cannot_be_null"})
     starts_at = changes.get("starts_at", shift.starts_at)
     ends_at = changes.get("ends_at", shift.ends_at)
     _validate_shift_times(starts_at, ends_at)
     if changes.get("status") == "cancelled":
+        if not changes.get("note") or len(changes["note"].strip()) < 5:
+            raise HTTPException(status_code=422, detail={"code": "shift_cancellation_note_required"})
         shift.status = "cancelled"
         changes.pop("status")
     elif changes.get("status") == "confirmed":
@@ -431,7 +436,14 @@ def list_shift_swap_requests(context: tuple = Depends(get_current_context), db: 
     user, hospital_id = context
     role = _role(db, user.id, hospital_id)
     query = select(StaffShiftSwapRequest).where(StaffShiftSwapRequest.hospital_id == hospital_id)
-    if role not in _MANAGER_ROLES:
+    if role in _MANAGER_ROLES:
+        manager_department_id = _manager_department(db, user.id, hospital_id, role)
+        if manager_department_id is not None:
+            query = query.join(StaffShiftAssignment, and_(
+                StaffShiftAssignment.hospital_id == StaffShiftSwapRequest.hospital_id,
+                StaffShiftAssignment.id == StaffShiftSwapRequest.shift_assignment_id,
+            )).where(StaffShiftAssignment.department_id == manager_department_id)
+    else:
         query = query.where(or_(
             StaffShiftSwapRequest.requester_user_id == user.id,
             StaffShiftSwapRequest.target_user_id == user.id,
@@ -477,13 +489,15 @@ def respond_to_shift_swap(request_id: UUID, payload: ShiftSwapResponse, context:
 @router.post("/swap-requests/{request_id}/decision", response_model=ShiftSwapRequestRead)
 def decide_shift_swap(request_id: UUID, payload: ShiftSwapDecision, context: tuple = Depends(get_current_context), db: Session = Depends(get_db)):
     user, hospital_id = context
-    _require_manager(db, user.id, hospital_id)
+    role = _require_manager(db, user.id, hospital_id)
+    manager_department_id = _manager_department(db, user.id, hospital_id, role)
     request = db.scalar(select(StaffShiftSwapRequest).where(
         StaffShiftSwapRequest.id == request_id, StaffShiftSwapRequest.hospital_id == hospital_id,
     ).with_for_update())
     if request is None or request.status != "accepted":
         raise HTTPException(status_code=404, detail={"code": "accepted_shift_swap_not_found"})
     shift = _shift(db, hospital_id, request.shift_assignment_id, lock=True)
+    _enforce_manager_department(manager_department_id, shift.department_id)
     if shift.status not in ("scheduled", "confirmed") or shift.staff_user_id != request.requester_user_id:
         raise HTTPException(status_code=409, detail={"code": "shift_changed_since_swap_request"})
     if payload.decision == "approved":
@@ -582,17 +596,21 @@ def check_out_of_shift(shift_id: UUID, payload: AttendanceCheckOut, context: tup
 @router.post("/attendance/{attendance_id}/decision", response_model=ShiftAttendanceRead)
 def decide_shift_attendance(attendance_id: UUID, payload: AttendanceDecision, context: tuple = Depends(get_current_context), db: Session = Depends(get_db)):
     user, hospital_id = context
-    _require_manager(db, user.id, hospital_id)
+    role = _require_manager(db, user.id, hospital_id)
+    manager_department_id = _manager_department(db, user.id, hospital_id, role)
     attendance = db.scalar(select(StaffShiftAttendance).where(
         StaffShiftAttendance.id == attendance_id, StaffShiftAttendance.hospital_id == hospital_id,
     ).with_for_update())
     if attendance is None or attendance.status != "submitted":
         raise HTTPException(status_code=404, detail={"code": "submitted_attendance_not_found"})
+    shift = _shift(db, hospital_id, attendance.shift_assignment_id, lock=True)
+    _enforce_manager_department(manager_department_id, shift.department_id)
+    if payload.decision == "rejected" and (not payload.note or len(payload.note.strip()) < 5):
+        raise HTTPException(status_code=422, detail={"code": "attendance_rejection_note_required"})
     attendance.status = payload.decision
     attendance.decided_by_user_id = user.id
     attendance.decided_at = datetime.now(timezone.utc)
     attendance.decision_note = payload.note
-    shift = _shift(db, hospital_id, attendance.shift_assignment_id, lock=True)
     if payload.decision == "approved" and shift.ends_at <= datetime.now(timezone.utc):
         shift.status = "completed"
         event_type = "attendance_approved"
