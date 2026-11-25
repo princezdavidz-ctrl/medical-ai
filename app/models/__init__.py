@@ -71,6 +71,7 @@ from app.models.procurement import ProcurementVendor, PurchaseRequisition, Purch
 from app.models.inventory import InventoryItem, InventoryWarehouse, GoodsReceipt, GoodsReceiptLine, InventoryStockBalance, InventoryMovement, AssetRecord
 from app.models.facilities import FacilityLocation, MaintenanceWorkOrder, MaintenanceEvent
 from app.models.transport import AmbulanceVehicle, TransportRequest, TransportReceivingOffer, TransportEvent
+from app.models.mortuary_pathology import MortuaryCase, MortuaryAuthorization, MortuaryMovement, MortuaryPropertyItem, PathologyCase, PathologySpecimen, PathologyReport, PathologyEvent
 from app.models.nursing import (
     NursingAssessment,
     NursingObservation,
@@ -189,6 +190,8 @@ __all__ = [
     "EmployeeProfile",
     "StaffCredential",
     "StaffLeaveRequest",
+    "MortuaryCase", "MortuaryAuthorization", "MortuaryMovement", "MortuaryPropertyItem",
+    "PathologyCase", "PathologySpecimen", "PathologyReport", "PathologyEvent",
     "AmbulanceVehicle", "TransportRequest", "TransportReceivingOffer", "TransportEvent",
     "FacilityLocation", "MaintenanceWorkOrder", "MaintenanceEvent",
     "InventoryItem", "InventoryWarehouse", "GoodsReceipt", "GoodsReceiptLine", "InventoryStockBalance", "InventoryMovement", "AssetRecord",
