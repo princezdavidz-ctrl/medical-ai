@@ -3,6 +3,7 @@ from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy import and_, or_, select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.api.audit import write_audit_event
@@ -92,6 +93,8 @@ def create_patient_portal_link(payload: PatientPortalLinkCreate, context: tuple 
     _require_portal_staff(db, user.id, hospital_id)
     if not payload.access_scope or len(set(payload.access_scope)) != len(payload.access_scope) or not set(payload.access_scope).issubset(_ALLOWED_SCOPES):
         raise HTTPException(status_code=422, detail={"code": "invalid_patient_portal_access_scope"})
+    if payload.expires_at is not None and (payload.expires_at.tzinfo is None or payload.expires_at <= datetime.now(timezone.utc)):
+        raise HTTPException(status_code=422, detail={"code": "portal_link_expiry_must_be_future_and_timezone_aware"})
     if payload.relationship_type == "self" and payload.authority_reference is not None:
         raise HTTPException(status_code=422, detail={"code": "self_link_must_not_use_proxy_authority"})
     if payload.relationship_type != "self":
@@ -114,11 +117,9 @@ def create_patient_portal_link(payload: PatientPortalLinkCreate, context: tuple 
         db.flush()
         _audit(db, hospital_id, user.id, "patient_portal.link_requested", "patient_portal_link", link.id)
         db.commit()
-    except Exception as exc:
+    except IntegrityError:
         db.rollback()
-        if exc.__class__.__name__ == "IntegrityError":
-            raise HTTPException(status_code=409, detail={"code": "patient_portal_link_already_exists"})
-        raise
+        raise HTTPException(status_code=409, detail={"code": "patient_portal_link_already_exists"})
     _restore_context(db, user.id, hospital_id)
     db.refresh(link)
     return link
@@ -208,12 +209,10 @@ def list_linked_patients(context: tuple = Depends(get_current_patient_context), 
             "phone_number": patient.phone_number, "relationship_type": link.relationship_type,
             "access_scope": link.access_scope,
         })
-    if rows:
-        first_link = rows[0][0]
-        _record_access(db, user.id, hospital_id, first_link, "viewed_profile", len(result))
+        _record_access(db, user.id, hospital_id, link, "viewed_profile", 1)
+    if result:
         db.commit()
         _restore_context(db, user.id, hospital_id)
-    return result
 
 
 @router.get("/patients/{patient_id}", response_model=PatientPortalPatientRead)
