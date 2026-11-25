@@ -95,6 +95,7 @@ def upgrade() -> None:
         sa.CheckConstraint("requester_user_id != target_user_id", name="ck_shift_swap_not_self"),
         sa.CheckConstraint("(status = 'pending_target' AND responded_by_user_id IS NULL AND responded_at IS NULL AND decided_by_user_id IS NULL AND decided_at IS NULL) OR (status IN ('accepted', 'declined') AND responded_by_user_id = target_user_id AND responded_at IS NOT NULL AND decided_by_user_id IS NULL AND decided_at IS NULL) OR (status IN ('approved', 'rejected') AND responded_by_user_id = target_user_id AND responded_at IS NOT NULL AND decided_by_user_id IS NOT NULL AND decided_at IS NOT NULL) OR status = 'cancelled'", name="ck_shift_swap_decision_state"),
     )
+    op.create_index("uq_staff_shift_swap_open", "staff_shift_swap_requests", ["hospital_id", "shift_assignment_id"], unique=True, postgresql_where=sa.text("status IN ('pending_target', 'accepted')"))
     op.create_index("ix_shift_swap_target_queue", "staff_shift_swap_requests", ["hospital_id", "target_user_id", "status", "created_at"])
     op.create_index("ix_shift_swap_shift", "staff_shift_swap_requests", ["hospital_id", "shift_assignment_id", "status"])
     op.create_table(
