@@ -33,6 +33,7 @@ def upgrade() -> None:
         sa.Column("created_at", sa.DateTime(timezone=True), server_default=sa.func.now(), nullable=False),
         sa.ForeignKeyConstraint(["hospital_id", "patient_id"], ["patients.hospital_id", "patients.id"], name="fk_patient_portal_link_patient"),
         sa.UniqueConstraint("hospital_id", "id", "patient_id", name="uq_patient_portal_link_hospital_patient"),
+        sa.UniqueConstraint("hospital_id", "id", "patient_id", "portal_user_id", name="uq_patient_portal_link_event_owner"),
         
         sa.CheckConstraint("relationship_type IN ('self', 'parent_guardian', 'caregiver', 'legal_representative')", name="ck_patient_portal_relationship"),
         sa.CheckConstraint("status IN ('pending', 'active', 'revoked')", name="ck_patient_portal_link_status"),
@@ -56,7 +57,7 @@ def upgrade() -> None:
         sa.Column("action", sa.String(40), nullable=False),
         sa.Column("resource_count", sa.Integer(), nullable=False, server_default="0"),
         sa.Column("created_at", sa.DateTime(timezone=True), server_default=sa.func.now(), nullable=False),
-        sa.ForeignKeyConstraint(["hospital_id", "portal_link_id", "patient_id"], ["patient_portal_links.hospital_id", "patient_portal_links.id", "patient_portal_links.patient_id"], name="fk_patient_portal_event_link"),
+        sa.ForeignKeyConstraint(["hospital_id", "portal_link_id", "patient_id", "portal_user_id"], ["patient_portal_links.hospital_id", "patient_portal_links.id", "patient_portal_links.patient_id", "patient_portal_links.portal_user_id"], name="fk_patient_portal_event_link"),
         sa.UniqueConstraint("hospital_id", "id", name="uq_patient_portal_event_hospital_id"),
         sa.CheckConstraint("action IN ('viewed_profile', 'viewed_encounters', 'viewed_lab_results', 'viewed_medications', 'viewed_invoices', 'viewed_consents')", name="ck_patient_portal_event_action"),
         sa.CheckConstraint("resource_count >= 0", name="ck_patient_portal_event_resource_count"),
