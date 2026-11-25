@@ -289,3 +289,16 @@ These corrections are included in the current development branch; they have not 
 - [ ] Explicit approval before any patient data or clinical AI is used in live care.
 
 No item is considered passed until evidence, environment, build SHA, reviewer and execution date are recorded.
+
+
+- [ ] Phase 3.17 inventory catalog: hospital-scoped item-code uniqueness, supported item types/tracking modes/status, nonnegative reorder threshold, active/inactive handling and cross-hospital identifier denial.
+- [ ] Warehouse governance: hospital-scoped warehouse-code uniqueness, active-only goods receipt destination and cross-hospital warehouse substitution denial.
+- [ ] Goods receipt creation: issued/partially-received PO only, exact same-PO purchase-order line binding, active inventory item, active warehouse, duplicate line rejection, positive quantity and nonnegative unit cost.
+- [ ] Tracking metadata: serial-tracked receipt exactly one unit with serial, lot-tracked receipt batch requirement, rejection of incompatible metadata, duplicate serial prevention and expired-stock rejection.
+- [ ] Goods receipt posting: draft-only posting, inventory-manager authorization, row locks, cumulative quantity cannot exceed PO line quantity, prior posted receipts counted, idempotent duplicate-post denial and atomic rollback on any failed line.
+- [ ] Stock projection and ledger: one balance per hospital/warehouse/item, transactional on-hand increment, no negative quantity, immutable movement ledger at database level, no draft receipt stock effect and no cross-hospital movement visibility.
+- [ ] Purchase-order synchronization: PO remains issued before receipt, becomes partially_received after partial receipt and received only when every PO line is fully received; cancellation and receipt race handling.
+- [ ] Asset register: only active equipment/asset catalog items, active warehouse, hospital-unique asset tags and serials, warranty/acquisition date consistency, allowed lifecycle transitions and terminal retired/disposed behavior.
+- [ ] Inventory authorization: role matrix for catalog, warehouse, draft receipt, posting, stock views and asset lifecycle; revoked memberships denied; ordinary clinical users denied.
+- [ ] Inventory tenant/privacy: RLS on all seven inventory tables, composite hospital foreign keys for warehouse/item/receipt/PO/PO-line relationships and UUID substitution rejection.
+- [ ] Inventory boundaries: no issue/reservation/transfer/adjustment/stocktake, no valuation/depreciation, no external ERP/device integration and no implied clinical device certification.
