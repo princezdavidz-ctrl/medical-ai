@@ -41,6 +41,7 @@ def upgrade() -> None:
         sa.CheckConstraint("status IN ('draft', 'active', 'suspended', 'retired')", name="ck_procurement_vendor_status"),
         sa.CheckConstraint("vendor_type IN ('company', 'individual', 'nonprofit', 'government', 'other')", name="ck_procurement_vendor_type"),
         sa.CheckConstraint("approved_by_user_id IS NULL OR approved_by_user_id != created_by_user_id", name="ck_procurement_vendor_independent_approval"),
+        sa.CheckConstraint("(status = 'draft' AND approved_by_user_id IS NULL AND approved_at IS NULL) OR (status IN ('active', 'suspended', 'retired') AND approved_by_user_id IS NOT NULL AND approved_at IS NOT NULL)", name="ck_procurement_vendor_approval_state"),
     )
     op.create_index("ix_procurement_vendor_status", "procurement_vendors", ["hospital_id", "status"])
 
@@ -64,6 +65,7 @@ def upgrade() -> None:
         sa.UniqueConstraint("hospital_id", "requisition_number", name="uq_purchase_requisition_number"),
         sa.CheckConstraint("status IN ('draft', 'submitted', 'approved', 'rejected', 'converted', 'cancelled')", name="ck_purchase_requisition_status"),
         sa.CheckConstraint("approved_by_user_id IS NULL OR approved_by_user_id != requested_by_user_id", name="ck_purchase_requisition_independent_approval"),
+        sa.CheckConstraint("(status = 'draft' AND submitted_at IS NULL AND approved_by_user_id IS NULL AND approved_at IS NULL) OR (status = 'submitted' AND submitted_at IS NOT NULL AND approved_by_user_id IS NULL AND approved_at IS NULL) OR (status IN ('approved', 'rejected', 'converted') AND submitted_at IS NOT NULL AND approved_by_user_id IS NOT NULL AND approved_at IS NOT NULL) OR status = 'cancelled'", name="ck_purchase_requisition_lifecycle"),
     )
     op.create_index("ix_purchase_requisition_queue", "purchase_requisitions", ["hospital_id", "status", "created_at"])
     op.create_index("ix_purchase_requisition_department", "purchase_requisitions", ["hospital_id", "department_id", "status"])
@@ -106,6 +108,7 @@ def upgrade() -> None:
         sa.UniqueConstraint("hospital_id", "order_number", name="uq_purchase_order_number"),
         sa.UniqueConstraint("hospital_id", "requisition_id", name="uq_purchase_order_requisition"),
         sa.CheckConstraint("status IN ('draft', 'issued', 'partially_received', 'received', 'cancelled')", name="ck_purchase_order_status"),
+        sa.CheckConstraint("(status = 'draft' AND issued_by_user_id IS NULL AND issued_at IS NULL) OR (status IN ('issued', 'partially_received', 'received', 'cancelled') AND issued_by_user_id IS NOT NULL AND issued_at IS NOT NULL)", name="ck_purchase_order_issue_state"),
         sa.CheckConstraint("total_amount >= 0 AND currency ~ '^[A-Z]{3}$'", name="ck_purchase_order_amount_currency"),
     )
     op.create_index("ix_purchase_order_queue", "purchase_orders", ["hospital_id", "status", "created_at"])
