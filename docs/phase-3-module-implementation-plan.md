@@ -102,6 +102,7 @@ Every module milestone must include:
 | Patient Portal | Phase 3.22 | Implemented; Phase 5 verification pending | PR #51 (merged) |
 | Doctor & Medical Staff Portal | Phase 3.23 | Implemented; Phase 5 verification pending | PR #52 and hardening PR #54 (merged) |
 | Staff Management & Scheduling | Phase 3.24 | Implemented; Phase 5 verification pending | PR #56 (merged) |
+| Medical Records & Health Information | Phase 3.25 | Implemented; Phase 5 verification pending | PR pending |
 
 Patient Registration & Management extends the Phase 1 patient foundation with governed duplicate review, identity/document metadata, contact and next-of-kin details, consent/lawful-basis recording, patient status and audit history. Automatic patient merging is prohibited.
 
@@ -135,3 +136,6 @@ Phase 3.23 access hardening: suspending clinical credentials now revokes active 
 
 
 Phase 3.24 adds hospital-scoped shift templates and employee assignments, conflict detection against overlapping shifts and approved leave, employee-initiated shift swaps with target acceptance and independent manager approval, manual attendance check-in/check-out with manager review, department-scoped roster access, dashboard counts and an append-only schedule event ledger. HR leave approval now rejects dates that overlap scheduled or confirmed shifts. Automated verification remains deferred to Phase 5.
+
+
+Phase 3.25 introduces a hospital-scoped longitudinal document index using encrypted-vault references and checksum metadata, independent document verification and immutable version history, consent-gated release-of-information requests, and non-destructive record amendment/addendum workflows. Existing department modules remain authoritative for their clinical records; automatic document publication and vault object verification are Phase 4 integrations. Patient/proxy self-service release remains gated on verified portal identity. Phase 5 verification is pending.
