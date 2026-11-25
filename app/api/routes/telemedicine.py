@@ -464,9 +464,10 @@ def complete_telemedicine_session(session_id: UUID, context: tuple = Depends(get
     note_count = db.scalar(select(TelemedicineClinicalNote.id).where(
         TelemedicineClinicalNote.hospital_id == hospital_id,
         TelemedicineClinicalNote.session_id == session.id,
+        TelemedicineClinicalNote.note_type.in_(["consultation", "assessment"]),
     ).limit(1))
     if note_count is None:
-        raise HTTPException(status_code=409, detail={"code": "signed_telemedicine_note_required_before_completion"})
+        raise HTTPException(status_code=409, detail={"code": "signed_consultation_or_assessment_note_required_before_completion"})
     now = datetime.now(timezone.utc)
     encounter = db.scalar(select(Encounter).where(
         Encounter.hospital_id == hospital_id,
