@@ -63,7 +63,8 @@ class PatientRecordReleaseRequest(Base):
         UniqueConstraint("hospital_id", "id", "patient_id", name="uq_record_release_hospital_id_patient"),
         CheckConstraint("requester_type IN ('treating_provider', 'insurer', 'court', 'regulator', 'other')", name="ck_record_release_requester_type"),
         CheckConstraint("recipient_type IN ('hospital', 'clinic', 'provider', 'insurer', 'patient', 'court', 'regulator', 'other')", name="ck_record_release_recipient_type"),
-        CheckConstraint("requester_evidence_reference IS NULL OR requester_evidence_reference ~ '^vault://[0-9a-fA-F-]{36}
+        CheckConstraint("requester_evidence_reference IS NULL OR requester_evidence_reference ~ '^vault://[0-9a-fA-F-]{36}$'", name="ck_record_release_requester_evidence_ref"),
+        CheckConstraint("requester_type = 'treating_provider' OR requester_evidence_reference IS NOT NULL", name="ck_record_release_external_requester_evidence_required"),
         CheckConstraint("status IN ('pending', 'approved', 'rejected', 'released', 'cancelled')", name="ck_record_release_status"),
         CheckConstraint("purpose IN ('record_sharing', 'care_coordination', 'referral', 'patient_portal', 'insurance_claim', 'legal_requirement', 'other')", name="ck_record_release_purpose"),
         CheckConstraint("json_typeof(data_categories) = 'array' AND json_array_length(data_categories) > 0", name="ck_record_release_categories"),
