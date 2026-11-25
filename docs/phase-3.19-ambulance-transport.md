@@ -15,6 +15,7 @@ Creating a transfer requires the exact supplied patient consent record to be act
 
 ## API
 - `POST/GET /api/v1/transport/vehicles`
+- `PATCH /api/v1/transport/vehicles/{vehicle_id}/status`
 - `POST/GET /api/v1/transport/requests` (origin hospital)
 - `GET /api/v1/transport/receiving/requests` (receiving hospital, minimized offers)
 - `POST /api/v1/transport/requests/{request_id}/receiving-acceptance`
