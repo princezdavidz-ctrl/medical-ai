@@ -68,6 +68,7 @@ from app.models.billing import (
 from app.models.insurance import InsurerDefinition, PatientCoverage, InsuranceClaim, InsuranceClaimEvent
 from app.models.hr import EmployeeProfile, StaffCredential, StaffLeaveRequest
 from app.models.procurement import ProcurementVendor, PurchaseRequisition, PurchaseRequisitionLine, PurchaseOrder, PurchaseOrderLine, ProcurementEvent
+from app.models.inventory import InventoryItem, InventoryWarehouse, GoodsReceipt, GoodsReceiptLine, InventoryStockBalance, InventoryMovement, AssetRecord
 from app.models.nursing import (
     NursingAssessment,
     NursingObservation,
@@ -186,6 +187,7 @@ __all__ = [
     "EmployeeProfile",
     "StaffCredential",
     "StaffLeaveRequest",
+    "InventoryItem", "InventoryWarehouse", "GoodsReceipt", "GoodsReceiptLine", "InventoryStockBalance", "InventoryMovement", "AssetRecord",
     "ProcurementVendor",
     "PurchaseRequisition",
     "PurchaseRequisitionLine",
