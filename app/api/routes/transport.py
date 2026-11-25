@@ -329,7 +329,7 @@ def record_tracking_update(request_id: UUID, payload: TrackingUpdate, context: t
         raise HTTPException(status_code=422, detail={"code": "latitude_and_longitude_must_be_paired"})
     if payload.latitude is None and not payload.note:
         raise HTTPException(status_code=422, detail={"code": "tracking_update_requires_location_or_note"})
-    _event(db, hospital_id, user.id, request, "location_update", payload.note, payload.latitude, payload.longitude)
+    _event(db, hospital_id, user.id, request.id, "location_update", payload.note, payload.latitude, payload.longitude)
     _audit(db, hospital_id, user.id, "transport.tracking.updated", "transport_request", request.id)
     db.commit()
     _restore_context(db, user.id, hospital_id)
@@ -389,6 +389,12 @@ def cancel_transport_request(request_id: UUID, context: tuple = Depends(get_curr
     request = _request_by_id(db, request_id, hospital_id, lock=True)
     if request.status not in ("requested", "bed_accepted", "vehicle_assigned"):
         raise HTTPException(status_code=409, detail={"code": "transport_request_not_cancellable"})
+    offer = db.scalar(select(TransportReceivingOffer).where(
+        TransportReceivingOffer.transport_request_id == request.id,
+        TransportReceivingOffer.origin_hospital_id == hospital_id,
+    ).with_for_update())
+    if offer is not None and offer.status in ("offered", "bed_accepted"):
+        offer.status = "cancelled"
     if request.assigned_vehicle_id is not None:
         vehicle = db.scalar(select(AmbulanceVehicle).where(
             AmbulanceVehicle.id == request.assigned_vehicle_id,
