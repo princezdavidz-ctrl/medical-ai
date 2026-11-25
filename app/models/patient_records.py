@@ -106,7 +106,8 @@ class PatientRecordAmendmentRequest(Base):
         CheckConstraint("amendment_type IN ('demographic', 'clinical_content', 'metadata', 'identity')", name="ck_record_amendment_type"),
         CheckConstraint("length(trim(reason)) >= 5", name="ck_record_amendment_reason"),
         CheckConstraint("(status = 'pending' AND reviewed_by_user_id IS NULL AND reviewed_at IS NULL AND decision_reason IS NULL AND amendment_vault_reference IS NULL) OR (status = 'approved' AND reviewed_by_user_id IS NOT NULL AND reviewed_at IS NOT NULL AND decision_reason IS NULL AND amendment_vault_reference IS NULL) OR (status = 'rejected' AND reviewed_by_user_id IS NOT NULL AND reviewed_at IS NOT NULL AND decision_reason IS NOT NULL AND amendment_vault_reference IS NULL) OR (status = 'fulfilled' AND reviewed_by_user_id IS NOT NULL AND reviewed_at IS NOT NULL AND fulfilled_by_user_id IS NOT NULL AND fulfilled_at IS NOT NULL AND amendment_vault_reference IS NOT NULL) OR (status = 'cancelled' AND amendment_vault_reference IS NULL)", name="ck_record_amendment_state"),
-        CheckConstraint("amendment_vault_reference IS NULL OR amendment_vault_reference ~ '^vault://[0-9a-fA-F-]{36}
+        CheckConstraint("amendment_vault_reference IS NULL OR amendment_vault_reference ~ '^vault://[0-9a-fA-F-]{36}$'", name="ck_record_amendment_vault_ref"),
+        CheckConstraint("supporting_evidence_reference IS NULL OR supporting_evidence_reference ~ '^vault://[0-9a-fA-F-]{36}$'", name="ck_record_amendment_evidence_ref"),
         Index("ix_record_amendment_patient_status", "hospital_id", "patient_id", "status", "created_at"),
     )
     id: Mapped[uuid.UUID] = mapped_column(Uuid(as_uuid=True), primary_key=True, default=uuid.uuid4)
