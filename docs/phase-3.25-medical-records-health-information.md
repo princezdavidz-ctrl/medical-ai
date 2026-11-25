@@ -30,7 +30,7 @@ Base prefix: /api/v1/medical-records
 | Method | Path | Purpose |
 |---|---|---|
 | POST | /documents | Register document metadata and vault reference |
-| GET | /patients/{patient_id}/documents | Search/list the patient's authorized document index |
+| GET | /patients/{patient_id}/documents | Search/list the patient's authorized document index with type, source, title and date filters |
 | GET | /documents/{document_id} | Read one authorized document metadata record |
 | POST | /documents/{document_id}/decision | Independently verify or reject a document |
 | POST | /release-requests | Create a consent-scoped release request |
