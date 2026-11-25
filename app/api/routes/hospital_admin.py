@@ -232,6 +232,9 @@ def decide_membership(membership_id: UUID, payload: MembershipDecision, context:
     if payload.decision == "activate":
         if membership.status != "pending" or payload.role_id is None:
             raise HTTPException(status_code=409, detail={"code": "pending_membership_and_role_required"})
+        target_user = db.get(User, membership.user_id)
+        if target_user is None or not target_user.is_active:
+            raise HTTPException(status_code=409, detail={"code": "active_user_account_required"})
         role = db.scalar(select(Role).where(Role.id == payload.role_id, Role.hospital_id == hospital_id))
         if role is None:
             raise HTTPException(status_code=422, detail={"code": "hospital_role_not_found"})
@@ -259,7 +262,7 @@ def decide_membership(membership_id: UUID, payload: MembershipDecision, context:
             ).where(
                 HospitalMembership.hospital_id == hospital_id,
                 HospitalMembership.status == "active",
-                Role.name.in_(list(_ADMIN_ROLES)),
+                func.lower(Role.name).in_(list(_ADMIN_ROLES)),
             )) or 0
             if active_admins <= 1:
                 raise HTTPException(status_code=409, detail={"code": "cannot_suspend_last_hospital_admin"})
