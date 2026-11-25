@@ -35,6 +35,7 @@ class TransportRequest(Base):
         ForeignKeyConstraint(["hospital_id", "consent_id", "patient_id"], ["patient_consents.hospital_id", "patient_consents.id", "patient_consents.patient_id"], name="fk_transport_request_consent"),
         ForeignKeyConstraint(["hospital_id", "assigned_vehicle_id"], ["ambulance_vehicles.hospital_id", "ambulance_vehicles.id"], name="fk_transport_request_vehicle"),
         UniqueConstraint("hospital_id", "id", name="uq_transport_request_hospital_id"),
+        UniqueConstraint("hospital_id", "id", "receiving_hospital_id", name="uq_transport_request_receiver_link"),
         UniqueConstraint("hospital_id", "transfer_number", name="uq_transport_request_number"),
         CheckConstraint("transport_type = 'interfacility'", name="ck_transport_request_type"),
         CheckConstraint("priority IN ('routine', 'urgent', 'emergency')", name="ck_transport_request_priority"),
@@ -82,7 +83,7 @@ class TransportRequest(Base):
 class TransportReceivingOffer(Base):
     __tablename__ = "transport_receiving_offers"
     __table_args__ = (
-        ForeignKeyConstraint(["origin_hospital_id", "transport_request_id"], ["transport_requests.hospital_id", "transport_requests.id"], name="fk_transport_offer_request"),
+        ForeignKeyConstraint(["origin_hospital_id", "transport_request_id", "hospital_id"], ["transport_requests.hospital_id", "transport_requests.id", "transport_requests.receiving_hospital_id"], name="fk_transport_offer_request_receiver"),
         UniqueConstraint("hospital_id", "id", name="uq_transport_offer_hospital_id"),
         UniqueConstraint("origin_hospital_id", "transport_request_id", name="uq_transport_offer_request"),
         CheckConstraint("status IN ('offered', 'bed_accepted', 'rejected', 'arrived', 'cancelled')", name="ck_transport_offer_status"),
