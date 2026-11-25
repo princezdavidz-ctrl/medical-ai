@@ -215,6 +215,7 @@ def get_hospital_settings(context: tuple = Depends(get_current_context), db: Ses
 def upsert_hospital_settings(payload: HospitalOperationalSettingsUpdate, context: tuple = Depends(get_current_context), db: Session = Depends(get_db)):
     user, hospital_id = context
     _require_admin(db, user.id, hospital_id)
+    _lock_hospital(db, hospital_id)
     settings = db.scalar(select(HospitalOperationalSettings).where(
         HospitalOperationalSettings.hospital_id == hospital_id,
     ).with_for_update())
