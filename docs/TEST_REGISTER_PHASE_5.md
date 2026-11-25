@@ -371,7 +371,7 @@ No item is considered passed until evidence, environment, build SHA, reviewer an
 
 
 - [ ] Phase 3.22 patient token: active user/password, active hospital, active verified patient link, hospital claim/header match, MFA-enabled account denied until challenge support, expired/revoked/pending link denied.
-- [ ] Patient portal link creation: active same-hospital patient and user, unique patient/user link, allowed nonempty access scopes only, self link cannot carry proxy authority, proxy link requires authority reference and timezone-aware future expiry.
+- [ ] Patient portal link creation: active same-hospital patient and user, one pending or active patient/user link, allowed nonempty access scopes only, self link cannot carry proxy authority, proxy link requires authority reference and timezone-aware future expiry.
 - [ ] Independent identity verification: creator cannot verify own link, approved verification methods by relationship type, protected vault evidence required, proxy guardian/court authority verification and expiry.
 - [ ] Patient portal revocation: active/pending link revocation, reason required, actor/time retained, immediate token/request denial, expired links inaccessible.
 - [ ] Patient portal scopes: each profile/encounter/lab/medication/invoice/consent endpoint requires matching scope; proxy cannot exceed granted scope; cross-patient UUID substitution denied.
