@@ -3,7 +3,7 @@ from datetime import datetime
 
 from sqlalchemy import (
     JSON, CheckConstraint, DateTime, ForeignKey, ForeignKeyConstraint, Index,
-    Integer, String, UniqueConstraint, Uuid, func,
+    Integer, String, UniqueConstraint, Uuid, func, text,
 )
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -18,7 +18,7 @@ class PatientRecordDocument(Base):
         ForeignKeyConstraint(["hospital_id", "supersedes_document_id", "patient_id"], ["patient_record_documents.hospital_id", "patient_record_documents.id", "patient_record_documents.patient_id"], name="fk_record_document_supersedes"),
         UniqueConstraint("hospital_id", "id", "patient_id", name="uq_record_document_hospital_id_patient"),
         UniqueConstraint("hospital_id", "vault_reference", name="uq_record_document_vault_reference"),
-        UniqueConstraint("hospital_id", "patient_id", "source_module", "source_record_id", "version_number", name="uq_record_document_source_version"),
+        Index("uq_record_document_source_version_active", "hospital_id", "patient_id", "source_module", "source_record_id", "version_number", unique=True, postgresql_where=text("status IN ('pending_review', 'verified', 'superseded')")),
         CheckConstraint("source_module IN ('opd', 'nursing', 'inpatient', 'emergency', 'icu', 'surgery', 'maternity', 'pediatrics', 'laboratory', 'radiology', 'pharmacy', 'billing', 'insurance', 'external', 'other')", name="ck_record_document_source"),
         CheckConstraint("record_type IN ('clinical_note', 'discharge_summary', 'lab_report', 'imaging_report', 'prescription', 'referral', 'consent', 'identity_document', 'administrative', 'external_record', 'other')", name="ck_record_document_type"),
         CheckConstraint("status IN ('pending_review', 'verified', 'rejected', 'superseded')", name="ck_record_document_status"),
