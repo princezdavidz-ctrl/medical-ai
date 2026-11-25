@@ -338,3 +338,20 @@ No item is considered passed until evidence, environment, build SHA, reviewer an
 - [ ] Receiving offer progression: offered → bed_accepted → vehicle_assigned → en_route → arrived; receiving arrival confirmation before dispatch denied, rejected/cancelled offers cannot be assigned, and offer destination must match the transfer's receiving_hospital_id.
 
 - [ ] Ambulance crew worklist: active assigned driver/crew only, origin-hospital scope, active trip statuses only, minimized route details and no patient/encounter IDs or clinical reason exposed.
+
+
+- [ ] Phase 3.20 mortuary intake: patient/optional encounter same-hospital linkage, unique case/body references, death timestamp timezone/future validation, received actor/time and RLS.
+- [ ] Mortuary authorization: allowed authority types, protected vault evidence reference, independent verifier (submitter cannot verify), rejected/revoked authority no longer permits release and cross-case authorization substitution denied.
+- [ ] Mortuary custody: received/stored/relocated/release-pending/retained/released transitions, correct from/to locations, append-only movement ledger and concurrent movement serialization.
+- [ ] Mortuary legal hold: hold blocks release-pending/release/transfer, manager-only application/lift, retained-by-authority state and audit evidence.
+- [ ] Mortuary release: release-pending state, active verified authorization, no legal hold, recipient name/identity, manager authorization, personal-effects reconciliation, body released timestamp/actor and repeat release denial.
+- [ ] Mortuary property: property inventory, sealed-state consistency, hospital-scoped references, independent release authority, recipient attribution and no release while legal hold is active.
+- [ ] Pathology case integrity: patient/encounter tenant linkage, unique case number, allowed case types/statuses, autopsy authority required and forensic legal authority type restrictions.
+- [ ] Pathology authority: independent pathology manager/admin verification, vault evidence required, rejected authority cancels case, unverified autopsy/forensic case cannot receive specimens or report.
+- [ ] Pathology assignment: active same-hospital pathologist membership, manager-only assignment, assignment changes locked after finalization/closure/cancellation.
+- [ ] Specimen accessioning: unique accession number, case/hospital binding, allowed condition, collected/received/processing/processed/archived/rejected transitions, received actor/time and invalid transition denial.
+- [ ] Pathology reports: at least one processed/archived specimen, one draft at a time, version increments, report author/assigned pathologist controls, signed actor/time and manager override.
+- [ ] Final pathology report immutability: UPDATE/DELETE denied after finalization; new version can be created while case remains open; closed case blocks additional versions.
+- [ ] Pathology case lifecycle: opened/specimens_received/in_progress/report_draft/finalized/closed/cancelled transitions, no specimen mutation during reporting/finalized/closed states, audit and append-only pathology event history.
+- [ ] Mortuary/pathology RLS: all eight tables hospital-isolated, composite patient/encounter/case foreign keys, cross-hospital UUID substitution denied and no cross-hospital report/authorization visibility.
+- [ ] Mortuary/pathology privacy/safety: no automated cause-of-death determination, death certification, pathology diagnosis, AI image interpretation, external coroner/registrar exchange or unsupported legal sufficiency claim.
