@@ -136,3 +136,10 @@ class ShiftAttendanceRead(BaseModel):
     decided_at: datetime | None
     decision_note: str | None
     created_at: datetime
+
+
+class AttendanceResubmission(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    check_in_at: datetime
+    check_out_at: datetime
+    note: str | None = Field(default=None, max_length=1000)
