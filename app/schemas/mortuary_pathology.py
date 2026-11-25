@@ -98,6 +98,7 @@ class PathologyCaseRead(BaseModel):
     order_reference: str | None
     authority_type: str | None
     authority_reference: str | None
+    authority_evidence_reference: str | None
     authority_verified_by_user_id: UUID | None
     authority_verified_at: datetime | None
     status: str
@@ -161,3 +162,12 @@ class PathologyReportRead(BaseModel):
     signed_by_user_id: UUID | None
     signed_at: datetime | None
     created_at: datetime
+
+class LegalHoldUpdate(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    legal_hold: bool
+
+
+class PathologyAssignment(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    pathologist_user_id: UUID
