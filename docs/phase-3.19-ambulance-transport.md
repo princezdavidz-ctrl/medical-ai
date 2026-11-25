@@ -22,6 +22,7 @@ Creating a transfer requires the exact supplied patient consent record to be act
 - `POST /api/v1/transport/requests/{request_id}/receiving-rejection`
 - `POST /api/v1/transport/requests/{request_id}/assign-vehicle`
 - `POST /api/v1/transport/requests/{request_id}/dispatch`
+- `GET /api/v1/transport/my-assignments` (assigned crew, minimized route details)
 - `POST /api/v1/transport/requests/{request_id}/tracking`
 - `POST /api/v1/transport/requests/{request_id}/arrival-confirmation` (receiving hospital)
 - `POST /api/v1/transport/requests/{request_id}/release-vehicle` (origin fleet)
