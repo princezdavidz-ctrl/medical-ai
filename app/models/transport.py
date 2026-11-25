@@ -80,6 +80,37 @@ class TransportRequest(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
 
 
+class TransportReceivingOffer(Base):
+    __tablename__ = "transport_receiving_offers"
+    __table_args__ = (
+        ForeignKeyConstraint(["origin_hospital_id", "transport_request_id"], ["transport_requests.hospital_id", "transport_requests.id"], name="fk_transport_offer_request"),
+        UniqueConstraint("hospital_id", "id", name="uq_transport_offer_hospital_id"),
+        UniqueConstraint("origin_hospital_id", "transport_request_id", name="uq_transport_offer_request"),
+        CheckConstraint("status IN ('offered', 'bed_accepted', 'rejected', 'arrived', 'cancelled')", name="ck_transport_offer_status"),
+        CheckConstraint("status NOT IN ('bed_accepted', 'arrived') OR (accepted_by_user_id IS NOT NULL AND bed_reference IS NOT NULL AND accepted_at IS NOT NULL)", name="ck_transport_offer_acceptance"),
+        CheckConstraint("status != 'rejected' OR (rejected_by_user_id IS NOT NULL AND rejection_reason IS NOT NULL)", name="ck_transport_offer_rejection"),
+        CheckConstraint("status != 'arrived' OR (arrival_confirmed_by_user_id IS NOT NULL AND arrived_at IS NOT NULL)", name="ck_transport_offer_arrival"),
+        Index("ix_transport_offer_queue", "hospital_id", "status", "created_at"),
+    )
+    id: Mapped[uuid.UUID] = mapped_column(Uuid(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    hospital_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("hospitals.id"), nullable=False)
+    origin_hospital_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("hospitals.id"), nullable=False)
+    transport_request_id: Mapped[uuid.UUID] = mapped_column(Uuid(as_uuid=True), nullable=False)
+    transfer_number: Mapped[str] = mapped_column(String(80), nullable=False)
+    priority: Mapped[str] = mapped_column(String(24), nullable=False)
+    origin_description: Mapped[str] = mapped_column(String(500), nullable=False)
+    destination_description: Mapped[str] = mapped_column(String(500), nullable=False)
+    status: Mapped[str] = mapped_column(String(24), nullable=False, default="offered")
+    bed_reference: Mapped[str | None] = mapped_column(String(120))
+    accepted_by_user_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("users.id"))
+    accepted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    rejected_by_user_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("users.id"))
+    rejection_reason: Mapped[str | None] = mapped_column(String(1000))
+    arrival_confirmed_by_user_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("users.id"))
+    arrived_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+
+
 class TransportEvent(Base):
     __tablename__ = "transport_events"
     __table_args__ = (
