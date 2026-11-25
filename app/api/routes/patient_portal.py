@@ -213,6 +213,7 @@ def list_linked_patients(context: tuple = Depends(get_current_patient_context), 
     if result:
         db.commit()
         _restore_context(db, user.id, hospital_id)
+    return result
 
 
 @router.get("/patients/{patient_id}", response_model=PatientPortalPatientRead)
