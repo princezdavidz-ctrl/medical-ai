@@ -124,3 +124,6 @@ Hospital Administration Console adds hospital profile and branding, operational 
 
 
 Patient Portal adds staff-verified links between existing user accounts and patient records, scoped and expiring proxy access, patient-scoped record views for encounters, finalized laboratory results, medications, invoices and consents, plus immutable access-event logging. Account signup/OTP, MFA challenge, appointments, secure messaging, payments and cross-hospital exchange remain Phase 4 or later integrations.
+
+
+Doctor & Medical Staff Portal adds independently verified clinical staff profiles, scoped patient care-team assignments, a role-aware patient overview and an assigned work queue. Existing clinical endpoints still require Phase 4 integration of care-team authorization before these assignments become a universal patient access boundary.
