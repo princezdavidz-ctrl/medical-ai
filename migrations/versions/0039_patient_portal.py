@@ -18,7 +18,7 @@ def upgrade() -> None:
         sa.Column("patient_id", sa.Uuid(), nullable=False),
         sa.Column("portal_user_id", sa.Uuid(), sa.ForeignKey("users.id"), nullable=False),
         sa.Column("relationship_type", sa.String(24), nullable=False, server_default="self"),
-        sa.Column("access_scope", sa.JSON(), nullable=False, server_default=sa.text("'["profile","encounters","lab_results","medications","invoices","consents"]'::json")),
+        sa.Column("access_scope", sa.JSON(), nullable=False, server_default=sa.text("""'["profile","encounters","lab_results","medications","invoices","consents"]'::json""")),
         sa.Column("authority_reference", sa.String(160)),
         sa.Column("expires_at", sa.DateTime(timezone=True)),
         sa.Column("status", sa.String(24), nullable=False, server_default="pending"),
