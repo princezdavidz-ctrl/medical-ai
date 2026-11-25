@@ -348,8 +348,6 @@ def decide_record_document(document_id: UUID, payload: RecordDocumentDecision, c
 def create_record_release_request(payload: RecordReleaseCreate, context: tuple = Depends(get_current_context), db: Session = Depends(get_db)):
     user, hospital_id = context
     _patient(db, hospital_id, payload.patient_id)
-    if payload.requester_type in {"patient", "legal_representative"}:
-        raise HTTPException(status_code=403, detail={"code": "patient_proxy_identity_workflow_not_connected"})
     is_him = _role(db, user.id, hospital_id) in _HIM_ROLES
     if is_him:
         _require_him(db, user.id, hospital_id)
