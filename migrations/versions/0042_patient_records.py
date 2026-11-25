@@ -52,7 +52,7 @@ def upgrade() -> None:
         sa.CheckConstraint("vault_reference ~ '^vault://[0-9a-fA-F-]{36}$'", name="ck_record_document_vault_ref"),
         sa.CheckConstraint("sha256_checksum ~ '^[0-9a-fA-F]{64}$'", name="ck_record_document_checksum"),
         sa.CheckConstraint("mime_type IN ('application/pdf', 'image/jpeg', 'image/png', 'application/dicom', 'text/plain', 'application/octet-stream')", name="ck_record_document_mime"),
-        sa.CheckConstraint("(status = 'pending_review' AND verified_by_user_id IS NULL AND verified_at IS NULL AND rejection_reason IS NULL) OR (status = 'verified' AND verified_by_user_id IS NOT NULL AND verified_at IS NOT NULL AND rejection_reason IS NULL) OR (status = 'rejected' AND verified_by_user_id IS NOT NULL AND verified_at IS NOT NULL AND rejection_reason IS NOT NULL) OR status = 'superseded'", name="ck_record_document_review_state"),
+        sa.CheckConstraint("(status = 'pending_review' AND verified_by_user_id IS NULL AND verified_at IS NULL AND rejection_reason IS NULL) OR (status = 'verified' AND verified_by_user_id IS NOT NULL AND verified_at IS NOT NULL AND rejection_reason IS NULL) OR (status = 'rejected' AND verified_by_user_id IS NOT NULL AND verified_at IS NOT NULL AND rejection_reason IS NOT NULL) OR (status = 'superseded' AND verified_by_user_id IS NOT NULL AND verified_at IS NOT NULL AND rejection_reason IS NULL)", name="ck_record_document_review_state"),
         sa.CheckConstraint("supersedes_document_id IS NULL OR supersedes_document_id != id", name="ck_record_document_no_self_supersede"),
     )
     op.create_index("ix_record_document_patient_date", "patient_record_documents", ["hospital_id", "patient_id", "document_date"])
