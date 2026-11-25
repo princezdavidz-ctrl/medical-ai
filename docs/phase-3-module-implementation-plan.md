@@ -97,6 +97,7 @@ Every module milestone must include:
 | Inventory & Asset Management | Phase 3.17 | Implemented; Phase 5 verification pending | PR #43 (merged) |
 | Facilities & Maintenance | Phase 3.18 | Implemented; Phase 5 verification pending | PR #44 (merged) |
 | Ambulance & Transport | Phase 3.19 | Implemented; Phase 5 verification pending | PR #45 (merged) |
+| Mortuary & Pathology | Phase 3.20 | Implemented; Phase 5 verification pending | PR #46 (pending) |
 | Ambulance & Transport | Phase 3.19 | Implemented; Phase 5 verification pending | PR #45 (pending) |
 
 Patient Registration & Management extends the Phase 1 patient foundation with governed duplicate review, identity/document metadata, contact and next-of-kin details, consent/lawful-basis recording, patient status and audit history. Automatic patient merging is prohibited.
@@ -114,3 +115,6 @@ Ambulance & Transport adds consent-gated interfacility transfer requests, minimi
 
 
 Ambulance & Transport adds consent-gated interfacility transfer requests, minimized receiving-hospital offers for bed acceptance/rejection, ambulance fleet records and status management, driver/crew assignment, dispatch, manually recorded location updates, receiving arrival confirmation and origin fleet release. Receiving hospitals do not receive patient/encounter identifiers or clinical details through this module. Actual inpatient bed reservation, patient-record exchange and live GPS/dispatch integrations remain separate workflows or Phase 4 integrations. Phase 5 verification is pending.
+
+
+Mortuary & Pathology adds hospital-scoped mortuary intake, body identification and storage movements, legal holds, independently verified release authority, personal-effects custody and controlled release. Pathology adds case registration, autopsy/forensic authority verification, specimen accession and processing states, assigned pathologists, versioned reports and immutable signed finals. It does not determine cause of death, issue death certificates, provide AI pathology interpretation or establish legal sufficiency; external statutory and registry integrations remain out of scope. Phase 5 verification is pending.
