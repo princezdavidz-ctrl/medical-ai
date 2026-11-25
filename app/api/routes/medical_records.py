@@ -100,6 +100,8 @@ def _require_patient_record_access(db: Session, user_id: UUID, hospital_id: UUID
     if (
         membership is None or employee is None or profile is None or user is None
         or not user.is_active or assignment is None
+        or (profile is not None and employee is not None and profile.employee_profile_id != employee.id)
+        or (assignment is not None and assignment.department_id is not None and employee is not None and assignment.department_id != employee.department_id)
         or (required_scope is not None and required_scope not in scopes)
     ):
         raise HTTPException(status_code=403, detail={"code": "active_scoped_care_team_access_required"})
