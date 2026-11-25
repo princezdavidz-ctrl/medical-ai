@@ -65,6 +65,9 @@ class TelemedicineSessionRead(BaseModel):
     emergency_contact_reference: str | None
     safety_confirmed_at: datetime | None
     safety_confirmed_by_user_id: UUID | None
+    patient_identity_confirmed: bool
+    privacy_confirmed: bool
+    emergency_plan_acknowledged: bool
     started_at: datetime | None
     started_by_user_id: UUID | None
     ended_at: datetime | None
