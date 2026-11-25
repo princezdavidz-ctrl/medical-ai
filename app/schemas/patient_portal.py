@@ -11,7 +11,7 @@ class PatientPortalLinkCreate(BaseModel):
     patient_id: UUID
     portal_user_id: UUID
     relationship_type: str = Field(default="self", pattern="^(self|parent_guardian|caregiver|legal_representative)$")
-    access_scope: list[str] = Field(default_factory=lambda: ["profile", "encounters", "lab_results", "medications", "invoices", "consents"], min_length=1)
+    access_scope: list[str] = Field(default_factory=lambda: ["profile", "encounters"], min_length=1)
     authority_reference: str | None = Field(default=None, max_length=160)
     expires_at: datetime | None = None
 
