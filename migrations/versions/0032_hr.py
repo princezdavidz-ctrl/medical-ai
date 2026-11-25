@@ -80,6 +80,7 @@ def upgrade() -> None:
         sa.UniqueConstraint("hospital_id", "id", name="uq_staff_leave_hospital_id"),
         sa.CheckConstraint("status IN ('pending', 'approved', 'rejected', 'cancelled')", name="ck_staff_leave_status"),
         sa.CheckConstraint("end_at > start_at", name="ck_staff_leave_dates"),
+        sa.CheckConstraint("(status = 'pending' AND decided_by_user_id IS NULL AND decided_at IS NULL AND decision_note IS NULL) OR (status IN ('approved', 'rejected') AND decided_by_user_id IS NOT NULL AND decided_at IS NOT NULL) OR status = 'cancelled'", name="ck_staff_leave_decision"),
     )
     op.create_index("ix_staff_leave_queue", "staff_leave_requests", ["hospital_id", "status", "start_at"])
 
