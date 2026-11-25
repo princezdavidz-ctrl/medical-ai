@@ -122,6 +122,7 @@ class PurchaseOrderLine(Base):
         ForeignKeyConstraint(["hospital_id", "purchase_order_id"], ["purchase_orders.hospital_id", "purchase_orders.id"], name="fk_purchase_order_line_parent"),
         ForeignKeyConstraint(["hospital_id", "requisition_line_id"], ["purchase_requisition_lines.hospital_id", "purchase_requisition_lines.id"], name="fk_purchase_order_line_requisition"),
         UniqueConstraint("hospital_id", "id", name="uq_purchase_order_line_hospital_id"),
+        UniqueConstraint("hospital_id", "purchase_order_id", "id", name="uq_purchase_order_line_hospital_order_id"),
         UniqueConstraint("hospital_id", "requisition_line_id", name="uq_purchase_order_line_requisition_line"),
         CheckConstraint("quantity > 0 AND unit_price >= 0 AND line_total >= 0", name="ck_purchase_order_line_amounts"),
         Index("ix_purchase_order_line_parent", "hospital_id", "purchase_order_id"),
