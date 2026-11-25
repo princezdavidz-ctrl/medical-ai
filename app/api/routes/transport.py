@@ -15,7 +15,6 @@ from app.schemas.transport import (
     VehicleCreate, VehicleRead, TransportRequestCreate, TransportRequestRead,
     ReceivingBedAcceptance, VehicleAssignment, TrackingUpdate, RejectionInput,
 )
-from app.services.patient_authorization import has_active_patient_authorization
 
 router = APIRouter(prefix="/transport", tags=["ambulance and patient transport"])
 _ORIGIN_STAFF = {"transfer_coordinator", "ambulance_dispatcher", "emergency_physician", "emergency_nurse", "hospital_admin"}
@@ -149,6 +148,7 @@ def create_transport_request(payload: TransportRequestCreate, context: tuple = D
         or (consent.expires_at is not None and consent.expires_at <= datetime.now(timezone.utc))
         or not isinstance(categories, list)
         or not isinstance(permitted_uses, list)
+        or not all(isinstance(item, str) for item in categories + permitted_uses)
         or not {"identity", "clinical_summary"}.issubset(set(categories))
         or "transfer_of_care" not in permitted_uses
     ):
@@ -345,3 +345,47 @@ def release_vehicle(request_id: UUID, context: tuple = Depends(get_current_conte
     db.commit()
     _restore_context(db, user.id, hospital_id)
     return {"request_id": request.id, "vehicle_status": vehicle.status}
+
+
+
+@router.post("/requests/{request_id}/cancel")
+def cancel_transport_request(request_id: UUID, context: tuple = Depends(get_current_context), db: Session = Depends(get_db)):
+    user, hospital_id = context
+    _require(db, user.id, hospital_id, _ORIGIN_STAFF | _FLEET_MANAGERS)
+    request = _request_by_id(db, request_id, hospital_id, lock=True)
+    if request.status not in ("requested", "bed_accepted", "vehicle_assigned"):
+        raise HTTPException(status_code=409, detail={"code": "transport_request_not_cancellable"})
+    if request.assigned_vehicle_id is not None:
+        vehicle = db.scalar(select(AmbulanceVehicle).where(
+            AmbulanceVehicle.id == request.assigned_vehicle_id,
+            AmbulanceVehicle.hospital_id == hospital_id,
+        ).with_for_update())
+        if vehicle is not None and vehicle.status == "assigned":
+            vehicle.status = "available"
+    request.status = "cancelled"
+    _event(db, hospital_id, user.id, request, "cancelled")
+    _audit(db, hospital_id, user.id, "transport.cancelled", "transport_request", request.id)
+    db.commit()
+    _restore_context(db, user.id, hospital_id)
+    return {"id": request.id, "transfer_number": request.transfer_number, "status": request.status}
+
+
+@router.get("/requests/{request_id}/events")
+def list_transport_events(request_id: UUID, context: tuple = Depends(get_current_context), db: Session = Depends(get_db)):
+    user, hospital_id = context
+    role = _role(db, user.id, hospital_id)
+    if role in _ORIGIN_STAFF | _FLEET_MANAGERS:
+        request = _request_by_id(db, request_id, hospital_id)
+    elif role in _RECEIVING_STAFF:
+        request = _request_by_id(db, request_id, hospital_id, receiving=True)
+    else:
+        raise HTTPException(status_code=403, detail={"code": "transport_event_access_denied"})
+    rows = db.scalars(select(TransportEvent).where(
+        TransportEvent.hospital_id == request.hospital_id,
+        TransportEvent.transport_request_id == request.id,
+    ).order_by(TransportEvent.created_at)).all()
+    return [{
+        "id": row.id, "event_type": row.event_type, "actor_user_id": row.actor_user_id,
+        "latitude": row.latitude, "longitude": row.longitude, "note": row.note,
+        "created_at": row.created_at,
+    } for row in rows]
