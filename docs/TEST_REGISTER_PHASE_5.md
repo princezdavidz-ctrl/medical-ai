@@ -302,3 +302,17 @@ No item is considered passed until evidence, environment, build SHA, reviewer an
 - [ ] Inventory authorization: role matrix for catalog, warehouse, draft receipt, posting, stock views and asset lifecycle; revoked memberships denied; ordinary clinical users denied.
 - [ ] Inventory tenant/privacy: RLS on all seven inventory tables, composite hospital foreign keys for warehouse/item/receipt/PO/PO-line relationships and UUID substitution rejection.
 - [ ] Inventory boundaries: no issue/reservation/transfer/adjustment/stocktake, no valuation/depreciation, no external ERP/device integration and no implied clinical device certification.
+
+
+- [ ] Phase 3.18 facility location hierarchy: per-hospital code uniqueness, allowed location types/statuses, same-hospital active parent, self-parent/cycle prevention, cross-hospital parent rejection and location closure with active children/open work orders.
+- [ ] Facilities authorization: active hospital membership and facilities role matrix for location management, request creation, approval/rejection/cancellation, assignment, start/completion and event visibility.
+- [ ] Maintenance request integrity: unique work-order number per hospital, active location requirement, optional active same-hospital asset reference, category/priority bounds and description validation.
+- [ ] Independent work-order decision: requester cannot approve or reject own request; non-manager denied; concurrent approval/rejection produces one valid terminal decision.
+- [ ] Technician assignment: only active same-hospital maintenance technician/biomedical engineer or authorized facilities manager; inactive, wrong-role and cross-hospital user rejected; assignment only after approval.
+- [ ] Work-order state machine: requested → approved → assigned → in_progress → completed; invalid transitions, repeated starts/completions, reassignment during work and terminal-state mutation denied.
+- [ ] Work-order cancellation: only requested/approved/assigned; cancellation clears approval/assignment projection fields while preserving append-only history; in-progress/completed/rejected/cancelled cancellation denied.
+- [ ] Work-order completion: assigned technician identity enforced; manager override policy, completion note required, completion actor/time recorded and no edit/delete after completion.
+- [ ] Maintenance event ledger: every transition creates event and audit record; event update/delete rejected at DB level; event reads are tenant-scoped and do not expose another hospital's events.
+- [ ] Facilities tenant isolation: RLS on all three facilities tables; composite hospital foreign keys for location parent, work-order location/asset and event/work-order; cross-hospital UUID substitution rejected.
+- [ ] Facilities concurrency: simultaneous approvals, assignments, start/cancel, completion/cancel, location close versus new work-order creation and duplicate work-order numbers.
+- [ ] Facilities safety boundary: no automatic medical-device certification, calibration approval, clinical equipment availability change, preventive maintenance scheduling, vendor dispatch or IoT/BMS action.
