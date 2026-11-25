@@ -33,7 +33,7 @@ def upgrade() -> None:
         sa.Column("created_at", sa.DateTime(timezone=True), server_default=sa.func.now(), nullable=False),
         sa.ForeignKeyConstraint(["hospital_id", "patient_id"], ["patients.hospital_id", "patients.id"], name="fk_patient_portal_link_patient"),
         sa.UniqueConstraint("hospital_id", "id", "patient_id", name="uq_patient_portal_link_hospital_patient"),
-        sa.UniqueConstraint("hospital_id", "patient_id", "portal_user_id", name="uq_patient_portal_link_user_patient"),
+        
         sa.CheckConstraint("relationship_type IN ('self', 'parent_guardian', 'caregiver', 'legal_representative')", name="ck_patient_portal_relationship"),
         sa.CheckConstraint("status IN ('pending', 'active', 'revoked')", name="ck_patient_portal_link_status"),
         sa.CheckConstraint("json_typeof(access_scope) = 'array'", name="ck_patient_portal_access_scope_array"),
@@ -43,6 +43,7 @@ def upgrade() -> None:
         sa.CheckConstraint("evidence_reference IS NULL OR evidence_reference ~ '^vault://[0-9a-fA-F-]{36}$'", name="ck_patient_portal_evidence_reference"),
         sa.CheckConstraint("(status = 'revoked' AND revoked_by_user_id IS NOT NULL AND revoked_at IS NOT NULL AND revocation_reason IS NOT NULL) OR (status != 'revoked' AND revoked_by_user_id IS NULL AND revoked_at IS NULL AND revocation_reason IS NULL)", name="ck_patient_portal_revocation_state"),
     )
+    op.create_index("uq_patient_portal_link_open", "patient_portal_links", ["hospital_id", "patient_id", "portal_user_id"], unique=True, postgresql_where=sa.text("status IN ('pending', 'active')"))
     op.create_index("ix_patient_portal_user_status", "patient_portal_links", ["hospital_id", "portal_user_id", "status"])
     op.create_index("ix_patient_portal_patient_status", "patient_portal_links", ["hospital_id", "patient_id", "status"])
     op.create_table(
@@ -75,6 +76,7 @@ def upgrade() -> None:
 def downgrade() -> None:
     op.execute("DROP TRIGGER IF EXISTS trg_patient_portal_events_immutable ON patient_portal_access_events")
     op.execute("DROP FUNCTION IF EXISTS prevent_patient_portal_event_mutation()")
+    op.drop_index("uq_patient_portal_link_open", table_name="patient_portal_links")
     for table in reversed(TABLES):
         op.execute(sa.text(f'DROP POLICY IF EXISTS "{table}_hospital_isolation" ON "{table}"'))
         op.execute(sa.text(f'ALTER TABLE "{table}" DISABLE ROW LEVEL SECURITY'))
