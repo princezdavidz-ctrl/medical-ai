@@ -260,9 +260,6 @@ def record_mortuary_movement(case_id: UUID, payload: MortuaryMovementCreate, con
         if not _has_verified_mortuary_authority(db, hospital_id, case.id):
             raise HTTPException(status_code=409, detail={"code": "verified_release_authority_required"})
         case.status = "release_pending"
-    elif payload.movement_type == "retained":
-        case.legal_hold = True
-        case.status = "retained_by_authority"
     elif payload.movement_type == "stored":
         case.status = "stored"
     elif payload.movement_type == "relocated":
