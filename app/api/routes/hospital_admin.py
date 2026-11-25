@@ -167,7 +167,6 @@ def upsert_hospital_profile(payload: HospitalProfileUpdate, context: tuple = Dep
         ZoneInfo(payload.timezone)
     except ZoneInfoNotFoundError:
         raise HTTPException(status_code=422, detail={"code": "unknown_timezone"})
-    hospital = _lock_hospital(db, hospital_id)
     profile = db.scalar(select(HospitalAdminProfile).where(
         HospitalAdminProfile.hospital_id == hospital_id,
     ).with_for_update())
@@ -181,10 +180,10 @@ def upsert_hospital_profile(payload: HospitalProfileUpdate, context: tuple = Dep
         profile.updated_by_user_id = user.id
     hospital.name = payload.display_name
     hospital.country_code = payload.country_code
-    db.flush()
-    _event(db, hospital_id, user.id, "profile_created" if created else "profile_updated", "hospital_profile", profile.id)
-    _audit(db, hospital_id, user.id, "hospital_admin.profile_saved", "hospital_profile", profile.id)
     try:
+        db.flush()
+        _event(db, hospital_id, user.id, "profile_created" if created else "profile_updated", "hospital_profile", profile.id)
+        _audit(db, hospital_id, user.id, "hospital_admin.profile_saved", "hospital_profile", profile.id)
         db.commit()
     except IntegrityError:
         db.rollback()
@@ -228,10 +227,14 @@ def upsert_hospital_settings(payload: HospitalOperationalSettingsUpdate, context
         for key, value in payload.model_dump().items():
             setattr(settings, key, value)
         settings.updated_by_user_id = user.id
-    db.flush()
-    _event(db, hospital_id, user.id, "settings_updated", "hospital_operational_settings", settings.id)
-    _audit(db, hospital_id, user.id, "hospital_admin.settings_saved", "hospital_operational_settings", settings.id)
-    db.commit()
+    try:
+        db.flush()
+        _event(db, hospital_id, user.id, "settings_updated", "hospital_operational_settings", settings.id)
+        _audit(db, hospital_id, user.id, "hospital_admin.settings_saved", "hospital_operational_settings", settings.id)
+        db.commit()
+    except IntegrityError:
+        db.rollback()
+        raise HTTPException(status_code=409, detail={"code": "hospital_settings_conflict"})
     _restore_context(db, user.id, hospital_id)
     db.refresh(settings)
     return settings
@@ -265,9 +268,13 @@ def replace_operating_hours(payload: OperatingHoursReplace, context: tuple = Dep
         hospital_id=hospital_id, updated_by_user_id=user.id, **item.model_dump(),
     ) for item in payload.hours]
     db.add_all(rows)
-    _event(db, hospital_id, user.id, "operating_hours_updated", "hospital_operating_hours", None, {"days_configured": 7})
-    _audit(db, hospital_id, user.id, "hospital_admin.operating_hours_saved", "hospital_operating_hours", None)
-    db.commit()
+    try:
+        _event(db, hospital_id, user.id, "operating_hours_updated", "hospital_operating_hours", None, {"days_configured": 7})
+        _audit(db, hospital_id, user.id, "hospital_admin.operating_hours_saved", "hospital_operating_hours", None)
+        db.commit()
+    except IntegrityError:
+        db.rollback()
+        raise HTTPException(status_code=409, detail={"code": "hospital_operating_hours_conflict"})
     _restore_context(db, user.id, hospital_id)
     return db.scalars(select(HospitalOperatingHour).where(
         HospitalOperatingHour.hospital_id == hospital_id,
@@ -325,10 +332,10 @@ def update_department(department_id: UUID, payload: DepartmentUpdate, context: t
     for key, value in changes.items():
         setattr(department, key, value)
     event_type = "department_deactivated" if changes.get("status") == "inactive" else "department_updated"
-    db.flush()
-    _event(db, hospital_id, user.id, event_type, "department", department.id, {"changed_fields": sorted(changes.keys())})
-    _audit(db, hospital_id, user.id, "hospital_admin.department_updated", "department", department.id, {"changed_fields": sorted(changes.keys())})
     try:
+        db.flush()
+        _event(db, hospital_id, user.id, event_type, "department", department.id, {"changed_fields": sorted(changes.keys())})
+        _audit(db, hospital_id, user.id, "hospital_admin.department_updated", "department", department.id, {"changed_fields": sorted(changes.keys())})
         db.commit()
     except IntegrityError:
         db.rollback()
