@@ -101,7 +101,7 @@ Every module milestone must include:
 | Hospital Administration Console | Phase 3.21 | Implemented; Phase 5 verification pending | PR #48 (merged) |
 | Patient Portal | Phase 3.22 | Implemented; Phase 5 verification pending | PR #51 (merged) |
 | Doctor & Medical Staff Portal | Phase 3.23 | Implemented; Phase 5 verification pending | PR #52 and hardening PR #54 (merged) |
-| Staff Management & Scheduling | Phase 3.24 | Implemented; Phase 5 verification pending | PR pending |
+| Staff Management & Scheduling | Phase 3.24 | Implemented; Phase 5 verification pending | PR #56 (merged) |
 
 Patient Registration & Management extends the Phase 1 patient foundation with governed duplicate review, identity/document metadata, contact and next-of-kin details, consent/lawful-basis recording, patient status and audit history. Automatic patient merging is prohibited.
 
