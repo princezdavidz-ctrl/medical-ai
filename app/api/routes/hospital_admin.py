@@ -169,6 +169,7 @@ def upsert_hospital_profile(payload: HospitalProfileUpdate, context: tuple = Dep
             setattr(profile, key, value)
         profile.updated_by_user_id = user.id
     hospital.name = payload.display_name
+    hospital.country_code = payload.country_code
     db.flush()
     _event(db, hospital_id, user.id, "profile_created" if created else "profile_updated", "hospital_profile", profile.id)
     _audit(db, hospital_id, user.id, "hospital_admin.profile_saved", "hospital_profile", profile.id)
@@ -296,6 +297,10 @@ def update_department(department_id: UUID, payload: DepartmentUpdate, context: t
     _require_admin(db, user.id, hospital_id)
     department = _department(db, department_id, hospital_id, lock=True)
     changes = payload.model_dump(exclude_unset=True)
+    if not changes:
+        raise HTTPException(status_code=422, detail={"code": "department_update_requires_changes"})
+    if any(changes.get(field) is None for field in ("name", "code", "status") if field in changes):
+        raise HTTPException(status_code=422, detail={"code": "department_name_code_status_cannot_be_null"})
     if "manager_user_id" in changes:
         _validate_department_manager(db, hospital_id, changes["manager_user_id"])
     if "parent_department_id" in changes:
