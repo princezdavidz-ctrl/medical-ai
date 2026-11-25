@@ -118,7 +118,7 @@ class StaffScheduleEvent(Base):
     __tablename__ = "staff_schedule_events"
     __table_args__ = (
         UniqueConstraint("hospital_id", "id", name="uq_staff_schedule_event_hospital_id"),
-        CheckConstraint("event_type IN ('shift_template_created', 'shift_template_updated', 'shift_assigned', 'shift_updated', 'shift_cancelled', 'swap_requested', 'swap_accepted', 'swap_approved', 'swap_rejected', 'attendance_checked_in', 'attendance_checked_out', 'attendance_approved', 'attendance_rejected')", name="ck_staff_schedule_event_type"),
+        CheckConstraint("event_type IN ('shift_template_created', 'shift_template_updated', 'shift_assigned', 'shift_updated', 'shift_cancelled', 'swap_requested', 'swap_accepted', 'swap_approved', 'swap_rejected', 'swap_cancelled', 'attendance_checked_in', 'attendance_checked_out', 'attendance_approved', 'attendance_rejected')", name="ck_staff_schedule_event_type"),
         Index("ix_staff_schedule_event_history", "hospital_id", "created_at"),
     )
     id: Mapped[uuid.UUID] = mapped_column(Uuid(as_uuid=True), primary_key=True, default=uuid.uuid4)
