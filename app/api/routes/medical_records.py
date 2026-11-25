@@ -130,7 +130,7 @@ def _event(db: Session, hospital_id: UUID, patient_id: UUID, user_id: UUID, even
     ))
 
 
-def _audit(db: Session, hospital_id: UUID, user_id: UUID, action: str, resource_type: str, resource_id: UUID, metadata=None) -> None:
+def _audit(db: Session, hospital_id: UUID, user_id: UUID, action: str, resource_type: str, resource_id: UUID | None, metadata=None) -> None:
     write_audit_event(
         db, hospital_id=hospital_id, actor_user_id=user_id, action=action,
         resource_type=resource_type, resource_id=str(resource_id), metadata=metadata or {},
@@ -382,7 +382,11 @@ def list_record_release_requests(patient_id: UUID | None = None, context: tuple 
         query = query.where(PatientRecordReleaseRequest.requester_user_id == user.id)
     if patient_id is not None:
         query = query.where(PatientRecordReleaseRequest.patient_id == patient_id)
-    return db.scalars(query.order_by(PatientRecordReleaseRequest.created_at.desc()).limit(300)).all()
+    rows = db.scalars(query.order_by(PatientRecordReleaseRequest.created_at.desc()).limit(300)).all()
+    _audit(db, hospital_id, user.id, "medical_records.release_queue_viewed", "patient_record_release_queue", None, {"result_count": len(rows), "patient_filter_applied": patient_id is not None})
+    db.commit()
+    _restore_context(db, user.id, hospital_id)
+    return rows
 
 
 @router.post("/release-requests/{request_id}/cancel", response_model=RecordReleaseRead)
@@ -505,7 +509,11 @@ def list_record_amendment_requests(patient_id: UUID | None = None, context: tupl
         query = query.where(PatientRecordAmendmentRequest.requested_by_user_id == user.id)
     if patient_id is not None:
         query = query.where(PatientRecordAmendmentRequest.patient_id == patient_id)
-    return db.scalars(query.order_by(PatientRecordAmendmentRequest.created_at.desc()).limit(300)).all()
+    rows = db.scalars(query.order_by(PatientRecordAmendmentRequest.created_at.desc()).limit(300)).all()
+    _audit(db, hospital_id, user.id, "medical_records.amendment_queue_viewed", "patient_record_amendment_queue", None, {"result_count": len(rows), "patient_filter_applied": patient_id is not None})
+    db.commit()
+    _restore_context(db, user.id, hospital_id)
+    return rows
 
 
 @router.post("/amendment-requests/{request_id}/cancel", response_model=RecordAmendmentRead)
