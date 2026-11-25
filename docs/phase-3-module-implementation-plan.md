@@ -103,7 +103,7 @@ Every module milestone must include:
 | Doctor & Medical Staff Portal | Phase 3.23 | Implemented; Phase 5 verification pending | PR #52 and hardening PR #54 (merged) |
 | Staff Management & Scheduling | Phase 3.24 | Implemented; Phase 5 verification pending | PR #56 (merged) |
 | Medical Records & Health Information | Phase 3.25 | Implemented; Phase 5 verification pending | PR #57 (merged) |
-| Telemedicine & Remote Care | Phase 3.26 | Implemented; Phase 5 verification pending | PR pending |
+| Telemedicine & Remote Care | Phase 3.26 | Implemented; Phase 5 verification pending | PR #58 (merged) |
 
 Patient Registration & Management extends the Phase 1 patient foundation with governed duplicate review, identity/document metadata, contact and next-of-kin details, consent/lawful-basis recording, patient status and audit history. Automatic patient merging is prohibited.
 
