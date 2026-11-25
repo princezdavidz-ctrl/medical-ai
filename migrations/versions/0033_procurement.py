@@ -64,6 +64,7 @@ def upgrade() -> None:
         sa.UniqueConstraint("hospital_id", "id", name="uq_purchase_requisition_hospital_id"),
         sa.UniqueConstraint("hospital_id", "requisition_number", name="uq_purchase_requisition_number"),
         sa.CheckConstraint("status IN ('draft', 'submitted', 'approved', 'rejected', 'converted', 'cancelled')", name="ck_purchase_requisition_status"),
+        sa.CheckConstraint("required_by IS NULL OR required_by >= created_at", name="ck_purchase_requisition_required_date"),
         sa.CheckConstraint("approved_by_user_id IS NULL OR approved_by_user_id != requested_by_user_id", name="ck_purchase_requisition_independent_approval"),
         sa.CheckConstraint("(status = 'draft' AND submitted_at IS NULL AND approved_by_user_id IS NULL AND approved_at IS NULL) OR (status = 'submitted' AND submitted_at IS NOT NULL AND approved_by_user_id IS NULL AND approved_at IS NULL) OR (status IN ('approved', 'rejected', 'converted') AND submitted_at IS NOT NULL AND approved_by_user_id IS NOT NULL AND approved_at IS NOT NULL) OR status = 'cancelled'", name="ck_purchase_requisition_lifecycle"),
     )
