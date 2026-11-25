@@ -57,12 +57,20 @@ class Department(TimestampMixin, Base):
     __table_args__ = (
         UniqueConstraint("hospital_id", "code", name="uq_department_hospital_code"),
         UniqueConstraint("hospital_id", "id", name="uq_department_hospital_id_id"),
+        ForeignKeyConstraint(["hospital_id", "parent_department_id"], ["departments.hospital_id", "departments.id"], name="fk_department_parent_tenant"),
+        CheckConstraint("parent_department_id IS NULL OR parent_department_id != id", name="ck_department_not_self_parent"),
+        Index("ix_department_parent", "hospital_id", "parent_department_id"),
     )
 
     id: Mapped[uuid.UUID] = mapped_column(Uuid(as_uuid=True), primary_key=True, default=uuid.uuid4)
     hospital_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("hospitals.id"), nullable=False, index=True)
     name: Mapped[str] = mapped_column(String(160), nullable=False)
     code: Mapped[str] = mapped_column(String(40), nullable=False)
+    description: Mapped[str | None] = mapped_column(Text)
+    contact_email: Mapped[str | None] = mapped_column(String(320))
+    contact_phone: Mapped[str | None] = mapped_column(String(40))
+    manager_user_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("users.id"))
+    parent_department_id: Mapped[uuid.UUID | None] = mapped_column(Uuid(as_uuid=True))
     status: Mapped[str] = mapped_column(String(24), default="active", nullable=False)
 
 
