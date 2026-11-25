@@ -15,7 +15,7 @@ class MortuaryCase(Base):
         UniqueConstraint("hospital_id", "body_reference", name="uq_mortuary_body_reference"),
         CheckConstraint("status IN ('received', 'stored', 'release_pending', 'released', 'transferred', 'retained_by_authority')", name="ck_mortuary_case_status"),
         CheckConstraint("length(trim(storage_location)) >= 2", name="ck_mortuary_storage_location"),
-        CheckConstraint("(status = 'released' AND released_to_name IS NOT NULL AND released_by_user_id IS NOT NULL AND released_at IS NOT NULL) OR (status != 'released' AND released_to_name IS NULL AND released_by_user_id IS NULL AND released_at IS NULL)", name="ck_mortuary_release_state"),
+        CheckConstraint("(status = 'released' AND released_to_name IS NOT NULL AND released_to_identity_reference IS NOT NULL AND released_by_user_id IS NOT NULL AND released_at IS NOT NULL) OR (status != 'released' AND released_to_name IS NULL AND released_to_identity_reference IS NULL AND released_by_user_id IS NULL AND released_at IS NULL)", name="ck_mortuary_release_state"),
         CheckConstraint("legal_hold = false OR status NOT IN ('release_pending', 'released', 'transferred')", name="ck_mortuary_legal_hold"),
         Index("ix_mortuary_case_queue", "hospital_id", "status", "received_at"),
     )
@@ -89,6 +89,7 @@ class MortuaryPropertyItem(Base):
         ForeignKeyConstraint(["hospital_id", "mortuary_case_id"], ["mortuary_cases.hospital_id", "mortuary_cases.id"], name="fk_mortuary_property_case"),
         UniqueConstraint("hospital_id", "id", name="uq_mortuary_property_hospital_id"),
         CheckConstraint("status IN ('received', 'sealed', 'released', 'retained')", name="ck_mortuary_property_status"),
+        CheckConstraint("status != 'sealed' OR sealed = true", name="ck_mortuary_property_sealed_state"),
         CheckConstraint("(status = 'released' AND released_to_name IS NOT NULL AND released_by_user_id IS NOT NULL AND released_at IS NOT NULL) OR (status != 'released' AND released_to_name IS NULL AND released_by_user_id IS NULL AND released_at IS NULL)", name="ck_mortuary_property_release_state"),
         Index("ix_mortuary_property_case", "hospital_id", "mortuary_case_id", "status"),
     )
