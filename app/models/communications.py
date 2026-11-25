@@ -1,5 +1,5 @@
 import uuid
-from datetime import datetime
+from datetime import datetime, time as time_type
 
 from sqlalchemy import (
     JSON, Boolean, CheckConstraint, DateTime, ForeignKey, ForeignKeyConstraint,
@@ -25,7 +25,7 @@ class NotificationPreference(Base):
     email_enabled: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
     sms_enabled: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
     muted_categories: Mapped[list] = mapped_column(JSON, nullable=False, default=list)
-    quiet_hours_start: Mapped[datetime | None] = mapped_column(Time)
+    quiet_hours_start: Mapped[time_type | None] = mapped_column(Time)
     quiet_hours_end: Mapped[datetime | None] = mapped_column(Time)
     timezone_name: Mapped[str] = mapped_column(String(64), nullable=False, default="UTC")
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False)
@@ -163,6 +163,7 @@ class CommunicationMessage(Base):
     __tablename__ = "communication_messages"
     __table_args__ = (
         ForeignKeyConstraint(["hospital_id", "thread_id", "patient_id", "portal_link_id", "patient_user_id", "assigned_staff_user_id"], ["communication_threads.hospital_id", "communication_threads.id", "communication_threads.patient_id", "communication_threads.portal_link_id", "communication_threads.patient_user_id", "communication_threads.assigned_staff_user_id"], name="fk_communication_message_thread"),
+        UniqueConstraint("hospital_id", "id", "thread_id", "patient_id", name="uq_communication_message_thread_patient"),
         CheckConstraint("sender_type IN ('patient', 'staff')", name="ck_communication_message_sender_type"),
         CheckConstraint("(sender_type = 'patient' AND sender_user_id = patient_user_id) OR (sender_type = 'staff' AND sender_user_id = assigned_staff_user_id)", name="ck_communication_message_sender_identity"),
         CheckConstraint("length(trim(body)) >= 1 AND length(body) <= 5000", name="ck_communication_message_body"),
@@ -178,6 +179,24 @@ class CommunicationMessage(Base):
     sender_user_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id"), nullable=False)
     sender_type: Mapped[str] = mapped_column(String(12), nullable=False)
     body: Mapped[str] = mapped_column(Text, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+
+
+class CommunicationMessageReceipt(Base):
+    __tablename__ = "communication_message_receipts"
+    __table_args__ = (
+        ForeignKeyConstraint(["hospital_id", "message_id", "thread_id", "patient_id"], ["communication_messages.hospital_id", "communication_messages.id", "communication_messages.thread_id", "communication_messages.patient_id"], name="fk_communication_receipt_message"),
+        UniqueConstraint("hospital_id", "message_id", "reader_user_id", name="uq_communication_message_reader"),
+        CheckConstraint("read_at IS NOT NULL", name="ck_communication_receipt_read_at"),
+        Index("ix_communication_receipt_thread", "hospital_id", "thread_id", "reader_user_id"),
+    )
+    id: Mapped[uuid.UUID] = mapped_column(Uuid(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    hospital_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("hospitals.id"), nullable=False)
+    message_id: Mapped[uuid.UUID] = mapped_column(Uuid(as_uuid=True), nullable=False)
+    thread_id: Mapped[uuid.UUID] = mapped_column(Uuid(as_uuid=True), nullable=False)
+    patient_id: Mapped[uuid.UUID] = mapped_column(Uuid(as_uuid=True), nullable=False)
+    reader_user_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id"), nullable=False)
+    read_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
 
 
