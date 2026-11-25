@@ -7,12 +7,12 @@ A hospital-scoped patient self-service API for verified patient and proxy accoun
 1. A portal user must already have an active user account. This module does not create user accounts or implement email OTP delivery; account registration and OTP integration are Phase 4 work.
 2. Hospital medical-records staff or a hospital administrator creates a pending link between an existing user and a patient record. The module does not automatically match users to patients using MRN, date of birth or phone number.
 3. A different authorized staff member must independently verify the pending link using in-person, identity-document, verified-email or verified-phone evidence stored by protected vault reference.
-4. Parent/guardian, caregiver and legal-representative links require an authority reference, expiry timestamp and guardian-document or court-order verification.
+4. Parent/guardian and caregiver links require an authority reference, expiry timestamp and guardian-document or court-order verification. Legal-representative links require court-order verification.
 5. Patient portal token issuance requires valid user credentials, an active hospital and an active verified link. MFA-enabled users are denied until the dedicated MFA challenge flow is available.
 6. Every request rechecks active link status and expiry. Revoked and expired links cannot access patient data.
 
 ## Access scopes
-Allowed scopes are `profile`, `encounters`, `lab_results`, `medications`, `invoices` and `consents`. Staff assign the minimum appropriate scope. Proxy links are time-limited. All data reads are tenant-filtered by hospital and patient and recorded with the link, user, action, resource count and timestamp.
+Allowed scopes are `profile`, `encounters`, `lab_results`, `medications`, `invoices` and `consents`. New links default to the least-privilege `profile` and `encounters` scopes; staff must explicitly grant any additional categories. Proxy links are time-limited. All data reads are tenant-filtered by hospital and patient and recorded with the link, user, action, resource count and timestamp.
 
 ## API
 - `POST /api/v1/auth/patient-token`
