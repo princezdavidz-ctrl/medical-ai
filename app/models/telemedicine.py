@@ -20,6 +20,7 @@ class TelemedicineSession(Base):
         ForeignKeyConstraint(["hospital_id", "consent_id", "patient_id"], ["patient_consents.hospital_id", "patient_consents.id", "patient_consents.patient_id"], name="fk_telemedicine_session_consent"),
         ForeignKeyConstraint(["hospital_id", "encounter_id", "patient_id"], ["encounters.hospital_id", "encounters.id", "encounters.patient_id"], name="fk_telemedicine_session_encounter"),
         UniqueConstraint("hospital_id", "id", "patient_id", name="uq_telemedicine_session_hospital_id_patient"),
+        UniqueConstraint("hospital_id", "id", "patient_id", "provider_user_id", name="uq_telemedicine_session_provider_patient"),
         CheckConstraint("status IN ('scheduled', 'patient_ready', 'in_progress', 'completed', 'cancelled', 'no_show')", name="ck_telemedicine_session_status"),
         CheckConstraint("scheduled_end > scheduled_start AND scheduled_end <= scheduled_start + interval '2 hours'", name="ck_telemedicine_session_duration"),
         CheckConstraint("length(trim(visit_reason)) >= 3", name="ck_telemedicine_session_reason"),
@@ -68,7 +69,7 @@ class TelemedicineSession(Base):
 class TelemedicineClinicalNote(Base):
     __tablename__ = "telemedicine_clinical_notes"
     __table_args__ = (
-        ForeignKeyConstraint(["hospital_id", "session_id", "patient_id"], ["telemedicine_sessions.hospital_id", "telemedicine_sessions.id", "telemedicine_sessions.patient_id"], name="fk_telemedicine_note_session"),
+        ForeignKeyConstraint(["hospital_id", "session_id", "patient_id", "author_user_id"], ["telemedicine_sessions.hospital_id", "telemedicine_sessions.id", "telemedicine_sessions.patient_id", "telemedicine_sessions.provider_user_id"], name="fk_telemedicine_note_session_provider"),
         ForeignKeyConstraint(["hospital_id", "encounter_id", "patient_id"], ["encounters.hospital_id", "encounters.id", "encounters.patient_id"], name="fk_telemedicine_note_encounter"),
         UniqueConstraint("hospital_id", "id", "patient_id", name="uq_telemedicine_note_hospital_id_patient"),
         CheckConstraint("note_type IN ('consultation', 'assessment', 'plan', 'follow_up', 'safety_plan', 'referral')", name="ck_telemedicine_note_type"),
