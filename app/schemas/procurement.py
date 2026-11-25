@@ -86,7 +86,7 @@ class RequisitionRead(BaseModel):
     approved_at: datetime | None
     decision_note: str | None
     created_at: datetime
-    lines: list[RequisitionLineRead] = []
+    lines: list[RequisitionLineRead] = Field(default_factory=list)
 
 
 class PurchaseOrderCreate(BaseModel):
@@ -95,6 +95,13 @@ class PurchaseOrderCreate(BaseModel):
     order_number: str = Field(min_length=3, max_length=80)
     currency: str = Field(default="KES", pattern="^[A-Z]{3}$")
     unit_prices: dict[UUID, Decimal] = Field(min_length=1, max_length=100)
+
+    @field_validator("unit_prices")
+    @classmethod
+    def validate_unit_prices(cls, value):
+        if any(price < 0 or price > Decimal("99999999999999.99") for price in value.values()):
+            raise ValueError("purchase_order_unit_price_out_of_range")
+        return value
 
 
 class PurchaseOrderRead(BaseModel):
