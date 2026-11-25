@@ -10,6 +10,8 @@ class EmployeeProfile(Base):
     __table_args__ = (
         UniqueConstraint("hospital_id", "id", name="uq_employee_profile_hospital_id"),
         UniqueConstraint("hospital_id", "user_id", name="uq_employee_profile_user"),
+        UniqueConstraint("hospital_id", "employee_number", name="uq_employee_profile_number"),
+        ForeignKeyConstraint(["hospital_id", "department_id"], ["departments.hospital_id", "departments.id"], name="fk_employee_profile_department"),
         CheckConstraint("employment_status IN ('active', 'on_leave', 'suspended', 'terminated')", name="ck_employee_profile_status"),
         CheckConstraint("employment_type IN ('permanent', 'contract', 'locum', 'intern', 'volunteer', 'other')", name="ck_employee_profile_type"),
         Index("ix_employee_profile_department_status", "hospital_id", "department_id", "employment_status"),
@@ -62,6 +64,7 @@ class StaffLeaveRequest(Base):
         UniqueConstraint("hospital_id", "id", name="uq_staff_leave_hospital_id"),
         CheckConstraint("status IN ('pending', 'approved', 'rejected', 'cancelled')", name="ck_staff_leave_status"),
         CheckConstraint("end_at > start_at", name="ck_staff_leave_dates"),
+        CheckConstraint("(status = 'pending' AND decided_by_user_id IS NULL AND decided_at IS NULL AND decision_note IS NULL) OR (status IN ('approved', 'rejected') AND decided_by_user_id IS NOT NULL AND decided_at IS NOT NULL) OR status = 'cancelled'", name="ck_staff_leave_decision"),
         CheckConstraint("(status = 'pending' AND decided_by_user_id IS NULL AND decided_at IS NULL AND decision_note IS NULL) OR (status IN ('approved', 'rejected') AND decided_by_user_id IS NOT NULL AND decided_at IS NOT NULL) OR (status = 'cancelled')", name="ck_staff_leave_decision"),
         Index("ix_staff_leave_queue", "hospital_id", "status", "start_at"),
     )
