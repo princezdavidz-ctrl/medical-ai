@@ -23,7 +23,7 @@ from app.schemas.staff_scheduling import (
 )
 
 router = APIRouter(prefix="/staff-scheduling", tags=["staff management and scheduling"])
-_MANAGER_ROLES = {"hospital_admin", "hospital_owner", "hr_manager", "roster_manager", "department_head", "nurse_manager"}
+_MANAGER_ROLES = {"hospital_admin", "hospital_director", "hospital_owner", "hr_manager", "hr_director", "roster_manager", "department_head", "nurse_manager"}
 
 
 def _role(db: Session, user_id: UUID, hospital_id: UUID) -> str:
