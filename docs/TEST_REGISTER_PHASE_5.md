@@ -355,3 +355,13 @@ No item is considered passed until evidence, environment, build SHA, reviewer an
 - [ ] Pathology case lifecycle: opened/specimens_received/in_progress/report_draft/finalized/closed/cancelled transitions, no specimen mutation during reporting/finalized/closed states, audit and append-only pathology event history.
 - [ ] Mortuary/pathology RLS: all eight tables hospital-isolated, composite patient/encounter/case foreign keys, cross-hospital UUID substitution denied and no cross-hospital report/authorization visibility.
 - [ ] Mortuary/pathology privacy/safety: no automated cause-of-death determination, death certification, pathology diagnosis, AI image interpretation, external coroner/registrar exchange or unsupported legal sufficiency claim.
+
+- [ ] Phase 3.21 admin authorization: active hospital_admin/hospital_director membership required; other roles, inactive memberships and cross-hospital context denied.
+- [ ] Admin overview privacy: counts scoped to current hospital, accurate status filters, no patient identifiers/MRNs/clinical narratives returned and empty-hospital behavior.
+- [ ] Hospital settings: default settings view, create/update, email/URL validation, ISO currency/country codes, timezone/locale bounds, country-code synchronization and cross-tenant RLS.
+- [ ] Department governance: per-hospital code uniqueness, name normalization, list tenant isolation, deactivation blocked while active staff are assigned, inactive department rejected for new membership assignment.
+- [ ] Membership governance: pending activation requires same-hospital role and active same-hospital department, reject pending only, suspend active only, self-change denied and last active hospital administrator cannot be suspended.
+- [ ] Membership tenant integrity: composite hospital-role and hospital-department foreign keys reject cross-hospital role/department substitution, including direct database writes.
+- [ ] Membership privacy and audit: only admin can see staff email/name in membership worklist; every decision audited with actor, membership and target user; no credential or password material exposed.
+- [ ] Admin concurrency: simultaneous last-admin suspension attempts, membership decision races, department deactivation versus staff assignment, and concurrent settings creation/update.
+- [ ] Admin boundary: no platform-wide super-admin, clinical override, patient-level record access, arbitrary role privilege creation, payroll/recruitment or external identity provisioning.
