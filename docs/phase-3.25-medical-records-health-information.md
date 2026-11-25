@@ -13,7 +13,7 @@ This module does not replace source clinical records. OPD, Nursing, Inpatient, E
 3. **Immutable version history** — a replacement document must point to a verified prior version for the same patient and source record, and increment its version. Verification supersedes the old version atomically. Documents cannot be deleted or content-edited after registration.
 4. **Purpose-specific release of information** — requests reference one exact, active patient authorization for record_sharing, the requested categories and the actual permitted use. A separate reviewer approves/rejects; a different records officer completes release with an opaque vault package reference. Consent is rechecked at approval and release.
 5. **Record amendment requests** — scoped clinicians or records officers can request a correction. Independent review is required; approved corrections are fulfilled as a separate vault addendum, never by overwriting the original clinical record.
-6. **Audit and event history** — patient-sensitive reads and workflow transitions are audited with minimal metadata; the patient record event ledger is hospital-scoped and append-only.
+6. **Audit and event history** — patient document reads, release/amendment queue reads and workflow transitions are audited with minimal metadata; the patient record event ledger is hospital-scoped and append-only.
 
 ## Authorization
 
