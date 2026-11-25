@@ -11,6 +11,7 @@ from app.db.session import get_db
 from app.models import Department, Encounter, HospitalMembership, Patient, PatientConsent, Role, User
 from app.models.hr import EmployeeProfile
 from app.models.staff_portal import ClinicalStaffProfile, PatientCareTeamAssignment
+from app.models.staff_scheduling import StaffShiftAssignment
 from app.models.telemedicine import TelemedicineClinicalNote, TelemedicineEvent, TelemedicineSession
 from app.schemas.telemedicine import (
     TelemedicineCancel, TelemedicineNoteCreate, TelemedicineNoteRead,
@@ -108,6 +109,23 @@ def _active_provider(db: Session, hospital_id: UUID, provider_user_id: UUID, loc
     if profile.clinical_role not in _PROVIDER_ROLES:
         raise HTTPException(status_code=403, detail={"code": "active_verified_telemedicine_provider_required"})
     return employee, profile
+
+def _require_provider_shift_coverage(db: Session, hospital_id: UUID, employee_profile_id: UUID, department_id: UUID, starts_at: datetime, ends_at: datetime, lock: bool = False):
+    query = select(StaffShiftAssignment).where(
+        StaffShiftAssignment.hospital_id == hospital_id,
+        StaffShiftAssignment.employee_profile_id == employee_profile_id,
+        StaffShiftAssignment.status.in_(["scheduled", "confirmed"]),
+        StaffShiftAssignment.starts_at <= starts_at,
+        StaffShiftAssignment.ends_at >= ends_at,
+        or_(StaffShiftAssignment.department_id == department_id, StaffShiftAssignment.department_id.is_(None)),
+    ).order_by(StaffShiftAssignment.starts_at)
+    if lock:
+        query = query.with_for_update()
+    shift = db.scalar(query)
+    if shift is None:
+        raise HTTPException(status_code=409, detail={"code": "provider_rostered_shift_covering_session_required"})
+    return shift
+
 
 def _active_telemedicine_consent(db: Session, hospital_id: UUID, patient_id: UUID, consent_id: UUID):
     now = datetime.now(timezone.utc)
@@ -219,6 +237,7 @@ def create_telemedicine_session(payload: TelemedicineSessionCreate, context: tup
         raise HTTPException(status_code=404, detail={"code": "active_department_not_found"})
     if employee.department_id not in (None, department.id) or profile.employee_profile_id != employee.id:
         raise HTTPException(status_code=403, detail={"code": "provider_department_scope_mismatch"})
+    _require_provider_shift_coverage(db, hospital_id, employee.id, department.id, payload.scheduled_start, payload.scheduled_end, lock=True)
     _active_telemedicine_consent(db, hospital_id, patient.id, payload.consent_id)
     conflict = db.scalar(select(TelemedicineSession.id).where(
         TelemedicineSession.hospital_id == hospital_id,
@@ -340,6 +359,7 @@ def start_telemedicine_session(session_id: UUID, context: tuple = Depends(get_cu
     if session.provider_user_id != user.id:
         raise HTTPException(status_code=403, detail={"code": "assigned_provider_required"})
     employee, profile = _active_provider(db, hospital_id, user.id, lock=True)
+    _require_provider_shift_coverage(db, hospital_id, employee.id, session.department_id, session.scheduled_start, session.scheduled_end, lock=True)
     if session.status != "patient_ready":
         raise HTTPException(status_code=409, detail={"code": "patient_ready_session_required"})
     now = datetime.now(timezone.utc)
@@ -373,7 +393,9 @@ def create_telemedicine_note(session_id: UUID, payload: TelemedicineNoteCreate, 
     if session.provider_user_id != user.id or session.status != "in_progress" or session.encounter_id is None:
         raise HTTPException(status_code=403, detail={"code": "assigned_active_telemedicine_provider_required"})
     _active_provider(db, hospital_id, user.id)
+    _require_provider_shift_coverage(db, hospital_id, session.provider_employee_profile_id, session.department_id, session.scheduled_start, session.scheduled_end)
     _require_care_team(db, hospital_id, session.patient_id, user.id)
+    _active_telemedicine_consent(db, hospital_id, session.patient_id, session.consent_id)
     note = TelemedicineClinicalNote(
         hospital_id=hospital_id, session_id=session.id,
         encounter_id=session.encounter_id, patient_id=session.patient_id,
@@ -417,7 +439,9 @@ def complete_telemedicine_session(session_id: UUID, context: tuple = Depends(get
     if session.provider_user_id != user.id or session.status != "in_progress" or session.encounter_id is None:
         raise HTTPException(status_code=403, detail={"code": "assigned_active_telemedicine_provider_required"})
     _active_provider(db, hospital_id, user.id)
+    _require_provider_shift_coverage(db, hospital_id, session.provider_employee_profile_id, session.department_id, session.scheduled_start, session.scheduled_end)
     _require_care_team(db, hospital_id, session.patient_id, user.id)
+    _active_telemedicine_consent(db, hospital_id, session.patient_id, session.consent_id)
     note_count = db.scalar(select(TelemedicineClinicalNote.id).where(
         TelemedicineClinicalNote.hospital_id == hospital_id,
         TelemedicineClinicalNote.session_id == session.id,
