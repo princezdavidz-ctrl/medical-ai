@@ -381,7 +381,7 @@ def start_telemedicine_session(session_id: UUID, context: tuple = Depends(get_cu
     session = _session(db, hospital_id, session_id, lock=True)
     if session.provider_user_id != user.id:
         raise HTTPException(status_code=403, detail={"code": "assigned_provider_required"})
-    employee, profile = _active_provider(db, hospital_id, user.id, lock=True)
+    employee, _ = _active_provider(db, hospital_id, user.id, lock=True)
     _require_provider_shift_coverage(db, hospital_id, employee.id, session.department_id, session.scheduled_start, session.scheduled_end)
     if session.status != "patient_ready":
         raise HTTPException(status_code=409, detail={"code": "patient_ready_session_required"})
