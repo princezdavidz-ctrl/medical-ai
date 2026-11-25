@@ -309,12 +309,14 @@ def release_mortuary_case(case_id: UUID, payload: MortuaryRelease, context: tupl
     ).limit(1))
     if outstanding_property:
         raise HTTPException(status_code=409, detail={"code": "personal_effects_custody_must_be_resolved"})
+    previous_location = case.storage_location
     case.status = "released"
+    case.storage_location = "Released"
     case.released_to_name = payload.released_to_name
     case.released_to_identity_reference = payload.identity_reference
     case.released_by_user_id = user.id
     case.released_at = datetime.now(timezone.utc)
-    _movement(db, hospital_id, user.id, case, "released", "Released to authorized recipient")
+    _movement(db, hospital_id, user.id, case, "released", "Released to authorized recipient", from_location=previous_location)
     _audit(db, hospital_id, user.id, "mortuary.case.released", "mortuary_case", case.id)
     db.commit()
     _restore_context(db, user.id, hospital_id)
