@@ -71,6 +71,10 @@ def issue_patient_portal_token(payload: PatientTokenRequest, db: Session = Depen
         text("SELECT set_config('app.current_hospital_id', :hospital_id, true)"),
         {"hospital_id": str(payload.hospital_id)},
     )
+    db.execute(
+        text("SELECT set_config('app.current_user_id', :user_id, true)"),
+        {"user_id": str(user.id)},
+    )
     hospital = db.get(Hospital, payload.hospital_id)
     if hospital is None or hospital.status != "active":
         raise HTTPException(status_code=403, detail="Hospital is not active")
