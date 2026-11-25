@@ -12,7 +12,6 @@ class MortuaryCaseCreate(BaseModel):
     death_occurred_at: datetime
     death_certification_reference: str | None = Field(default=None, max_length=160)
     storage_location: str = Field(min_length=2, max_length=180)
-    legal_hold: bool = False
 
 
 class MortuaryCaseRead(BaseModel):
@@ -166,6 +165,8 @@ class PathologyReportRead(BaseModel):
 class LegalHoldUpdate(BaseModel):
     model_config = ConfigDict(extra="forbid")
     legal_hold: bool
+    reason: str | None = Field(default=None, min_length=5, max_length=1000)
+    authority_reference: str | None = Field(default=None, max_length=160)
 
 
 class PathologyAssignment(BaseModel):
