@@ -41,7 +41,11 @@ class TransportRequest(Base):
         CheckConstraint("status IN ('requested', 'accepted', 'bed_accepted', 'vehicle_assigned', 'en_route', 'arrived', 'rejected', 'cancelled')", name="ck_transport_request_status"),
         CheckConstraint("length(trim(origin_description)) >= 3 AND length(trim(destination_description)) >= 3", name="ck_transport_request_locations"),
         CheckConstraint("transport_type != 'interfacility' OR (receiving_hospital_id IS NOT NULL AND receiving_hospital_id != hospital_id)", name="ck_transport_interfacility_destination"),
-        CheckConstraint("status NOT IN ('bed_accepted', 'vehicle_assigned', 'en_route', 'arrived') OR (receiving_accepted_by_user_id IS NOT NULL AND receiving_bed_reference IS NOT NULL)", name="ck_transport_bed_acceptance_state"),
+        CheckConstraint("status NOT IN ('bed_accepted', 'vehicle_assigned', 'en_route', 'arrived') OR (receiving_accepted_by_user_id IS NOT NULL AND receiving_bed_reference IS NOT NULL AND receiving_accepted_at IS NOT NULL)", name="ck_transport_bed_acceptance_state"),
+        CheckConstraint("transport_type = 'interfacility' OR receiving_hospital_id IS NULL", name="ck_transport_non_interfacility_destination"),
+        CheckConstraint("status NOT IN ('en_route', 'arrived') OR (dispatched_by_user_id IS NOT NULL AND dispatched_at IS NOT NULL)", name="ck_transport_dispatch_state"),
+        CheckConstraint("status != 'arrived' OR (arrived_at IS NOT NULL AND arrival_confirmed_by_user_id IS NOT NULL)", name="ck_transport_arrival_confirmation"),
+        CheckConstraint("status != 'rejected' OR (rejected_by_user_id IS NOT NULL AND rejection_reason IS NOT NULL)", name="ck_transport_rejection_state"),
         CheckConstraint("status NOT IN ('vehicle_assigned', 'en_route', 'arrived') OR (assigned_vehicle_id IS NOT NULL AND assigned_driver_user_id IS NOT NULL)", name="ck_transport_vehicle_assignment_state"),
         CheckConstraint("status != 'arrived' OR arrived_at IS NOT NULL", name="ck_transport_arrival_state"),
         Index("ix_transport_request_queue", "hospital_id", "status", "priority", "created_at"),
@@ -81,7 +85,7 @@ class TransportEvent(Base):
     __table_args__ = (
         ForeignKeyConstraint(["hospital_id", "transport_request_id"], ["transport_requests.hospital_id", "transport_requests.id"], name="fk_transport_event_request"),
         UniqueConstraint("hospital_id", "id", name="uq_transport_event_hospital_id"),
-        CheckConstraint("event_type IN ('requested', 'accepted', 'bed_accepted', 'vehicle_assigned', 'departed', 'location_update', 'arrived', 'rejected', 'cancelled')", name="ck_transport_event_type"),
+        CheckConstraint("event_type IN ('requested', 'accepted', 'bed_accepted', 'vehicle_assigned', 'departed', 'location_update', 'arrived', 'rejected', 'cancelled', 'vehicle_released')", name="ck_transport_event_type"),
         CheckConstraint("(latitude IS NULL AND longitude IS NULL) OR (latitude BETWEEN -90 AND 90 AND longitude BETWEEN -180 AND 180)", name="ck_transport_event_coordinates"),
         Index("ix_transport_event_request_time", "hospital_id", "transport_request_id", "created_at"),
     )
