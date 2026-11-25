@@ -28,6 +28,10 @@ class MortuaryCaseRead(BaseModel):
     storage_location: str
     status: str
     legal_hold: bool
+    legal_hold_reason: str | None
+    legal_hold_reference: str | None
+    legal_hold_set_by_user_id: UUID | None
+    legal_hold_set_at: datetime | None
     released_to_name: str | None
     released_to_identity_reference: str | None
     released_by_user_id: UUID | None
