@@ -12,7 +12,7 @@ from app.db.session import get_db
 from app.models import Encounter, Hospital, HospitalMembership, Patient, PatientConsent, Role
 from app.models.transport import AmbulanceVehicle, TransportEvent, TransportReceivingOffer, TransportRequest
 from app.schemas.transport import (
-    VehicleCreate, VehicleRead, TransportRequestCreate, TransportRequestRead,
+    VehicleCreate, VehicleRead, VehicleStatusUpdate, TransportRequestCreate, TransportRequestRead,
     ReceivingBedAcceptance, VehicleAssignment, TrackingUpdate, RejectionInput,
 )
 
@@ -125,6 +125,33 @@ def list_vehicles(context: tuple = Depends(get_current_context), db: Session = D
     return db.scalars(select(AmbulanceVehicle).where(
         AmbulanceVehicle.hospital_id == hospital_id,
     ).order_by(AmbulanceVehicle.vehicle_code)).all()
+
+
+@router.patch("/vehicles/{vehicle_id}/status", response_model=VehicleRead)
+def update_vehicle_status(vehicle_id: UUID, payload: VehicleStatusUpdate, context: tuple = Depends(get_current_context), db: Session = Depends(get_db)):
+    user, hospital_id = context
+    _require(db, user.id, hospital_id, _FLEET_MANAGERS)
+    vehicle = db.scalar(select(AmbulanceVehicle).where(
+        AmbulanceVehicle.id == vehicle_id,
+        AmbulanceVehicle.hospital_id == hospital_id,
+    ).with_for_update())
+    if vehicle is None:
+        raise HTTPException(status_code=404, detail={"code": "ambulance_vehicle_not_found"})
+    if vehicle.status == "assigned":
+        raise HTTPException(status_code=409, detail={"code": "assigned_vehicle_cannot_change_status"})
+    active_request = db.scalar(select(TransportRequest.id).where(
+        TransportRequest.hospital_id == hospital_id,
+        TransportRequest.assigned_vehicle_id == vehicle.id,
+        TransportRequest.status.in_(["vehicle_assigned", "en_route"]),
+    ).limit(1))
+    if active_request is not None:
+        raise HTTPException(status_code=409, detail={"code": "vehicle_has_active_transfer"})
+    vehicle.status = payload.status
+    _audit(db, hospital_id, user.id, "transport.vehicle.status_changed", "ambulance_vehicle", vehicle.id, {"status": payload.status})
+    db.commit()
+    _restore_context(db, user.id, hospital_id)
+    db.refresh(vehicle)
+    return vehicle
 
 
 @router.post("/requests", response_model=TransportRequestRead, status_code=status.HTTP_201_CREATED)
