@@ -12,6 +12,7 @@ class FacilityLocation(Base):
         UniqueConstraint("hospital_id", "location_code", name="uq_facility_location_code"),
         ForeignKeyConstraint(["hospital_id", "parent_location_id"], ["facility_locations.hospital_id", "facility_locations.id"], name="fk_facility_location_parent"),
         CheckConstraint("status IN ('active', 'inactive', 'closed')", name="ck_facility_location_status"),
+        CheckConstraint("location_type IN ('campus', 'building', 'floor', 'wing', 'department', 'room', 'utility_area', 'external_area')", name="ck_facility_location_type"),
         CheckConstraint("parent_location_id IS NULL OR parent_location_id != id", name="ck_facility_location_not_self_parent"),
         Index("ix_facility_location_parent", "hospital_id", "parent_location_id"),
     )
