@@ -96,7 +96,7 @@ Every module milestone must include:
 | Procurement & Supply Chain | Phase 3.16 | Implemented; Phase 5 verification pending | PR #42 (merged) |
 | Inventory & Asset Management | Phase 3.17 | Implemented; Phase 5 verification pending | PR #43 (merged) |
 | Facilities & Maintenance | Phase 3.18 | Implemented; Phase 5 verification pending | PR #44 (merged) |
-| Ambulance & Transport | Phase 3.19 | Implemented; Phase 5 verification pending | PR #45 (pending) |
+| Ambulance & Transport | Phase 3.19 | Implemented; Phase 5 verification pending | PR #45 (merged) |
 | Ambulance & Transport | Phase 3.19 | Implemented; Phase 5 verification pending | PR #45 (pending) |
 
 Patient Registration & Management extends the Phase 1 patient foundation with governed duplicate review, identity/document metadata, contact and next-of-kin details, consent/lawful-basis recording, patient status and audit history. Automatic patient merging is prohibited.
