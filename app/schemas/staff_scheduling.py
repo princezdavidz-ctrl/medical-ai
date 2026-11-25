@@ -143,3 +143,8 @@ class AttendanceResubmission(BaseModel):
     check_in_at: datetime
     check_out_at: datetime
     note: str | None = Field(default=None, max_length=1000)
+
+
+class ShiftSwapCancellation(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    reason: str = Field(min_length=5, max_length=1000)
