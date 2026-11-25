@@ -119,7 +119,8 @@ class PathologyCase(Base):
         CheckConstraint("authority_type IS NULL OR authority_type IN ('patient_consent', 'next_of_kin_consent', 'court_order', 'coroner_directive', 'public_health_order', 'other_lawful_basis')", name="ck_pathology_authority_type"),
         CheckConstraint("case_type != 'forensic' OR authority_type IN ('court_order', 'coroner_directive', 'public_health_order')", name="ck_pathology_forensic_authority"),
         CheckConstraint("authority_evidence_reference IS NULL OR authority_evidence_reference ~ '^vault://[0-9a-fA-F-]{36}
-        CheckConstraint("(authority_verified_by_user_id IS NULL AND authority_verified_at IS NULL) OR (authority_verified_by_user_id IS NOT NULL AND authority_verified_at IS NOT NULL)", name="ck_pathology_authority_verification"),
+        CheckConstraint("(authority_verified_by_user_id IS NULL AND authority_verified_at IS NULL AND authority_evidence_reference IS NULL) OR (authority_verified_by_user_id IS NOT NULL AND authority_verified_at IS NOT NULL AND authority_evidence_reference IS NOT NULL)", name="ck_pathology_authority_verification"),
+        CheckConstraint("authority_verified_by_user_id IS NULL OR case_type IN ('autopsy', 'forensic')", name="ck_pathology_authority_verification_scope"),
         Index("ix_pathology_case_queue", "hospital_id", "status", "created_at"),
     )
     id: Mapped[uuid.UUID] = mapped_column(Uuid(as_uuid=True), primary_key=True, default=uuid.uuid4)
