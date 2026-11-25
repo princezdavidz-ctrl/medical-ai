@@ -7,8 +7,8 @@ A hospital-scoped, read-only patient self-service API. Existing user accounts ar
 - The portal does not create user accounts. It authenticates existing accounts through a dedicated patient-token exchange.
 - A patient record is never matched using MRN, date of birth or name alone.
 - Staff create a pending link and a different authorized staff member verifies it. The requester cannot verify their own request.
-- Self links require an approved identity-verification method and protected evidence reference.
-- Parent/guardian, caregiver and legal-representative links require authority reference, future expiry and guardian/court-document verification.
+- Self links require an approved identity-verification method and protected evidence reference. New links default to `profile` and `encounters`; staff must explicitly grant laboratory, medication, invoice or consent scopes.
+- Parent/guardian and caregiver links require authority reference, future expiry and guardian-document or court-order verification. Legal-representative links require court-order verification.
 - Links are hospital-scoped, may be revoked, and expired/revoked/pending links cannot access records.
 - A unique open-link constraint prevents duplicate pending/active links while allowing a new request after revocation.
 
