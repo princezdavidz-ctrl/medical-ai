@@ -12,6 +12,7 @@ class HospitalAdminProfile(Base):
         UniqueConstraint("hospital_id", "id", name="uq_hospital_admin_profile_hospital_id"),
         CheckConstraint("length(country_code) = 2 AND country_code = upper(country_code)", name="ck_hospital_profile_country"),
         CheckConstraint("length(currency_code) = 3 AND currency_code = upper(currency_code)", name="ck_hospital_profile_currency"),
+        CheckConstraint("facility_type IN ('general', 'specialist', 'teaching', 'referral', 'clinic', 'other')", name="ck_hospital_profile_facility_type"),
         CheckConstraint("brand_primary_color IS NULL OR brand_primary_color ~ '^#[0-9A-Fa-f]{6}$'", name="ck_hospital_profile_primary_color"),
         CheckConstraint("brand_secondary_color IS NULL OR brand_secondary_color ~ '^#[0-9A-Fa-f]{6}$'", name="ck_hospital_profile_secondary_color"),
     )
@@ -55,7 +56,6 @@ class HospitalOperationalSettings(Base):
     appointment_booking_enabled: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
     patient_self_registration_enabled: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
     public_directory_enabled: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
-    maintenance_mode: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
     default_appointment_duration_minutes: Mapped[int] = mapped_column(Integer, nullable=False, default=20)
     appointment_booking_advance_days: Mapped[int] = mapped_column(Integer, nullable=False, default=60)
     updated_by_user_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id"), nullable=False)
