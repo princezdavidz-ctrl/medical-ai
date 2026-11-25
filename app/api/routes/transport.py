@@ -366,6 +366,23 @@ def dispatch_vehicle(request_id: UUID, context: tuple = Depends(get_current_cont
     return request
 
 
+@router.get("/my-assignments")
+def list_my_transport_assignments(context: tuple = Depends(get_current_context), db: Session = Depends(get_db)):
+    user, hospital_id = context
+    if not _active_crew(db, hospital_id, user.id):
+        raise HTTPException(status_code=403, detail={"code": "active_ambulance_crew_required"})
+    rows = db.scalars(select(TransportRequest).where(
+        TransportRequest.hospital_id == hospital_id,
+        (TransportRequest.assigned_driver_user_id == user.id) | (TransportRequest.assigned_crew_user_id == user.id),
+        TransportRequest.status.in_(["vehicle_assigned", "en_route"]),
+    ).order_by(TransportRequest.created_at.desc()).limit(50)).all()
+    return [{
+        "id": row.id, "transfer_number": row.transfer_number, "priority": row.priority,
+        "origin_description": row.origin_description, "destination_description": row.destination_description,
+        "status": row.status, "dispatched_at": row.dispatched_at,
+    } for row in rows]
+
+
 @router.post("/requests/{request_id}/tracking")
 def record_tracking_update(request_id: UUID, payload: TrackingUpdate, context: tuple = Depends(get_current_context), db: Session = Depends(get_db)):
     user, hospital_id = context
