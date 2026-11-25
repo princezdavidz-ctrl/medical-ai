@@ -237,7 +237,7 @@ def create_telemedicine_session(payload: TelemedicineSessionCreate, context: tup
         raise HTTPException(status_code=404, detail={"code": "active_department_not_found"})
     if employee.department_id not in (None, department.id) or profile.employee_profile_id != employee.id:
         raise HTTPException(status_code=403, detail={"code": "provider_department_scope_mismatch"})
-    _require_provider_shift_coverage(db, hospital_id, employee.id, department.id, payload.scheduled_start, payload.scheduled_end, lock=True)
+    _require_provider_shift_coverage(db, hospital_id, employee.id, department.id, payload.scheduled_start, payload.scheduled_end)
     _active_telemedicine_consent(db, hospital_id, patient.id, payload.consent_id)
     conflict = db.scalar(select(TelemedicineSession.id).where(
         TelemedicineSession.hospital_id == hospital_id,
@@ -359,7 +359,7 @@ def start_telemedicine_session(session_id: UUID, context: tuple = Depends(get_cu
     if session.provider_user_id != user.id:
         raise HTTPException(status_code=403, detail={"code": "assigned_provider_required"})
     employee, profile = _active_provider(db, hospital_id, user.id, lock=True)
-    _require_provider_shift_coverage(db, hospital_id, employee.id, session.department_id, session.scheduled_start, session.scheduled_end, lock=True)
+    _require_provider_shift_coverage(db, hospital_id, employee.id, session.department_id, session.scheduled_start, session.scheduled_end)
     if session.status != "patient_ready":
         raise HTTPException(status_code=409, detail={"code": "patient_ready_session_required"})
     now = datetime.now(timezone.utc)
