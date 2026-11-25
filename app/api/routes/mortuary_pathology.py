@@ -106,7 +106,7 @@ def _has_verified_mortuary_authority(db: Session, hospital_id: UUID, case_id: UU
         MortuaryAuthorization.hospital_id == hospital_id,
         MortuaryAuthorization.mortuary_case_id == case_id,
         MortuaryAuthorization.status == "verified",
-    ).limit(1)) is not None
+    ).with_for_update().limit(1)) is not None
 
 
 @router.post("/cases", response_model=MortuaryCaseRead, status_code=status.HTTP_201_CREATED)
@@ -224,6 +224,13 @@ def list_mortuary_authorizations(case_id: UUID, context: tuple = Depends(get_cur
 def revoke_mortuary_authorization(authorization_id: UUID, context: tuple = Depends(get_current_context), db: Session = Depends(get_db)):
     user, hospital_id = context
     _require(db, user.id, hospital_id, _MORTUARY_MANAGERS)
+    item = db.scalar(select(MortuaryAuthorization).where(
+        MortuaryAuthorization.id == authorization_id,
+        MortuaryAuthorization.hospital_id == hospital_id,
+    ))
+    if item is None:
+        raise HTTPException(status_code=404, detail={"code": "mortuary_authorization_not_found"})
+    _mortuary_case(db, item.mortuary_case_id, hospital_id, lock=True)
     item = db.scalar(select(MortuaryAuthorization).where(
         MortuaryAuthorization.id == authorization_id,
         MortuaryAuthorization.hospital_id == hospital_id,
