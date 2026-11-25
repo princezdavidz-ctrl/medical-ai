@@ -43,6 +43,14 @@ def _require_scheduler(db: Session, user_id: UUID, hospital_id: UUID) -> str:
     user = db.get(User, user_id)
     if user is None or not user.is_active:
         raise HTTPException(status_code=403, detail={"code": "active_user_account_required"})
+    if role not in {"hospital_admin", "hospital_director"}:
+        employee = db.scalar(select(EmployeeProfile).where(
+            EmployeeProfile.hospital_id == hospital_id,
+            EmployeeProfile.user_id == user_id,
+            EmployeeProfile.employment_status == "active",
+        ))
+        if employee is None:
+            raise HTTPException(status_code=403, detail={"code": "active_scheduler_employment_required"})
     return role
 
 
@@ -235,7 +243,16 @@ def create_telemedicine_session(payload: TelemedicineSessionCreate, context: tup
     ))
     if department is None:
         raise HTTPException(status_code=404, detail={"code": "active_department_not_found"})
-    if employee.department_id not in (None, department.id) or profile.employee_profile_id != employee.id:
+    provider_membership = db.scalar(select(HospitalMembership).where(
+        HospitalMembership.hospital_id == hospital_id,
+        HospitalMembership.user_id == payload.provider_user_id,
+        HospitalMembership.status == "active",
+    ))
+    if (
+        employee.department_id not in (None, department.id)
+        or (provider_membership is not None and provider_membership.department_id not in (None, department.id))
+        or profile.employee_profile_id != employee.id
+    ):
         raise HTTPException(status_code=403, detail={"code": "provider_department_scope_mismatch"})
     _require_provider_shift_coverage(db, hospital_id, employee.id, department.id, payload.scheduled_start, payload.scheduled_end)
     _active_telemedicine_consent(db, hospital_id, patient.id, payload.consent_id)
