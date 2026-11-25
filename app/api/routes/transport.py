@@ -227,7 +227,7 @@ def list_receiving_requests(context: tuple = Depends(get_current_context), db: S
     _require(db, user.id, hospital_id, _RECEIVING_STAFF)
     rows = db.scalars(select(TransportReceivingOffer).where(
         TransportReceivingOffer.hospital_id == hospital_id,
-        TransportReceivingOffer.status.in_(["offered", "bed_accepted", "rejected", "arrived", "cancelled"]),
+        TransportReceivingOffer.status.in_(["offered", "bed_accepted", "vehicle_assigned", "en_route", "rejected", "arrived", "cancelled"]),
     ).order_by(TransportReceivingOffer.created_at.desc()).limit(200)).all()
     return [{
         "id": row.transport_request_id, "transfer_number": row.transfer_number,
@@ -305,6 +305,7 @@ def assign_vehicle(request_id: UUID, payload: VehicleAssignment, context: tuple 
     request.assigned_driver_user_id = payload.driver_user_id
     request.assigned_crew_user_id = payload.crew_user_id
     request.status = "vehicle_assigned"
+    offer.status = "vehicle_assigned"
     _event(db, hospital_id, user.id, request.id, "vehicle_assigned")
     _audit(db, hospital_id, user.id, "transport.vehicle.assigned", "transport_request", request.id, {"vehicle_id": str(vehicle.id)})
     db.commit()
@@ -321,6 +322,13 @@ def dispatch_vehicle(request_id: UUID, context: tuple = Depends(get_current_cont
     if request.status != "vehicle_assigned":
         raise HTTPException(status_code=409, detail={"code": "assigned_vehicle_required"})
     request.status = "en_route"
+    offer = db.scalar(select(TransportReceivingOffer).where(
+        TransportReceivingOffer.transport_request_id == request.id,
+        TransportReceivingOffer.origin_hospital_id == hospital_id,
+    ).with_for_update())
+    if offer is None or offer.status != "vehicle_assigned":
+        raise HTTPException(status_code=409, detail={"code": "receiving_offer_not_ready_for_dispatch"})
+    offer.status = "en_route"
     request.dispatched_by_user_id = user.id
     request.dispatched_at = datetime.now(timezone.utc)
     _event(db, hospital_id, user.id, request.id, "departed")
@@ -353,8 +361,8 @@ def confirm_arrival(request_id: UUID, context: tuple = Depends(get_current_conte
     user, receiving_hospital_id = context
     _require(db, user.id, receiving_hospital_id, _RECEIVING_STAFF)
     offer = _offer_by_id(db, request_id, receiving_hospital_id, lock=True)
-    if offer.status != "bed_accepted":
-        raise HTTPException(status_code=409, detail={"code": "accepted_transfer_not_ready_for_arrival"})
+    if offer.status != "en_route":
+        raise HTTPException(status_code=409, detail={"code": "en_route_transfer_required"})
     offer.status = "arrived"
     offer.arrived_at = datetime.now(timezone.utc)
     offer.arrival_confirmed_by_user_id = user.id
@@ -405,7 +413,7 @@ def cancel_transport_request(request_id: UUID, context: tuple = Depends(get_curr
         TransportReceivingOffer.transport_request_id == request.id,
         TransportReceivingOffer.origin_hospital_id == hospital_id,
     ).with_for_update())
-    if offer is not None and offer.status in ("offered", "bed_accepted"):
+    if offer is not None and offer.status in ("offered", "bed_accepted", "vehicle_assigned"):
         offer.status = "cancelled"
     if request.assigned_vehicle_id is not None:
         vehicle = db.scalar(select(AmbulanceVehicle).where(
