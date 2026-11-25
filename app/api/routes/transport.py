@@ -204,9 +204,21 @@ def create_transport_request(payload: TransportRequestCreate, context: tuple = D
 def list_origin_requests(context: tuple = Depends(get_current_context), db: Session = Depends(get_db)):
     user, hospital_id = context
     _require(db, user.id, hospital_id, _ORIGIN_STAFF | _FLEET_MANAGERS)
-    return db.scalars(select(TransportRequest).where(
+    rows = db.execute(select(
+        TransportRequest, TransportReceivingOffer.status,
+    ).outerjoin(
+        TransportReceivingOffer,
+        (TransportReceivingOffer.origin_hospital_id == TransportRequest.hospital_id)
+        & (TransportReceivingOffer.transport_request_id == TransportRequest.id),
+    ).where(
         TransportRequest.hospital_id == hospital_id,
     ).order_by(TransportRequest.created_at.desc()).limit(200)).all()
+    result = []
+    for request, receiving_status in rows:
+        item = TransportRequestRead.model_validate(request).model_dump()
+        item["receiving_status"] = receiving_status
+        result.append(item)
+    return result
 
 
 @router.get("/receiving/requests")
@@ -215,7 +227,7 @@ def list_receiving_requests(context: tuple = Depends(get_current_context), db: S
     _require(db, user.id, hospital_id, _RECEIVING_STAFF)
     rows = db.scalars(select(TransportReceivingOffer).where(
         TransportReceivingOffer.hospital_id == hospital_id,
-        TransportReceivingOffer.status.in_(["offered", "bed_accepted", "arrived"]),
+        TransportReceivingOffer.status.in_(["offered", "bed_accepted", "rejected", "arrived", "cancelled"]),
     ).order_by(TransportReceivingOffer.created_at.desc()).limit(200)).all()
     return [{
         "id": row.transport_request_id, "transfer_number": row.transfer_number,
