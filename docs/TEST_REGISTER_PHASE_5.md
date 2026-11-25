@@ -459,7 +459,7 @@ No item is considered passed until evidence, environment, build SHA, reviewer an
 - [ ] Session start: only assigned provider; patient-ready state; valid start window; consent rechecked; active roster coverage and active verified care-team assignment with encounters scope required; encounter created exactly once.
 - [ ] Clinical note authorship: only assigned active provider can create signed notes for an in-progress session; DB composite FK binds author to assigned provider; note text minimum/maximum enforced; notes immutable.
 - [ ] Note visibility: only assigned provider or active verified care-team members with encounters scope can read notes; schedulers and hospital administrators cannot read clinical note content.
-- [ ] Session completion: requires at least one signed note and active encounter; session and encounter close atomically with actor/time; duplicate completion and completion without note denied.
+- [ ] Session completion: requires at least one signed consultation or assessment note and active encounter; session and encounter close atomically with actor/time; duplicate completion and completion without note denied.
 - [ ] Consent withdrawal after start: prevents new session start but does not block required note documentation or encounter closure for a consultation already in progress.
 - [ ] Cancellation/no-show: cancellation only before start with reason; no-show only for scheduled session after scheduled end; terminal sessions cannot be restarted or modified.
 - [ ] Event and audit controls: session lifecycle events append-only; notes append-only; session/note/list reads and state transitions create minimal audit records without note text, raw location or emergency contact.
