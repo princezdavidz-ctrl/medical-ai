@@ -100,6 +100,8 @@ Every module milestone must include:
 | Mortuary & Pathology | Phase 3.20 | Implemented; Phase 5 verification pending | PR #46 (merged) |
 | Hospital Administration Console | Phase 3.21 | Implemented; Phase 5 verification pending | PR #48 (merged) |
 | Patient Portal | Phase 3.22 | Implemented; Phase 5 verification pending | PR #51 (merged) |
+| Doctor & Medical Staff Portal | Phase 3.23 | Implemented; Phase 5 verification pending | PR #52 and hardening PR #54 (merged) |
+| Staff Management & Scheduling | Phase 3.24 | Implemented; Phase 5 verification pending | PR pending |
 
 Patient Registration & Management extends the Phase 1 patient foundation with governed duplicate review, identity/document metadata, contact and next-of-kin details, consent/lawful-basis recording, patient status and audit history. Automatic patient merging is prohibited.
 
@@ -130,3 +132,6 @@ Doctor & Medical Staff Portal adds independently verified clinical staff profile
 
 
 Phase 3.23 access hardening: suspending clinical credentials now revokes active care-team assignments; patient-linked task reads and updates require current assignment and task-specific scope; future-start assignments are excluded from active worklists and dashboard counts. Phase 5 verification remains pending.
+
+
+Phase 3.24 adds hospital-scoped shift templates and employee assignments, conflict detection against overlapping shifts and approved leave, employee-initiated shift swaps with target acceptance and independent manager approval, manual attendance check-in/check-out with manager review, department-scoped roster access, dashboard counts and an append-only schedule event ledger. HR leave approval now rejects dates that overlap scheduled or confirmed shifts. Automated verification remains deferred to Phase 5.

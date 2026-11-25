@@ -405,3 +405,23 @@ No item is considered passed until evidence, environment, build SHA, reviewer an
 - [ ] Patient-linked staff task read/update: task list and task status mutation require a current active care-team assignment and task-specific scope; expired, future-start, revoked or suspended-profile assignments block access.
 - [ ] Staff worklist timing: assigned patient lists, care-team views and dashboard counts exclude future-start and expired assignments.
 - [ ] Clinical admin patient privacy: hospital/HR/medical administrators may govern credential profiles but cannot browse arbitrary patient charts or patient worklists without verified active clinical assignment.
+
+## Phase 3.24 — Staff Management & Scheduling
+
+- [ ] Shift template CRUD: only roster managers create/update; template codes unique per hospital; active department and department manager scope enforced; inactive templates cannot receive assignments.
+- [ ] Shift assignment authorization: assigned employee belongs to the same hospital, has active employment, active membership and active user account; department/template consistency enforced; cross-hospital IDs denied.
+- [ ] Shift time validation: timezone-aware start/end, positive duration no longer than 24 hours, overnight shifts supported, invalid/equal timestamps rejected.
+- [ ] Shift overlap prevention: overlapping scheduled/confirmed shifts rejected for the same employee; adjacent shifts allowed; completed/cancelled shifts do not block; concurrent create/update/swap operations serialize on employee row and cannot double-book.
+- [ ] Leave conflict: approved leave blocks shift assignment/update; leave approval is rejected when an overlapping scheduled/confirmed shift exists; concurrent leave approval and shift assignment cannot bypass the employee lock.
+- [ ] Department roster scope: department heads/nurse managers see and manage only their department; hospital/HR roster managers have authorized hospital-wide scope; explicit out-of-department IDs denied.
+- [ ] Staff schedule visibility: employee sees only own shifts and own swap requests/responses; roster managers see only permitted department/hospital rosters; no cross-hospital records.
+- [ ] Shift update lifecycle: terminal shifts cannot be changed; cancellation requires a reason; attendance prevents shift time reassignment/cancellation; all changes produce audit and immutable schedule events.
+- [ ] Shift swap workflow: only assigned staff request; target must be active employee with active membership; target acceptance does not change assignment until independent manager approval; requester cancellation allowed only before final decision; rejected/declined/cancelled swaps are terminal.
+- [ ] Shift swap concurrency: only one pending/accepted swap per shift; duplicate concurrent requests conflict safely; manager approval rechecks target employment, department, leave and overlapping shifts under lock.
+- [ ] Attendance check-in: only assigned active employee; only within two hours before shift start through shift end; one attendance record per shift; duplicate check-in denied.
+- [ ] Attendance check-out: only the assigned employee with an open attendance record; check-out strictly follows check-in; submitted attendance requires independent manager decision.
+- [ ] Attendance review: department-scoped manager; rejection requires a reason; approved past shift closes as completed; rejected attendance can be resubmitted only with timezone-aware valid timestamps inside the scheduled shift window.
+- [ ] Scheduling dashboard: staff receive own upcoming shifts/pending swap responses; managers receive scoped upcoming shifts, accepted swaps and attendance review counts; aggregate-only response contains no staff/patient-sensitive data.
+- [ ] Event ledger: schedule events are hospital RLS protected and append-only; all template, assignment, swap and attendance transitions record actor, timestamp, resource and metadata.
+- [ ] Migration: 0041 follows 0040; all five tables, indexes, constraints, RLS policies and immutable-event trigger create successfully; downgrade removes only Module 24 objects and leaves HR employee schema intact.
+- [ ] HR integration: leave approval checks overlapping scheduled shifts; scheduling checks approved leave; employee deactivation blocks future shift actions and check-in; role changes and membership revocation are enforced.
