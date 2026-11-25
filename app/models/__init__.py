@@ -74,6 +74,7 @@ from app.models.transport import AmbulanceVehicle, TransportRequest, TransportRe
 from app.models.mortuary_pathology import MortuaryCase, MortuaryAuthorization, MortuaryMovement, MortuaryPropertyItem, PathologyCase, PathologySpecimen, PathologyReport, PathologyEvent
 from app.models.hospital_admin import HospitalAdminProfile, HospitalOperationalSettings, HospitalOperatingHour, HospitalAdminEvent
 from app.models.patient_portal import PatientPortalLink, PatientPortalAccessEvent
+from app.models.staff_portal import ClinicalStaffProfile, PatientCareTeamAssignment, StaffWorkQueueTask, StaffPortalEvent
 from app.models.nursing import (
     NursingAssessment,
     NursingObservation,
@@ -192,6 +193,7 @@ __all__ = [
     "EmployeeProfile",
     "StaffCredential",
     "StaffLeaveRequest",
+    "ClinicalStaffProfile", "PatientCareTeamAssignment", "StaffWorkQueueTask", "StaffPortalEvent",
     "PatientPortalLink", "PatientPortalAccessEvent",
     "HospitalAdminProfile", "HospitalOperationalSettings", "HospitalOperatingHour", "HospitalAdminEvent",
     "MortuaryCase", "MortuaryAuthorization", "MortuaryMovement", "MortuaryPropertyItem",
