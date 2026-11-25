@@ -69,8 +69,44 @@ def upgrade() -> None:
         sa.CheckConstraint("authority_type IN ('next_of_kin_consent', 'court_order', 'coroner_directive', 'public_health_order', 'other_lawful_basis')", name="ck_mortuary_authority_type"),
         sa.CheckConstraint("status IN ('pending', 'verified', 'rejected', 'revoked')", name="ck_mortuary_authorization_status"),
         sa.CheckConstraint("(status = 'verified' AND verified_by_user_id IS NOT NULL AND verified_at IS NOT NULL AND evidence_reference IS NOT NULL) OR (status != 'verified' AND verified_by_user_id IS NULL AND verified_at IS NULL)", name="ck_mortuary_authorization_verification"),
-        sa.CheckConstraint("evidence_reference IS NULL OR evidence_reference ~ '^vault://[0-9a-fA-F-]{36}
-        sa.CheckConstraint("evidence_reference IS NULL OR evidence_reference ~ '^vault://[0-9a-fA-F-]{36}$'", name="ck_mortuary_authorization_evidence"),
+        sa.CheckConstraint("evidence_reference IS NULL OR (evidence_reference ~ '^vault://[0-9a-fA-F-]+
+        sa.CheckConstraint("evidence_reference IS NULL OR (evidence_reference ~ '^vault://[0-9a-fA-F-]+
+    )
+    op.create_index("ix_mortuary_authorization_case", "mortuary_authorizations", ["hospital_id", "mortuary_case_id", "status"])
+     AND length(evidence_reference) = 44)", name="ck_mortuary_authorization_evidence"),
+        sa.CheckConstraint("evidence_reference IS NULL OR (evidence_reference ~ '^vault://[0-9a-fA-F-]+
+    )
+    op.create_index("ix_mortuary_authorization_case", "mortuary_authorizations", ["hospital_id", "mortuary_case_id", "status"])
+for table in TABLES:
+        op.execute(sa.text(f'ALTER TABLE "{table}" ENABLE ROW LEVEL SECURITY'))
+        op.execute(sa.text(f'CREATE POLICY "{table}_hospital_isolation" ON "{table}" USING (hospital_id = NULLIF(current_setting(\'app.current_hospital_id\', true), \'\')::uuid) WITH CHECK (hospital_id = NULLIF(current_setting(\'app.current_hospital_id\', true), \'\')::uuid)'))
+    op.execute("""
+        CREATE FUNCTION prevent_mortuary_movement_mutation() RETURNS trigger AS $$
+        BEGIN RAISE EXCEPTION 'mortuary movement records are append-only'; END;
+        $$ LANGUAGE plpgsql
+    """)
+    op.execute("CREATE TRIGGER trg_mortuary_movements_immutable BEFORE UPDATE OR DELETE ON mortuary_movements FOR EACH ROW EXECUTE FUNCTION prevent_mortuary_movement_mutation()")
+    op.execute("""
+        CREATE FUNCTION prevent_pathology_event_mutation() RETURNS trigger AS $$
+        BEGIN RAISE EXCEPTION 'pathology events are append-only'; END;
+        $$ LANGUAGE plpgsql
+    """)
+    op.execute("CREATE TRIGGER trg_pathology_events_immutable BEFORE UPDATE OR DELETE ON pathology_events FOR EACH ROW EXECUTE FUNCTION prevent_pathology_event_mutation()")
+    op.execute("""
+        CREATE FUNCTION prevent_final_pathology_report_mutation() RETURNS trigger AS $$
+        BEGIN
+            IF OLD.status = 'final' THEN
+                RAISE EXCEPTION 'final pathology reports are immutable; create a new version';
+            END IF;
+            IF TG_OP = 'DELETE' THEN
+                RETURN OLD;
+            END IF;
+            RETURN NEW;
+        END;
+        $$ LANGUAGE plpgsql
+    """)
+    op.execute("CREATE TRIGGER trg_pathology_reports_immutable BEFORE UPDATE OR DELETE ON pathology_reports FOR EACH ROW EXECUTE FUNCTION prevent_final_pathology_report_mutation()")
+ AND length(evidence_reference) = 44)", name="ck_mortuary_authorization_evidence"),
     )
     op.create_index("ix_mortuary_authorization_case", "mortuary_authorizations", ["hospital_id", "mortuary_case_id", "status"])
     op.create_table(
@@ -206,13 +242,13 @@ def upgrade() -> None:
         op.execute(sa.text(f'ALTER TABLE "{table}" ENABLE ROW LEVEL SECURITY'))
         op.execute(sa.text(f'CREATE POLICY "{table}_hospital_isolation" ON "{table}" USING (hospital_id = NULLIF(current_setting(\'app.current_hospital_id\', true), \'\')::uuid) WITH CHECK (hospital_id = NULLIF(current_setting(\'app.current_hospital_id\', true), \'\')::uuid)'))
     op.execute("""
-        CREATE FUNCTION prevent_mortuary_movement_mutation() RETURNS trigger AS $$$
+        CREATE FUNCTION prevent_mortuary_movement_mutation() RETURNS trigger AS $$
         BEGIN RAISE EXCEPTION 'mortuary movement records are append-only'; END;
         $$ LANGUAGE plpgsql
     """)
     op.execute("CREATE TRIGGER trg_mortuary_movements_immutable BEFORE UPDATE OR DELETE ON mortuary_movements FOR EACH ROW EXECUTE FUNCTION prevent_mortuary_movement_mutation()")
     op.execute("""
-        CREATE FUNCTION prevent_pathology_event_mutation() RETURNS trigger AS $$$
+        CREATE FUNCTION prevent_pathology_event_mutation() RETURNS trigger AS $$
         BEGIN RAISE EXCEPTION 'pathology events are append-only'; END;
         $$ LANGUAGE plpgsql
     """)
@@ -231,7 +267,6 @@ def upgrade() -> None:
         $$ LANGUAGE plpgsql
     """)
     op.execute("CREATE TRIGGER trg_pathology_reports_immutable BEFORE UPDATE OR DELETE ON pathology_reports FOR EACH ROW EXECUTE FUNCTION prevent_final_pathology_report_mutation()")
-
 
 
 
