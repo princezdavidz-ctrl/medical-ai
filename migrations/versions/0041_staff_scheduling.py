@@ -88,6 +88,8 @@ def upgrade() -> None:
         sa.Column("decision_note", sa.String(1000)),
         sa.Column("created_at", sa.DateTime(timezone=True), server_default=sa.func.now(), nullable=False),
         sa.ForeignKeyConstraint(["hospital_id", "shift_assignment_id"], ["staff_shift_assignments.hospital_id", "staff_shift_assignments.id"], name="fk_shift_swap_assignment"),
+        sa.ForeignKeyConstraint(["hospital_id", "requester_user_id"], ["hospital_memberships.hospital_id", "hospital_memberships.user_id"], name="fk_shift_swap_requester_membership"),
+        sa.ForeignKeyConstraint(["hospital_id", "target_user_id"], ["hospital_memberships.hospital_id", "hospital_memberships.user_id"], name="fk_shift_swap_target_membership"),
         sa.UniqueConstraint("hospital_id", "id", name="uq_shift_swap_hospital_id"),
         sa.CheckConstraint("status IN ('pending_target', 'accepted', 'declined', 'approved', 'rejected', 'cancelled')", name="ck_shift_swap_status"),
         sa.CheckConstraint("requester_user_id != target_user_id", name="ck_shift_swap_not_self"),
