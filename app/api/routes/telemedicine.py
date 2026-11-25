@@ -165,7 +165,7 @@ def _active_telemedicine_consent(db: Session, hospital_id: UUID, patient_id: UUI
 
 
 def _require_care_team(db: Session, hospital_id: UUID, patient_id: UUID, provider_user_id: UUID):
-    employee, profile = _active_clinician(db, hospital_id, provider_user_id)
+    employee, _ = _active_clinician(db, hospital_id, provider_user_id)
     now = datetime.now(timezone.utc)
     assignment = db.scalar(select(PatientCareTeamAssignment).where(
         PatientCareTeamAssignment.hospital_id == hospital_id,
