@@ -67,7 +67,7 @@ class HospitalOperationalSettingsUpdate(BaseModel):
 
 class HospitalOperationalSettingsRead(BaseModel):
     model_config = ConfigDict(from_attributes=True)
-    id: UUID
+    id: UUID | None = None
     hospital_id: UUID
     appointment_booking_enabled: bool
     patient_self_registration_enabled: bool
