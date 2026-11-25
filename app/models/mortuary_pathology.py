@@ -15,6 +15,7 @@ class MortuaryCase(Base):
         CheckConstraint("length(trim(storage_location)) >= 2", name="ck_mortuary_storage_location"),
         CheckConstraint("(status = 'released' AND released_to_name IS NOT NULL AND released_to_identity_reference IS NOT NULL AND released_by_user_id IS NOT NULL AND released_at IS NOT NULL) OR (status != 'released' AND released_to_name IS NULL AND released_to_identity_reference IS NULL AND released_by_user_id IS NULL AND released_at IS NULL)", name="ck_mortuary_release_state"),
         CheckConstraint("legal_hold = false OR status NOT IN ('release_pending', 'released', 'transferred')", name="ck_mortuary_legal_hold"),
+        CheckConstraint("(legal_hold = false AND legal_hold_reason IS NULL AND legal_hold_set_by_user_id IS NULL AND legal_hold_set_at IS NULL) OR (legal_hold = true AND legal_hold_reason IS NOT NULL AND legal_hold_set_by_user_id IS NOT NULL AND legal_hold_set_at IS NOT NULL)", name="ck_mortuary_legal_hold_evidence"),
         Index("ix_mortuary_case_queue", "hospital_id", "status", "received_at"),
     )
     id: Mapped[uuid.UUID] = mapped_column(Uuid(as_uuid=True), primary_key=True, default=uuid.uuid4)
@@ -30,6 +31,10 @@ class MortuaryCase(Base):
     storage_location: Mapped[str] = mapped_column(String(180), nullable=False)
     status: Mapped[str] = mapped_column(String(32), nullable=False, default="received")
     legal_hold: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    legal_hold_reason: Mapped[str | None] = mapped_column(String(1000))
+    legal_hold_reference: Mapped[str | None] = mapped_column(String(160))
+    legal_hold_set_by_user_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("users.id"))
+    legal_hold_set_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     released_to_name: Mapped[str | None] = mapped_column(String(180))
     released_to_identity_reference: Mapped[str | None] = mapped_column(String(160))
     released_by_user_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("users.id"))
