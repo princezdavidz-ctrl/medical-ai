@@ -17,7 +17,7 @@ This module does not replace source clinical records. OPD, Nursing, Inpatient, E
 
 ## Authorization
 
-- Records management actions are limited to medical_records_officer, health_information_manager and medical_records_manager.
+- Records management actions are limited to active employees with medical_records_officer, health_information_manager or medical_records_manager roles and active hospital membership.
 - Hospital administrators/directors do not receive unrestricted chart/document access through this module.
 - Clinical readers must have active hospital membership, active employee profile, active user account, independently verified clinical profile, unexpired license, active care-team assignment and the required record-type scope.
 - Document list results are filtered per document type; a broad encounter scope cannot expose lab or medication documents.
