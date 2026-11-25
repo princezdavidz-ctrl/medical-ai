@@ -2,7 +2,7 @@ import uuid
 from datetime import datetime
 
 from sqlalchemy import (
-    JSON, CheckConstraint, DateTime, ForeignKey, ForeignKeyConstraint, Index,
+    JSON, Boolean, CheckConstraint, DateTime, ForeignKey, ForeignKeyConstraint, Index,
     String, Text, UniqueConstraint, Uuid, func,
 )
 from sqlalchemy.orm import Mapped, mapped_column
@@ -25,8 +25,8 @@ class TelemedicineSession(Base):
         CheckConstraint("length(trim(visit_reason)) >= 3", name="ck_telemedicine_session_reason"),
         CheckConstraint("patient_location_reference IS NULL OR patient_location_reference ~ '^vault://[0-9a-fA-F-]{36}$'", name="ck_telemedicine_location_ref"),
         CheckConstraint("emergency_contact_reference IS NULL OR emergency_contact_reference ~ '^vault://[0-9a-fA-F-]{36}$'", name="ck_telemedicine_emergency_ref"),
-        CheckConstraint("(status IN ('scheduled', 'cancelled', 'no_show') AND (status != 'scheduled' OR (patient_ready_at IS NULL AND patient_ready_by_user_id IS NULL AND patient_location_reference IS NULL AND emergency_contact_reference IS NULL AND safety_confirmed_at IS NULL AND safety_confirmed_by_user_id IS NULL))) OR (status IN ('patient_ready', 'in_progress', 'completed') AND patient_ready_at IS NOT NULL AND patient_ready_by_user_id IS NOT NULL AND patient_location_reference IS NOT NULL AND emergency_contact_reference IS NOT NULL AND safety_confirmed_at IS NOT NULL AND safety_confirmed_by_user_id IS NOT NULL)", name="ck_telemedicine_safety_state"),
-        CheckConstraint("(status IN ('scheduled', 'patient_ready', 'cancelled', 'no_show') AND started_at IS NULL AND ended_at IS NULL) OR (status = 'in_progress' AND started_at IS NOT NULL AND ended_at IS NULL) OR (status = 'completed' AND started_at IS NOT NULL AND ended_at IS NOT NULL AND ended_at > started_at)", name="ck_telemedicine_session_time_state"),
+        CheckConstraint("(status IN ('scheduled', 'cancelled', 'no_show') AND (status != 'scheduled' OR (patient_ready_at IS NULL AND patient_ready_by_user_id IS NULL AND patient_location_reference IS NULL AND emergency_contact_reference IS NULL AND safety_confirmed_at IS NULL AND safety_confirmed_by_user_id IS NULL AND patient_identity_confirmed = false AND privacy_confirmed = false AND emergency_plan_acknowledged = false))) OR (status IN ('patient_ready', 'in_progress', 'completed') AND patient_ready_at IS NOT NULL AND patient_ready_by_user_id IS NOT NULL AND patient_location_reference IS NOT NULL AND emergency_contact_reference IS NOT NULL AND safety_confirmed_at IS NOT NULL AND safety_confirmed_by_user_id IS NOT NULL AND patient_identity_confirmed = true AND privacy_confirmed = true AND emergency_plan_acknowledged = true)", name="ck_telemedicine_safety_state"),
+        CheckConstraint("(status IN ('scheduled', 'patient_ready', 'cancelled', 'no_show') AND encounter_id IS NULL AND started_at IS NULL AND started_by_user_id IS NULL AND ended_at IS NULL AND ended_by_user_id IS NULL) OR (status = 'in_progress' AND encounter_id IS NOT NULL AND started_at IS NOT NULL AND started_by_user_id IS NOT NULL AND ended_at IS NULL AND ended_by_user_id IS NULL) OR (status = 'completed' AND encounter_id IS NOT NULL AND started_at IS NOT NULL AND started_by_user_id IS NOT NULL AND ended_at IS NOT NULL AND ended_by_user_id IS NOT NULL AND ended_at > started_at)", name="ck_telemedicine_session_time_state"),
         CheckConstraint("(status IN ('cancelled', 'no_show') AND cancelled_by_user_id IS NOT NULL AND cancelled_at IS NOT NULL AND cancellation_reason IS NOT NULL) OR (status NOT IN ('cancelled', 'no_show') AND cancelled_by_user_id IS NULL AND cancelled_at IS NULL AND cancellation_reason IS NULL)", name="ck_telemedicine_session_cancel_state"),
         Index("ix_telemedicine_patient_schedule", "hospital_id", "patient_id", "scheduled_start", "status"),
         Index("ix_telemedicine_provider_schedule", "hospital_id", "provider_user_id", "scheduled_start", "status"),
@@ -50,6 +50,9 @@ class TelemedicineSession(Base):
     emergency_contact_reference: Mapped[str | None] = mapped_column(String(80))
     safety_confirmed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     safety_confirmed_by_user_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("users.id"))
+    patient_identity_confirmed: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    privacy_confirmed: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    emergency_plan_acknowledged: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
     started_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     started_by_user_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("users.id"))
     ended_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
