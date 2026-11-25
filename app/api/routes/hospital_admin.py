@@ -146,6 +146,9 @@ def list_departments(context: tuple = Depends(get_current_context), db: Session 
 def create_department(payload: DepartmentCreate, context: tuple = Depends(get_current_context), db: Session = Depends(get_db)):
     user, hospital_id = context
     _require_admin(db, user.id, hospital_id)
+    normalized_code = payload.code.replace("_", "").replace("-", "")
+    if not normalized_code or not normalized_code.isalnum():
+        raise HTTPException(status_code=422, detail={"code": "invalid_department_code"})
     department = Department(hospital_id=hospital_id, name=payload.name.strip(), code=payload.code.upper())
     db.add(department)
     try:
@@ -259,9 +262,10 @@ def decide_membership(membership_id: UUID, payload: MembershipDecision, context:
         if target_role and target_role.name.strip().casefold().replace(" ", "_") in _ADMIN_ROLES:
             active_admins = db.scalar(select(func.count()).select_from(HospitalMembership).join(
                 Role, Role.id == HospitalMembership.role_id,
-            ).where(
+            ).join(User, User.id == HospitalMembership.user_id).where(
                 HospitalMembership.hospital_id == hospital_id,
                 HospitalMembership.status == "active",
+                User.is_active.is_(True),
                 func.lower(Role.name).in_(list(_ADMIN_ROLES)),
             )) or 0
             if active_admins <= 1:
