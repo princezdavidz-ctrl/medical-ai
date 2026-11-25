@@ -311,7 +311,7 @@ def dispatch_vehicle(request_id: UUID, context: tuple = Depends(get_current_cont
     request.status = "en_route"
     request.dispatched_by_user_id = user.id
     request.dispatched_at = datetime.now(timezone.utc)
-    _event(db, hospital_id, user.id, request, "departed")
+    _event(db, hospital_id, user.id, request.id, "departed")
     _audit(db, hospital_id, user.id, "transport.dispatched", "transport_request", request.id)
     db.commit()
     _restore_context(db, user.id, hospital_id)
@@ -340,17 +340,17 @@ def record_tracking_update(request_id: UUID, payload: TrackingUpdate, context: t
 def confirm_arrival(request_id: UUID, context: tuple = Depends(get_current_context), db: Session = Depends(get_db)):
     user, receiving_hospital_id = context
     _require(db, user.id, receiving_hospital_id, _RECEIVING_STAFF)
-    request = _request_by_id(db, request_id, receiving_hospital_id, receiving=True, lock=True)
-    if request.status != "en_route":
-        raise HTTPException(status_code=409, detail={"code": "en_route_transfer_required"})
-    request.status = "arrived"
-    request.arrived_at = datetime.now(timezone.utc)
-    request.arrival_confirmed_by_user_id = user.id
-    _event(db, request.hospital_id, user.id, request, "arrived")
-    _audit(db, receiving_hospital_id, user.id, "transport.arrival.confirmed", "transport_request", request.id)
+    offer = _offer_by_id(db, request_id, receiving_hospital_id, lock=True)
+    if offer.status != "bed_accepted":
+        raise HTTPException(status_code=409, detail={"code": "accepted_transfer_not_ready_for_arrival"})
+    offer.status = "arrived"
+    offer.arrived_at = datetime.now(timezone.utc)
+    offer.arrival_confirmed_by_user_id = user.id
+    _event(db, offer.origin_hospital_id, user.id, offer.transport_request_id, "arrived")
+    _audit(db, receiving_hospital_id, user.id, "transport.arrival.confirmed", "transport_request", offer.transport_request_id)
     db.commit()
     _restore_context(db, user.id, receiving_hospital_id)
-    return {"id": request.id, "transfer_number": request.transfer_number, "status": request.status, "arrived_at": request.arrived_at}
+    return {"id": offer.transport_request_id, "transfer_number": offer.transfer_number, "status": offer.status, "arrived_at": offer.arrived_at}
 
 
 @router.post("/requests/{request_id}/release-vehicle")
@@ -358,8 +358,15 @@ def release_vehicle(request_id: UUID, context: tuple = Depends(get_current_conte
     user, hospital_id = context
     _require(db, user.id, hospital_id, _FLEET_MANAGERS)
     request = _request_by_id(db, request_id, hospital_id, lock=True)
-    if request.status != "arrived" or request.assigned_vehicle_id is None:
-        raise HTTPException(status_code=409, detail={"code": "arrived_transfer_with_assigned_vehicle_required"})
+    offer = db.scalar(select(TransportReceivingOffer).where(
+        TransportReceivingOffer.transport_request_id == request.id,
+        TransportReceivingOffer.origin_hospital_id == hospital_id,
+    ))
+    if offer is None or offer.status != "arrived" or request.status != "en_route" or request.assigned_vehicle_id is None:
+        raise HTTPException(status_code=409, detail={"code": "receiving_arrival_and_assigned_vehicle_required"})
+    request.status = "arrived"
+    request.arrived_at = offer.arrived_at
+    request.arrival_confirmed_by_user_id = offer.arrival_confirmed_by_user_id
     vehicle = db.scalar(select(AmbulanceVehicle).where(
         AmbulanceVehicle.id == request.assigned_vehicle_id,
         AmbulanceVehicle.hospital_id == hospital_id,
@@ -401,15 +408,17 @@ def cancel_transport_request(request_id: UUID, context: tuple = Depends(get_curr
 def list_transport_events(request_id: UUID, context: tuple = Depends(get_current_context), db: Session = Depends(get_db)):
     user, hospital_id = context
     role = _role(db, user.id, hospital_id)
-    if role in _ORIGIN_STAFF | _FLEET_MANAGERS:
+    if role in (_ORIGIN_STAFF | _FLEET_MANAGERS):
         request = _request_by_id(db, request_id, hospital_id)
+        origin_hospital_id, transport_request_id = request.hospital_id, request.id
     elif role in _RECEIVING_STAFF:
-        request = _request_by_id(db, request_id, hospital_id, receiving=True)
+        offer = _offer_by_id(db, request_id, hospital_id)
+        origin_hospital_id, transport_request_id = offer.origin_hospital_id, offer.transport_request_id
     else:
         raise HTTPException(status_code=403, detail={"code": "transport_event_access_denied"})
     rows = db.scalars(select(TransportEvent).where(
-        TransportEvent.hospital_id == request.hospital_id,
-        TransportEvent.transport_request_id == request.id,
+        TransportEvent.hospital_id == origin_hospital_id,
+        TransportEvent.transport_request_id == transport_request_id,
     ).order_by(TransportEvent.created_at)).all()
     return [{
         "id": row.id, "event_type": row.event_type, "actor_user_id": row.actor_user_id,
