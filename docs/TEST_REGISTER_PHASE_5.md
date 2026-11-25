@@ -385,3 +385,18 @@ No item is considered passed until evidence, environment, build SHA, reviewer an
 - [ ] Patient portal account boundaries: no implicit user signup, no MRN/DOB-only identity matching, no unsupported MFA bypass, no secure messaging/appointment/payment/record-sharing claims.
 
 - [ ] Patient portal re-linking: one pending/active link per hospital-patient-user, duplicate open link denied, revoked link history retained and new request permitted after revocation.
+
+
+- [ ] Phase 3.23 clinical profile submission: own active HR employee record, active clinical membership, unique hospital registration number, supported clinical role and timezone-aware future license expiry.
+- [ ] Clinical credential verification: admin/medical director/HR role, independent verifier, vault evidence required for approval, rejection reason required, expired license cannot verify, suspension reason required, expired-license resubmission requires re-verification, suspended profile reinstatement requires a second independent administrator and new evidence, and suspended profile denied patient access/assignment.
+- [ ] Care-team assignment: authorized assigner, active employee membership, verified clinical profile, unexpired license, same-hospital patient and department, care-role compatibility, no self-assignment and no duplicate active role assignment.
+- [ ] Care-team renewal/expiry: expired assignment excluded from access, expired active row closed during renewal, future end time required, ended/revoked state actor/time/reason recorded and no reactivation through status mutation.
+- [ ] Care-team access scope: only profile/encounters/lab_results/medications, profile scope mandatory, task types require their specific lab/medication/encounter scope, missing scope denied.
+- [ ] Staff patient directory/overview: active employment and verified clinical profile rechecked, active care-team assignment required except clinical administrator access, no cross-patient or cross-hospital UUID substitution.
+- [ ] Staff clinical overview: patient profile, encounter history, finalized laboratory results including critical results for authorized clinicians, medication history, scope-specific filtering and access event logging.
+- [ ] Work queue creation: assigned staff has active hospital membership and employee record, patient-linked task requires assignee care-team assignment, encounter belongs to same patient/hospital, department is active and matches employee department.
+- [ ] Work queue transitions: only assignee or clinical administrator can update, open to in-progress/completed/cancelled, completion actor/time, terminal completed/cancelled tasks cannot be reopened, no task delete endpoint.
+- [ ] Staff portal dashboard: open task and active assigned-patient counts are scoped to current staff/hospital; no patient-level data in aggregate response.
+- [ ] Staff portal events: credential, care-team, task and patient overview events recorded; event table hospital RLS and UPDATE/DELETE denied by append-only trigger.
+- [ ] Staff portal tenant security: all four tables hospital RLS, composite patient/encounter/department/employee relationships, active membership checks and cross-hospital access denial.
+- [ ] Phase 4 integration: existing clinical APIs enforce verified care-team assignments before universal care-team authorization is claimed; existing note/order/prescription workflows remain authoritative.
