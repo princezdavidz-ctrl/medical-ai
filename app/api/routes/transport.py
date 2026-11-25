@@ -213,15 +213,15 @@ def list_origin_requests(context: tuple = Depends(get_current_context), db: Sess
 def list_receiving_requests(context: tuple = Depends(get_current_context), db: Session = Depends(get_db)):
     user, hospital_id = context
     _require(db, user.id, hospital_id, _RECEIVING_STAFF)
-    rows = db.scalars(select(TransportRequest).where(
-        TransportRequest.receiving_hospital_id == hospital_id,
-        TransportRequest.status.in_(["requested", "bed_accepted", "vehicle_assigned", "en_route", "arrived"]),
-    ).order_by(TransportRequest.created_at.desc()).limit(200)).all()
+    rows = db.scalars(select(TransportReceivingOffer).where(
+        TransportReceivingOffer.hospital_id == hospital_id,
+        TransportReceivingOffer.status.in_(["offered", "bed_accepted", "arrived"]),
+    ).order_by(TransportReceivingOffer.created_at.desc()).limit(200)).all()
     return [{
-        "id": row.id, "transfer_number": row.transfer_number, "transport_type": row.transport_type,
+        "id": row.transport_request_id, "transfer_number": row.transfer_number,
         "priority": row.priority, "origin_description": row.origin_description,
         "destination_description": row.destination_description, "status": row.status,
-        "receiving_bed_reference": row.receiving_bed_reference, "created_at": row.created_at,
+        "bed_reference": row.bed_reference, "created_at": row.created_at,
     } for row in rows]
 
 
@@ -229,35 +229,35 @@ def list_receiving_requests(context: tuple = Depends(get_current_context), db: S
 def accept_receiving_bed(request_id: UUID, payload: ReceivingBedAcceptance, context: tuple = Depends(get_current_context), db: Session = Depends(get_db)):
     user, receiving_hospital_id = context
     _require(db, user.id, receiving_hospital_id, _RECEIVING_STAFF)
-    request = _request_by_id(db, request_id, receiving_hospital_id, receiving=True, lock=True)
-    if request.status != "requested":
+    offer = _offer_by_id(db, request_id, receiving_hospital_id, lock=True)
+    if offer.status != "offered":
         raise HTTPException(status_code=409, detail={"code": "transfer_not_awaiting_receiving_acceptance"})
-    request.status = "bed_accepted"
-    request.receiving_accepted_by_user_id = user.id
-    request.receiving_bed_reference = payload.bed_reference
-    request.receiving_accepted_at = datetime.now(timezone.utc)
-    _event(db, request.hospital_id, user.id, request, "bed_accepted", "Receiving hospital accepted the bed")
-    _audit(db, receiving_hospital_id, user.id, "transport.receiving_bed_accepted", "transport_request", request.id)
+    offer.status = "bed_accepted"
+    offer.accepted_by_user_id = user.id
+    offer.bed_reference = payload.bed_reference
+    offer.accepted_at = datetime.now(timezone.utc)
+    _event(db, offer.origin_hospital_id, user.id, offer.transport_request_id, "bed_accepted", "Receiving hospital accepted the bed")
+    _audit(db, receiving_hospital_id, user.id, "transport.receiving_bed_accepted", "transport_request", offer.transport_request_id)
     db.commit()
     _restore_context(db, user.id, receiving_hospital_id)
-    return {"id": request.id, "transfer_number": request.transfer_number, "status": request.status, "receiving_bed_reference": request.receiving_bed_reference}
+    return {"id": offer.transport_request_id, "transfer_number": offer.transfer_number, "status": offer.status, "bed_reference": offer.bed_reference}
 
 
 @router.post("/requests/{request_id}/receiving-rejection")
 def reject_receiving_request(request_id: UUID, payload: RejectionInput, context: tuple = Depends(get_current_context), db: Session = Depends(get_db)):
     user, receiving_hospital_id = context
     _require(db, user.id, receiving_hospital_id, _RECEIVING_STAFF)
-    request = _request_by_id(db, request_id, receiving_hospital_id, receiving=True, lock=True)
-    if request.status != "requested":
+    offer = _offer_by_id(db, request_id, receiving_hospital_id, lock=True)
+    if offer.status != "offered":
         raise HTTPException(status_code=409, detail={"code": "transfer_not_awaiting_receiving_decision"})
-    request.status = "rejected"
-    request.rejected_by_user_id = user.id
-    request.rejection_reason = payload.reason
-    _event(db, request.hospital_id, user.id, request, "rejected", payload.reason)
-    _audit(db, receiving_hospital_id, user.id, "transport.receiving_rejected", "transport_request", request.id)
+    offer.status = "rejected"
+    offer.rejected_by_user_id = user.id
+    offer.rejection_reason = payload.reason
+    _event(db, offer.origin_hospital_id, user.id, offer.transport_request_id, "rejected", payload.reason)
+    _audit(db, receiving_hospital_id, user.id, "transport.receiving_rejected", "transport_request", offer.transport_request_id)
     db.commit()
     _restore_context(db, user.id, receiving_hospital_id)
-    return {"id": request.id, "transfer_number": request.transfer_number, "status": request.status}
+    return {"id": offer.transport_request_id, "transfer_number": offer.transfer_number, "status": offer.status}
 
 
 @router.post("/requests/{request_id}/assign-vehicle", response_model=TransportRequestRead)
@@ -265,8 +265,16 @@ def assign_vehicle(request_id: UUID, payload: VehicleAssignment, context: tuple 
     user, hospital_id = context
     _require(db, user.id, hospital_id, _FLEET_MANAGERS)
     request = _request_by_id(db, request_id, hospital_id, lock=True)
-    if request.status != "bed_accepted":
+    offer = db.scalar(select(TransportReceivingOffer).where(
+        TransportReceivingOffer.transport_request_id == request.id,
+        TransportReceivingOffer.origin_hospital_id == hospital_id,
+    ).with_for_update())
+    if offer is None or offer.status != "bed_accepted":
         raise HTTPException(status_code=409, detail={"code": "receiving_bed_acceptance_required"})
+    request.status = "bed_accepted"
+    request.receiving_accepted_by_user_id = offer.accepted_by_user_id
+    request.receiving_bed_reference = offer.bed_reference
+    request.receiving_accepted_at = offer.accepted_at
     vehicle = db.scalar(select(AmbulanceVehicle).where(
         AmbulanceVehicle.id == payload.vehicle_id,
         AmbulanceVehicle.hospital_id == hospital_id,
@@ -285,7 +293,7 @@ def assign_vehicle(request_id: UUID, payload: VehicleAssignment, context: tuple 
     request.assigned_driver_user_id = payload.driver_user_id
     request.assigned_crew_user_id = payload.crew_user_id
     request.status = "vehicle_assigned"
-    _event(db, hospital_id, user.id, request, "vehicle_assigned")
+    _event(db, hospital_id, user.id, request.id, "vehicle_assigned")
     _audit(db, hospital_id, user.id, "transport.vehicle.assigned", "transport_request", request.id, {"vehicle_id": str(vehicle.id)})
     db.commit()
     _restore_context(db, user.id, hospital_id)
