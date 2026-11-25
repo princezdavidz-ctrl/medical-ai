@@ -36,7 +36,7 @@ Hospital-scoped mortuary case intake and body identification, storage location t
 ## Mortuary custody and release rules
 1. Every body receives a unique hospital case number and body reference; patient and optional encounter must belong to the same hospital and patient.
 2. Body movements are append-only. The current storage location is updated alongside the movement ledger.
-3. A legal hold blocks release. Applying a hold places the case in retained-by-authority status; only a mortuary manager/admin can lift it.
+3. A legal hold blocks release. Applying a hold requires a recorded reason and authority reference, attributes the actor and timestamp, and places the case in retained-by-authority status; only a mortuary manager/admin can lift it.
 4. Release requires a verified, non-revoked authorization with a protected vault evidence reference, explicit release-pending state, recipient identity details and resolution of every personal-effects item (released or retained).
 5. Authorization verification is independent: the submitter cannot verify their own authority. Releasing a body does not certify cause of death or replace statutory death registration.
 
