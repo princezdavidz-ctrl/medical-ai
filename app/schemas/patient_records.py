@@ -86,7 +86,7 @@ class RecordReleaseCreate(BaseModel):
     model_config = ConfigDict(extra="forbid")
     patient_id: UUID
     consent_id: UUID
-    requester_type: Literal["patient", "legal_representative", "treating_provider", "insurer", "court", "regulator", "other"]
+    requester_type: Literal["treating_provider", "insurer", "court", "regulator", "other"]
     requester_name: str = Field(min_length=2, max_length=180)
     requester_evidence_reference: str | None = Field(default=None, pattern=r"^vault://[0-9a-fA-F-]{36}$", min_length=44, max_length=44)
     recipient_name: str = Field(min_length=2, max_length=180)
