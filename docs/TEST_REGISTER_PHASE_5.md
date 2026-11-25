@@ -445,3 +445,24 @@ No item is considered passed until evidence, environment, build SHA, reviewer an
 - [ ] Tenant security: all four tables enforce hospital RLS; composite patient/encounter/consent/document relationships prevent cross-hospital or mismatched-patient links; no cross-tenant UUID substitution.
 - [ ] Migration: 0042 follows 0041; all four tables, indexes, constraints, RLS policies and immutable triggers create successfully; downgrade removes only Module 25 objects.
 - [ ] Phase 4 integrations: clinical modules publish document metadata to the record index; encrypted vault adapter verifies object existence/checksum and streams authorized documents; patient/proxy identity and secure self-service export workflows are connected.
+
+## Phase 3.26 — Telemedicine & Remote Care
+
+- [ ] Scheduler authorization: telemedicine_coordinator/appointment_scheduler active employee roles and authorized hospital administrators can schedule; department heads/nurse managers are limited to their active department; revoked memberships and inactive users denied.
+- [ ] Provider qualification: same-hospital active membership, active employee, active account, verified clinical profile, supported provider role and unexpired license required; suspended/rejected/expired credentials denied.
+- [ ] Provider roster coverage: a scheduled/confirmed staff shift must cover the full telemedicine session in the correct department; cancelled, completed, too-short or cross-department shifts do not qualify.
+- [ ] Telemedicine consent: exact same-hospital consent ID must be granted, purpose telemedicine, lawful basis declared, clinical_records category and telemedicine permitted use; expiry, withdrawal, wrong patient, wrong purpose or scope mismatch denied.
+- [ ] Scheduling time validation: timezone-aware future start within 365 days, end after start, maximum two hours; patient and provider cannot have overlapping scheduled/patient-ready/in-progress sessions.
+- [ ] Scheduling concurrency: concurrent sessions for the same patient or provider serialize using patient/employee row locks; no duplicate overlapping session can be created.
+- [ ] Department boundaries: department head/nurse manager cannot create, list, view, mark ready, cancel or mark no-show for sessions outside their department; hospital-level scheduler scope remains tenant-bound.
+- [ ] Patient readiness: readiness only within 15 minutes before start through 15 minutes after end; exact consent rechecked; encrypted location and emergency-contact references required; identity, privacy and emergency-plan acknowledgements all required.
+- [ ] Session start: only assigned provider; patient-ready state; valid start window; consent rechecked; active roster coverage and active verified care-team assignment with encounters scope required; encounter created exactly once.
+- [ ] Clinical note authorship: only assigned active provider can create signed notes for an in-progress session; DB composite FK binds author to assigned provider; note text minimum/maximum enforced; notes immutable.
+- [ ] Note visibility: only assigned provider or active verified care-team members with encounters scope can read notes; schedulers and hospital administrators cannot read clinical note content.
+- [ ] Session completion: requires at least one signed note and active encounter; session and encounter close atomically with actor/time; duplicate completion and completion without note denied.
+- [ ] Consent withdrawal after start: prevents new session start but does not block required note documentation or encounter closure for a consultation already in progress.
+- [ ] Cancellation/no-show: cancellation only before start with reason; no-show only for scheduled session after scheduled end; terminal sessions cannot be restarted or modified.
+- [ ] Event and audit controls: session lifecycle events append-only; notes append-only; session/note/list reads and state transitions create minimal audit records without note text, raw location or emergency contact.
+- [ ] Tenant security: RLS on sessions, notes and events; composite patient/encounter/consent/provider links reject cross-hospital or mismatched-patient IDs.
+- [ ] Migration: 0043 follows 0042; three tables, constraints, indexes, RLS and immutable triggers create/downgrade without affecting earlier modules.
+- [ ] Phase 4 integrations: connect live video/audio provider, meeting link issuance, secure vault verification, patient-side booking/readiness, notifications, medical-record document indexing, prescribing, referrals and billing.
