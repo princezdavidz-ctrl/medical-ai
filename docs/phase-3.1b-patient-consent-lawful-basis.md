@@ -7,7 +7,7 @@ Record purpose-specific patient processing authorization with a narrow data scop
 ## Request scope
 
 Each request records:
-- purpose code: care delivery, care coordination, referral, billing, insurance claim, patient portal or other;
+- purpose code: care delivery, care coordination, referral, billing, insurance claim, patient portal, record sharing or other;
 - explicit data categories (demographics, contact details, clinical records, lab results, imaging, medications, billing, insurance or other);
 - explicit permitted uses;
 - declared basis code;
