@@ -10,7 +10,7 @@ from app.api.audit import write_audit_event
 from app.api.deps import get_current_context
 from app.db.session import get_db
 from app.models import Encounter, Hospital, HospitalMembership, Patient, PatientConsent, Role
-from app.models.transport import AmbulanceVehicle, TransportEvent, TransportRequest
+from app.models.transport import AmbulanceVehicle, TransportEvent, TransportReceivingOffer, TransportRequest
 from app.schemas.transport import (
     VehicleCreate, VehicleRead, TransportRequestCreate, TransportRequestRead,
     ReceivingBedAcceptance, VehicleAssignment, TrackingUpdate, RejectionInput,
@@ -54,19 +54,18 @@ def _audit(db: Session, hospital_id: UUID, user_id: UUID, action: str, resource:
     )
 
 
-def _event(db: Session, origin_hospital_id: UUID, user_id: UUID, request: TransportRequest, event_type: str, note=None, latitude=None, longitude=None) -> None:
+def _event(db: Session, origin_hospital_id: UUID, user_id: UUID, request_id: UUID, event_type: str, note=None, latitude=None, longitude=None) -> None:
     db.add(TransportEvent(
-        hospital_id=origin_hospital_id, transport_request_id=request.id,
+        hospital_id=origin_hospital_id, transport_request_id=request_id,
         actor_user_id=user_id, event_type=event_type, note=note,
         latitude=latitude, longitude=longitude,
     ))
 
 
-def _request_by_id(db: Session, request_id: UUID, hospital_id: UUID, *, receiving: bool = False, lock: bool = False):
-    query = select(TransportRequest).where(TransportRequest.id == request_id)
-    query = query.where(
-        TransportRequest.receiving_hospital_id == hospital_id if receiving
-        else TransportRequest.hospital_id == hospital_id
+def _request_by_id(db: Session, request_id: UUID, hospital_id: UUID, *, lock: bool = False):
+    query = select(TransportRequest).where(
+        TransportRequest.id == request_id,
+        TransportRequest.hospital_id == hospital_id,
     )
     if lock:
         query = query.with_for_update()
@@ -75,6 +74,19 @@ def _request_by_id(db: Session, request_id: UUID, hospital_id: UUID, *, receivin
         raise HTTPException(status_code=404, detail={"code": "transport_request_not_found"})
     return request
 
+
+
+def _offer_by_id(db: Session, request_id: UUID, receiving_hospital_id: UUID, *, lock: bool = False):
+    query = select(TransportReceivingOffer).where(
+        TransportReceivingOffer.transport_request_id == request_id,
+        TransportReceivingOffer.hospital_id == receiving_hospital_id,
+    )
+    if lock:
+        query = query.with_for_update()
+    offer = db.scalar(query)
+    if offer is None:
+        raise HTTPException(status_code=404, detail={"code": "receiving_transfer_offer_not_found"})
+    return offer
 
 def _active_crew(db: Session, hospital_id: UUID, user_id: UUID) -> bool:
     membership = db.scalar(select(HospitalMembership).join(
@@ -170,7 +182,14 @@ def create_transport_request(payload: TransportRequestCreate, context: tuple = D
     db.add(request)
     try:
         db.flush()
-        _event(db, hospital_id, user.id, request, "requested")
+        if request.receiving_hospital_id is not None:
+            db.add(TransportReceivingOffer(
+                hospital_id=request.receiving_hospital_id, origin_hospital_id=hospital_id,
+                transport_request_id=request.id, transfer_number=request.transfer_number,
+                priority=request.priority, origin_description=request.origin_description,
+                destination_description=request.destination_description, status="offered",
+            ))
+        _event(db, hospital_id, user.id, request.id, "requested")
         _audit(db, hospital_id, user.id, "transport.requested", "transport_request", request.id, {"priority": request.priority, "transport_type": request.transport_type})
         db.commit()
     except IntegrityError:
