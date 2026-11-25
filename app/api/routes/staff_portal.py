@@ -747,6 +747,7 @@ def get_staff_portal_dashboard(context: tuple = Depends(get_current_context), db
             PatientCareTeamAssignment.hospital_id == hospital_id,
             PatientCareTeamAssignment.staff_user_id == user.id,
             PatientCareTeamAssignment.status == "active",
+            PatientCareTeamAssignment.starts_at <= now,
             or_(PatientCareTeamAssignment.ends_at.is_(None), PatientCareTeamAssignment.ends_at > now),
         )) or 0,
         "clinical_profile_status": (db.scalar(select(ClinicalStaffProfile.status).where(
