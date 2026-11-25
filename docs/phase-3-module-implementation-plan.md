@@ -119,3 +119,6 @@ Mortuary & Pathology adds hospital-scoped mortuary intake, body identification a
 
 
 Hospital Administration Console adds hospital profile and branding, operational settings, weekly operating hours, department hierarchy/manager/contact governance, aggregate administration dashboard and immutable administrative event history. Appointment booking, patient self-registration and public-directory flags remain configuration values until Phase 4 connects enforcement to their respective workflows. Record sharing remains request-based and consent-gated.
+
+
+Patient Portal adds staff-verified links between existing user accounts and patient records, scoped and expiring proxy access, patient-scoped record views for encounters, finalized laboratory results, medications, invoices and consents, plus immutable access-event logging. Account signup/OTP, MFA challenge, appointments, secure messaging, payments and cross-hospital exchange remain Phase 4 or later integrations.
