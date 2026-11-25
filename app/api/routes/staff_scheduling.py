@@ -392,6 +392,7 @@ def create_shift_swap_request(shift_id: UUID, payload: ShiftSwapRequestCreate, c
     shift = _shift(db, hospital_id, shift_id, lock=True)
     if shift.staff_user_id != user.id or shift.status not in ("scheduled", "confirmed"):
         raise HTTPException(status_code=403, detail={"code": "only_assigned_staff_can_request_swap"})
+    _active_employee(db, hospital_id, shift.employee_profile_id)
     _ensure_no_attendance(db, hospital_id, shift.id)
     if payload.target_user_id == user.id:
         raise HTTPException(status_code=422, detail={"code": "shift_swap_target_must_be_another_staff_member"})
@@ -524,6 +525,9 @@ def decide_shift_swap(request_id: UUID, payload: ShiftSwapDecision, context: tup
     _enforce_manager_department(manager_department_id, shift.department_id)
     if shift.status not in ("scheduled", "confirmed") or shift.staff_user_id != request.requester_user_id:
         raise HTTPException(status_code=409, detail={"code": "shift_changed_since_swap_request"})
+    _active_employee(db, hospital_id, shift.employee_profile_id, lock=True)
+    if payload.decision == "rejected" and (not payload.note or len(payload.note.strip()) < 5):
+        raise HTTPException(status_code=422, detail={"code": "swap_rejection_note_required"})
     if payload.decision == "approved":
         target = db.scalar(select(EmployeeProfile).where(
             EmployeeProfile.hospital_id == hospital_id, EmployeeProfile.user_id == request.target_user_id,
