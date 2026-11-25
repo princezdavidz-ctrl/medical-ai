@@ -43,7 +43,7 @@ def upgrade() -> None:
         sa.ForeignKeyConstraint(["hospital_id", "supersedes_document_id", "patient_id"], ["patient_record_documents.hospital_id", "patient_record_documents.id", "patient_record_documents.patient_id"], name="fk_record_document_supersedes"),
         sa.UniqueConstraint("hospital_id", "id", "patient_id", name="uq_record_document_hospital_id_patient"),
         sa.UniqueConstraint("hospital_id", "vault_reference", name="uq_record_document_vault_reference"),
-        sa.UniqueConstraint("hospital_id", "patient_id", "source_module", "source_record_id", "version_number", name="uq_record_document_source_version"),
+ 
         sa.CheckConstraint("source_module IN ('opd', 'nursing', 'inpatient', 'emergency', 'icu', 'surgery', 'maternity', 'pediatrics', 'laboratory', 'radiology', 'pharmacy', 'billing', 'insurance', 'external', 'other')", name="ck_record_document_source"),
         sa.CheckConstraint("record_type IN ('clinical_note', 'discharge_summary', 'lab_report', 'imaging_report', 'prescription', 'referral', 'consent', 'identity_document', 'administrative', 'external_record', 'other')", name="ck_record_document_type"),
         sa.CheckConstraint("status IN ('pending_review', 'verified', 'rejected', 'superseded')", name="ck_record_document_status"),
@@ -55,6 +55,7 @@ def upgrade() -> None:
         sa.CheckConstraint("(status = 'pending_review' AND verified_by_user_id IS NULL AND verified_at IS NULL AND rejection_reason IS NULL) OR (status = 'verified' AND verified_by_user_id IS NOT NULL AND verified_at IS NOT NULL AND rejection_reason IS NULL) OR (status = 'rejected' AND verified_by_user_id IS NOT NULL AND verified_at IS NOT NULL AND rejection_reason IS NOT NULL) OR (status = 'superseded' AND verified_by_user_id IS NOT NULL AND verified_at IS NOT NULL AND rejection_reason IS NULL)", name="ck_record_document_review_state"),
         sa.CheckConstraint("supersedes_document_id IS NULL OR supersedes_document_id != id", name="ck_record_document_no_self_supersede"),
     )
+    op.create_index("uq_record_document_source_version_active", "patient_record_documents", ["hospital_id", "patient_id", "source_module", "source_record_id", "version_number"], unique=True, postgresql_where=sa.text("status IN ('pending_review', 'verified', 'superseded')"))
     op.create_index("ix_record_document_patient_date", "patient_record_documents", ["hospital_id", "patient_id", "document_date"])
     op.create_index("ix_record_document_patient_type", "patient_record_documents", ["hospital_id", "patient_id", "record_type", "status"])
     op.create_index("ix_record_document_encounter", "patient_record_documents", ["hospital_id", "encounter_id"])
