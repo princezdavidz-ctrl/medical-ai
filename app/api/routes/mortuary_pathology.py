@@ -286,13 +286,25 @@ def update_mortuary_legal_hold(case_id: UUID, payload: LegalHoldUpdate, context:
     case = _mortuary_case(db, case_id, hospital_id, lock=True)
     if case.status in ("released", "transferred"):
         raise HTTPException(status_code=409, detail={"code": "terminal_mortuary_case"})
-    case.legal_hold = payload.legal_hold
     if payload.legal_hold:
+        if not payload.reason or not payload.authority_reference:
+            raise HTTPException(status_code=422, detail={"code": "legal_hold_reason_and_authority_required"})
+        case.legal_hold = True
+        case.legal_hold_reason = payload.reason
+        case.legal_hold_reference = payload.authority_reference
+        case.legal_hold_set_by_user_id = user.id
+        case.legal_hold_set_at = datetime.now(timezone.utc)
         case.status = "retained_by_authority"
-        _movement(db, hospital_id, user.id, case, "retained", case.storage_location, "Legal hold applied")
-    elif case.status == "retained_by_authority":
-        case.status = "stored"
-        _movement(db, hospital_id, user.id, case, "stored", case.storage_location, "Legal hold lifted")
+        _movement(db, hospital_id, user.id, case, "retained", case.storage_location, payload.reason)
+    else:
+        case.legal_hold = False
+        case.legal_hold_reason = None
+        case.legal_hold_reference = None
+        case.legal_hold_set_by_user_id = None
+        case.legal_hold_set_at = None
+        if case.status == "retained_by_authority":
+            case.status = "stored"
+            _movement(db, hospital_id, user.id, case, "stored", case.storage_location, "Legal hold lifted")
     _audit(db, hospital_id, user.id, "mortuary.legal_hold.changed", "mortuary_case", case.id, {"legal_hold": payload.legal_hold})
     db.commit()
     _restore_context(db, user.id, hospital_id)
