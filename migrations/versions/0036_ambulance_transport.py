@@ -81,6 +81,35 @@ def upgrade() -> None:
     )
     op.create_index("ix_transport_request_queue", "transport_requests", ["hospital_id", "status", "priority", "created_at"])
     op.create_index("ix_transport_request_destination", "transport_requests", ["receiving_hospital_id", "status", "created_at"])
+
+    op.create_table(
+        "transport_receiving_offers",
+        sa.Column("id", sa.Uuid(), primary_key=True),
+        sa.Column("hospital_id", sa.Uuid(), sa.ForeignKey("hospitals.id"), nullable=False),
+        sa.Column("origin_hospital_id", sa.Uuid(), sa.ForeignKey("hospitals.id"), nullable=False),
+        sa.Column("transport_request_id", sa.Uuid(), nullable=False),
+        sa.Column("transfer_number", sa.String(80), nullable=False),
+        sa.Column("priority", sa.String(24), nullable=False),
+        sa.Column("origin_description", sa.String(500), nullable=False),
+        sa.Column("destination_description", sa.String(500), nullable=False),
+        sa.Column("status", sa.String(24), nullable=False, server_default="offered"),
+        sa.Column("bed_reference", sa.String(120)),
+        sa.Column("accepted_by_user_id", sa.Uuid(), sa.ForeignKey("users.id")),
+        sa.Column("accepted_at", sa.DateTime(timezone=True)),
+        sa.Column("rejected_by_user_id", sa.Uuid(), sa.ForeignKey("users.id")),
+        sa.Column("rejection_reason", sa.String(1000)),
+        sa.Column("arrival_confirmed_by_user_id", sa.Uuid(), sa.ForeignKey("users.id")),
+        sa.Column("arrived_at", sa.DateTime(timezone=True)),
+        sa.Column("created_at", sa.DateTime(timezone=True), server_default=sa.func.now(), nullable=False),
+        sa.ForeignKeyConstraint(["origin_hospital_id", "transport_request_id"], ["transport_requests.hospital_id", "transport_requests.id"], name="fk_transport_offer_request"),
+        sa.UniqueConstraint("hospital_id", "id", name="uq_transport_offer_hospital_id"),
+        sa.UniqueConstraint("origin_hospital_id", "transport_request_id", name="uq_transport_offer_request"),
+        sa.CheckConstraint("status IN ('offered', 'bed_accepted', 'rejected', 'arrived', 'cancelled')", name="ck_transport_offer_status"),
+        sa.CheckConstraint("status NOT IN ('bed_accepted', 'arrived') OR (accepted_by_user_id IS NOT NULL AND bed_reference IS NOT NULL AND accepted_at IS NOT NULL)", name="ck_transport_offer_acceptance"),
+        sa.CheckConstraint("status != 'rejected' OR (rejected_by_user_id IS NOT NULL AND rejection_reason IS NOT NULL)", name="ck_transport_offer_rejection"),
+        sa.CheckConstraint("status != 'arrived' OR (arrival_confirmed_by_user_id IS NOT NULL AND arrived_at IS NOT NULL)", name="ck_transport_offer_arrival"),
+    )
+    op.create_index("ix_transport_offer_queue", "transport_receiving_offers", ["hospital_id", "status", "created_at"])
     op.create_table(
         "transport_events",
         sa.Column("id", sa.Uuid(), primary_key=True),
@@ -101,15 +130,17 @@ def upgrade() -> None:
     op.execute("ALTER TABLE ambulance_vehicles ENABLE ROW LEVEL SECURITY")
     op.execute("CREATE POLICY ambulance_vehicles_hospital_isolation ON ambulance_vehicles USING (hospital_id = NULLIF(current_setting('app.current_hospital_id', true), '')::uuid) WITH CHECK (hospital_id = NULLIF(current_setting('app.current_hospital_id', true), '')::uuid)")
     op.execute("ALTER TABLE transport_requests ENABLE ROW LEVEL SECURITY")
+    op.execute("CREATE POLICY transport_requests_origin_isolation ON transport_requests USING (hospital_id = NULLIF(current_setting('app.current_hospital_id', true), '')::uuid) WITH CHECK (hospital_id = NULLIF(current_setting('app.current_hospital_id', true), '')::uuid)")
+    op.execute("ALTER TABLE transport_receiving_offers ENABLE ROW LEVEL SECURITY")
     op.execute("""
-        CREATE POLICY transport_requests_participant_isolation ON transport_requests
+        CREATE POLICY transport_receiving_offers_participant_isolation ON transport_receiving_offers
         USING (
             hospital_id = NULLIF(current_setting('app.current_hospital_id', true), '')::uuid
-            OR receiving_hospital_id = NULLIF(current_setting('app.current_hospital_id', true), '')::uuid
+            OR origin_hospital_id = NULLIF(current_setting('app.current_hospital_id', true), '')::uuid
         )
         WITH CHECK (
             hospital_id = NULLIF(current_setting('app.current_hospital_id', true), '')::uuid
-            OR receiving_hospital_id = NULLIF(current_setting('app.current_hospital_id', true), '')::uuid
+            OR origin_hospital_id = NULLIF(current_setting('app.current_hospital_id', true), '')::uuid
         )
     """)
     op.execute("ALTER TABLE transport_events ENABLE ROW LEVEL SECURITY")
@@ -118,19 +149,19 @@ def upgrade() -> None:
         USING (
             hospital_id = NULLIF(current_setting('app.current_hospital_id', true), '')::uuid
             OR EXISTS (
-                SELECT 1 FROM transport_requests r
-                WHERE r.hospital_id = transport_events.hospital_id
-                  AND r.id = transport_events.transport_request_id
-                  AND r.receiving_hospital_id = NULLIF(current_setting('app.current_hospital_id', true), '')::uuid
+                SELECT 1 FROM transport_receiving_offers o
+                WHERE o.origin_hospital_id = transport_events.hospital_id
+                  AND o.transport_request_id = transport_events.transport_request_id
+                  AND o.hospital_id = NULLIF(current_setting('app.current_hospital_id', true), '')::uuid
             )
         )
         WITH CHECK (
             hospital_id = NULLIF(current_setting('app.current_hospital_id', true), '')::uuid
             OR EXISTS (
-                SELECT 1 FROM transport_requests r
-                WHERE r.hospital_id = transport_events.hospital_id
-                  AND r.id = transport_events.transport_request_id
-                  AND r.receiving_hospital_id = NULLIF(current_setting('app.current_hospital_id', true), '')::uuid
+                SELECT 1 FROM transport_receiving_offers o
+                WHERE o.origin_hospital_id = transport_events.hospital_id
+                  AND o.transport_request_id = transport_events.transport_request_id
+                  AND o.hospital_id = NULLIF(current_setting('app.current_hospital_id', true), '')::uuid
             )
         )
     """)
@@ -152,7 +183,10 @@ def downgrade() -> None:
     op.execute("DROP POLICY IF EXISTS transport_events_participant_isolation ON transport_events")
     op.execute("ALTER TABLE transport_events DISABLE ROW LEVEL SECURITY")
     op.drop_table("transport_events")
-    op.execute("DROP POLICY IF EXISTS transport_requests_participant_isolation ON transport_requests")
+    op.execute("DROP POLICY IF EXISTS transport_receiving_offers_participant_isolation ON transport_receiving_offers")
+    op.execute("ALTER TABLE transport_receiving_offers DISABLE ROW LEVEL SECURITY")
+    op.drop_table("transport_receiving_offers")
+    op.execute("DROP POLICY IF EXISTS transport_requests_origin_isolation ON transport_requests")
     op.execute("ALTER TABLE transport_requests DISABLE ROW LEVEL SECURITY")
     op.drop_table("transport_requests")
     op.execute("DROP POLICY IF EXISTS ambulance_vehicles_hospital_isolation ON ambulance_vehicles")
