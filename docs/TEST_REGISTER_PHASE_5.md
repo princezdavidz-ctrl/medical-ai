@@ -368,3 +368,18 @@ No item is considered passed until evidence, environment, build SHA, reviewer an
 - [ ] Hospital administration events: every profile/settings/hours/department change audited, event history is hospital-scoped and UPDATE/DELETE denied by database trigger.
 - [ ] Hospital admin RLS: all four new administration tables isolated by hospital; existing department RLS remains effective; cross-hospital UUID substitution denied.
 - [ ] Phase 4 enforcement dependency: appointment booking, self-registration and public-directory settings are connected to their respective workflows before enforcement is claimed; request-based consent-gated record sharing remains immutable.
+
+
+- [ ] Phase 3.22 patient token: active user/password, active hospital, active verified patient link, hospital claim/header match, MFA-enabled account denied until challenge support, expired/revoked/pending link denied.
+- [ ] Patient portal link creation: active same-hospital patient and user, unique patient/user link, allowed nonempty access scopes only, self link cannot carry proxy authority, proxy link requires authority reference and timezone-aware future expiry.
+- [ ] Independent identity verification: creator cannot verify own link, approved verification methods by relationship type, protected vault evidence required, proxy guardian/court authority verification and expiry.
+- [ ] Patient portal revocation: active/pending link revocation, reason required, actor/time retained, immediate token/request denial, expired links inaccessible.
+- [ ] Patient portal scopes: each profile/encounter/lab/medication/invoice/consent endpoint requires matching scope; proxy cannot exceed granted scope; cross-patient UUID substitution denied.
+- [ ] Patient portal demographics/encounters: patient tenant binding, allowed fields only, no access without active link and corresponding scope.
+- [ ] Patient portal laboratory results: final results only, correct patient through specimen/order joins, critical result withheld until clinician acknowledgement, tenant isolation and result ordering.
+- [ ] Patient portal medications: correct patient and hospital, medication definition join, status/history visibility and no cross-patient medication leakage.
+- [ ] Patient portal invoices: draft invoices hidden, totals/balance calculation correct, no cross-patient billing visibility.
+- [ ] Patient portal consents: correct patient/hospital, consent status/scope fields, no ability for proxy link to silently grant or alter consent.
+- [ ] Patient portal access audit: each sensitive read creates immutable event with correct link/user/patient/action/count, event rows are hospital-scoped and UPDATE/DELETE denied.
+- [ ] Patient portal RLS: link and access-event tables hospital-isolated; composite link/patient FK integrity; patient record queries tenant filtered; no cross-hospital UUID substitution.
+- [ ] Patient portal account boundaries: no implicit user signup, no MRN/DOB-only identity matching, no unsupported MFA bypass, no secure messaging/appointment/payment/record-sharing claims.
