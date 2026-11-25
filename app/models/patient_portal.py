@@ -10,6 +10,7 @@ class PatientPortalLink(Base):
     __table_args__ = (
         ForeignKeyConstraint(["hospital_id", "patient_id"], ["patients.hospital_id", "patients.id"], name="fk_patient_portal_link_patient"),
         UniqueConstraint("hospital_id", "id", "patient_id", name="uq_patient_portal_link_hospital_patient"),
+        UniqueConstraint("hospital_id", "id", "patient_id", "portal_user_id", name="uq_patient_portal_link_event_owner"),
         Index("uq_patient_portal_link_open", "hospital_id", "patient_id", "portal_user_id", unique=True, postgresql_where=text("status IN ('pending', 'active')")),
         CheckConstraint("relationship_type IN ('self', 'parent_guardian', 'caregiver', 'legal_representative')", name="ck_patient_portal_relationship"),
         CheckConstraint("status IN ('pending', 'active', 'revoked')", name="ck_patient_portal_link_status"),
@@ -45,7 +46,7 @@ class PatientPortalLink(Base):
 class PatientPortalAccessEvent(Base):
     __tablename__ = "patient_portal_access_events"
     __table_args__ = (
-        ForeignKeyConstraint(["hospital_id", "portal_link_id", "patient_id"], ["patient_portal_links.hospital_id", "patient_portal_links.id", "patient_portal_links.patient_id"], name="fk_patient_portal_event_link"),
+        ForeignKeyConstraint(["hospital_id", "portal_link_id", "patient_id", "portal_user_id"], ["patient_portal_links.hospital_id", "patient_portal_links.id", "patient_portal_links.patient_id", "patient_portal_links.portal_user_id"], name="fk_patient_portal_event_link"),
         UniqueConstraint("hospital_id", "id", name="uq_patient_portal_event_hospital_id"),
         CheckConstraint("action IN ('viewed_profile', 'viewed_encounters', 'viewed_lab_results', 'viewed_medications', 'viewed_invoices', 'viewed_consents')", name="ck_patient_portal_event_action"),
         CheckConstraint("resource_count >= 0", name="ck_patient_portal_event_resource_count"),
