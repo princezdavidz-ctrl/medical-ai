@@ -434,12 +434,15 @@ def cancel_transport_request(request_id: UUID, context: tuple = Depends(get_curr
 def list_transport_events(request_id: UUID, context: tuple = Depends(get_current_context), db: Session = Depends(get_db)):
     user, hospital_id = context
     role = _role(db, user.id, hospital_id)
-    if role in (_ORIGIN_STAFF | _FLEET_MANAGERS):
+    offer = db.scalar(select(TransportReceivingOffer).where(
+        TransportReceivingOffer.transport_request_id == request_id,
+        TransportReceivingOffer.hospital_id == hospital_id,
+    )) if role in _RECEIVING_STAFF else None
+    if offer is not None:
+        origin_hospital_id, transport_request_id = offer.origin_hospital_id, offer.transport_request_id
+    elif role in (_ORIGIN_STAFF | _FLEET_MANAGERS):
         request = _request_by_id(db, request_id, hospital_id)
         origin_hospital_id, transport_request_id = request.hospital_id, request.id
-    elif role in _RECEIVING_STAFF:
-        offer = _offer_by_id(db, request_id, hospital_id)
-        origin_hospital_id, transport_request_id = offer.origin_hospital_id, offer.transport_request_id
     else:
         raise HTTPException(status_code=403, detail={"code": "transport_event_access_denied"})
     rows = db.scalars(select(TransportEvent).where(
