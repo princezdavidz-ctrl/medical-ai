@@ -26,7 +26,7 @@ class TransportRequestCreate(BaseModel):
     consent_id: UUID
     receiving_hospital_id: UUID | None = None
     transfer_number: str = Field(min_length=2, max_length=80)
-    transport_type: str = Field(pattern="^(interfacility|emergency|scheduled|internal)$")
+    transport_type: str = Field(pattern="^interfacility$")
     priority: str = Field(default="routine", pattern="^(routine|urgent|emergency)$")
     reason: str = Field(min_length=5, max_length=3000)
     origin_description: str = Field(min_length=3, max_length=500)
@@ -45,6 +45,7 @@ class TransportRequestRead(BaseModel):
     destination_description: str
     receiving_hospital_id: UUID | None
     status: str
+    receiving_status: str | None = None
     receiving_bed_reference: str | None
     assigned_vehicle_id: UUID | None
     assigned_driver_user_id: UUID | None
