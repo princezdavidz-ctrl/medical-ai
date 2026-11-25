@@ -161,7 +161,7 @@ def list_mortuary_cases(context: tuple = Depends(get_current_context), db: Sessi
 def submit_mortuary_authorization(case_id: UUID, payload: MortuaryAuthorizationCreate, context: tuple = Depends(get_current_context), db: Session = Depends(get_db)):
     user, hospital_id = context
     _require(db, user.id, hospital_id, _MORTUARY_STAFF)
-    case = _mortuary_case(db, case_id, hospital_id)
+    case = _mortuary_case(db, case_id, hospital_id, lock=True)
     if case.status in ("released", "transferred"):
         raise HTTPException(status_code=409, detail={"code": "closed_mortuary_case"})
     item = MortuaryAuthorization(
@@ -180,6 +180,15 @@ def submit_mortuary_authorization(case_id: UUID, payload: MortuaryAuthorizationC
 def decide_mortuary_authorization(authorization_id: UUID, payload: MortuaryAuthorizationDecision, context: tuple = Depends(get_current_context), db: Session = Depends(get_db)):
     user, hospital_id = context
     _require(db, user.id, hospital_id, _MORTUARY_MANAGERS)
+    item = db.scalar(select(MortuaryAuthorization).where(
+        MortuaryAuthorization.id == authorization_id,
+        MortuaryAuthorization.hospital_id == hospital_id,
+    ))
+    if item is None:
+        raise HTTPException(status_code=404, detail={"code": "pending_mortuary_authorization_not_found"})
+    case = _mortuary_case(db, item.mortuary_case_id, hospital_id, lock=True)
+    if case.status in ("released", "transferred"):
+        raise HTTPException(status_code=409, detail={"code": "closed_mortuary_case"})
     item = db.scalar(select(MortuaryAuthorization).where(
         MortuaryAuthorization.id == authorization_id,
         MortuaryAuthorization.hospital_id == hospital_id,
