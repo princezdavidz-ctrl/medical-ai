@@ -204,13 +204,13 @@ def upgrade() -> None:
         op.execute(sa.text(f'ALTER TABLE "{table}" ENABLE ROW LEVEL SECURITY'))
         op.execute(sa.text(f'CREATE POLICY "{table}_hospital_isolation" ON "{table}" USING (hospital_id = NULLIF(current_setting(\'app.current_hospital_id\', true), \'\')::uuid) WITH CHECK (hospital_id = NULLIF(current_setting(\'app.current_hospital_id\', true), \'\')::uuid)'))
     op.execute("""
-        CREATE FUNCTION prevent_mortuary_movement_mutation() RETURNS trigger AS $
+        CREATE FUNCTION prevent_mortuary_movement_mutation() RETURNS trigger AS $$
         BEGIN RAISE EXCEPTION 'mortuary movement records are append-only'; END;
         $$ LANGUAGE plpgsql
     """)
     op.execute("CREATE TRIGGER trg_mortuary_movements_immutable BEFORE UPDATE OR DELETE ON mortuary_movements FOR EACH ROW EXECUTE FUNCTION prevent_mortuary_movement_mutation()")
     op.execute("""
-        CREATE FUNCTION prevent_pathology_event_mutation() RETURNS trigger AS $
+        CREATE FUNCTION prevent_pathology_event_mutation() RETURNS trigger AS $$
         BEGIN RAISE EXCEPTION 'pathology events are append-only'; END;
         $$ LANGUAGE plpgsql
     """)
