@@ -200,7 +200,7 @@ def _event(db: Session, hospital_id: UUID, session: TelemedicineSession, user_id
 def _audit(db: Session, hospital_id: UUID, user_id: UUID, action: str, resource_type: str, resource_id: UUID | None, metadata=None) -> None:
     write_audit_event(
         db, hospital_id=hospital_id, actor_user_id=user_id, action=action,
-        resource_type=resource_type, resource_id=str(resource_id), metadata=metadata or {},
+        resource_type=resource_type, resource_id=str(resource_id) if resource_id is not None else None, metadata=metadata or {},
     )
 
 
