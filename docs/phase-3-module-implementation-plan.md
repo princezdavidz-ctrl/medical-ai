@@ -97,6 +97,7 @@ Every module milestone must include:
 | Inventory & Asset Management | Phase 3.17 | Implemented; Phase 5 verification pending | PR #43 (merged) |
 | Facilities & Maintenance | Phase 3.18 | Implemented; Phase 5 verification pending | PR #44 (merged) |
 | Ambulance & Transport | Phase 3.19 | Implemented; Phase 5 verification pending | PR #45 (pending) |
+| Ambulance & Transport | Phase 3.19 | Implemented; Phase 5 verification pending | PR #45 (pending) |
 
 Patient Registration & Management extends the Phase 1 patient foundation with governed duplicate review, identity/document metadata, contact and next-of-kin details, consent/lawful-basis recording, patient status and audit history. Automatic patient merging is prohibited.
 
@@ -110,3 +111,6 @@ Facilities & Maintenance adds a hospital-scoped facility location hierarchy, ass
 
 
 Ambulance & Transport adds consent-gated interfacility transfer requests, minimized receiving-hospital offers for bed acceptance/rejection, ambulance fleet records, driver/crew assignment, dispatch, manually recorded location updates, receiving arrival confirmation and origin fleet release. Receiving hospitals do not receive patient/encounter identifiers or clinical details through this module. Actual inpatient bed reservation, patient-record exchange and live GPS/dispatch integrations remain separate workflows or Phase 4 integrations. Phase 5 verification is pending.
+
+
+Ambulance & Transport adds consent-gated interfacility transfer requests, minimized receiving-hospital offers for bed acceptance/rejection, ambulance fleet records and status management, driver/crew assignment, dispatch, manually recorded location updates, receiving arrival confirmation and origin fleet release. Receiving hospitals do not receive patient/encounter identifiers or clinical details through this module. Actual inpatient bed reservation, patient-record exchange and live GPS/dispatch integrations remain separate workflows or Phase 4 integrations. Phase 5 verification is pending.
