@@ -19,7 +19,7 @@ from app.schemas.staff_scheduling import (
     ShiftTemplateCreate, ShiftTemplateUpdate, ShiftTemplateRead,
     ShiftAssignmentCreate, ShiftAssignmentUpdate, ShiftAssignmentRead,
     ShiftSwapRequestCreate, ShiftSwapResponse, ShiftSwapDecision, ShiftSwapRequestRead,
-    AttendanceCheckOut, AttendanceDecision, AttendanceResubmission, ShiftAttendanceRead,
+    AttendanceCheckOut, AttendanceDecision, AttendanceResubmission, ShiftAttendanceRead, ShiftSwapCancellation,
 )
 
 router = APIRouter(prefix="/staff-scheduling", tags=["staff management and scheduling"])
@@ -450,6 +450,28 @@ def list_shift_swap_requests(context: tuple = Depends(get_current_context), db: 
             StaffShiftSwapRequest.target_user_id == user.id,
         ))
     return db.scalars(query.order_by(StaffShiftSwapRequest.created_at.desc()).limit(300)).all()
+
+
+@router.post("/swap-requests/{request_id}/cancel", response_model=ShiftSwapRequestRead)
+def cancel_shift_swap_request(request_id: UUID, payload: ShiftSwapCancellation, context: tuple = Depends(get_current_context), db: Session = Depends(get_db)):
+    user, hospital_id = context
+    request = db.scalar(select(StaffShiftSwapRequest).where(
+        StaffShiftSwapRequest.id == request_id,
+        StaffShiftSwapRequest.hospital_id == hospital_id,
+    ).with_for_update())
+    if request is None or request.requester_user_id != user.id or request.status not in ("pending_target", "accepted"):
+        raise HTTPException(status_code=404, detail={"code": "cancellable_own_shift_swap_not_found"})
+    shift = _shift(db, hospital_id, request.shift_assignment_id, lock=True)
+    if shift.status not in ("scheduled", "confirmed"):
+        raise HTTPException(status_code=409, detail={"code": "shift_no_longer_swappable"})
+    request.status = "cancelled"
+    request.decision_note = payload.reason
+    _event(db, hospital_id, user.id, "swap_cancelled", "staff_shift_swap_request", request.id)
+    _audit(db, hospital_id, user.id, "staff_scheduling.swap_cancelled", "staff_shift_swap_request", request.id)
+    db.commit()
+    _restore_context(db, user.id, hospital_id)
+    db.refresh(request)
+    return request
 
 
 @router.post("/swap-requests/{request_id}/respond", response_model=ShiftSwapRequestRead)
