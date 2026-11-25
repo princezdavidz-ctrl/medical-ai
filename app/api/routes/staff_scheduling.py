@@ -214,6 +214,9 @@ def list_shift_templates(context: tuple = Depends(get_current_context), db: Sess
     if role in {"department_head", "nurse_manager"}:
         department_id = _manager_department(db, user.id, hospital_id, role)
         query = query.where(or_(StaffShiftTemplate.department_id == department_id, StaffShiftTemplate.department_id.is_(None)))
+    elif role in _MANAGER_ROLES:
+        # Hospital-wide roster managers may see all department templates.
+        pass
     elif department_id is not None:
         query = query.where(or_(StaffShiftTemplate.department_id == department_id, StaffShiftTemplate.department_id.is_(None)))
     else:
