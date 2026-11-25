@@ -79,7 +79,7 @@ class User(TimestampMixin, Base):
 
 class Role(TimestampMixin, Base):
     __tablename__ = "roles"
-    __table_args__ = (UniqueConstraint("hospital_id", "name", name="uq_role_hospital_name"),)
+    __table_args__ = (UniqueConstraint("hospital_id", "name", name="uq_role_hospital_name"), UniqueConstraint("hospital_id", "id", name="uq_role_hospital_id"))
 
     id: Mapped[uuid.UUID] = mapped_column(Uuid(as_uuid=True), primary_key=True, default=uuid.uuid4)
     hospital_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("hospitals.id"), nullable=False, index=True)
@@ -89,7 +89,11 @@ class Role(TimestampMixin, Base):
 
 class HospitalMembership(TimestampMixin, Base):
     __tablename__ = "hospital_memberships"
-    __table_args__ = (UniqueConstraint("hospital_id", "user_id", name="uq_membership_hospital_user"),)
+    __table_args__ = (
+        UniqueConstraint("hospital_id", "user_id", name="uq_membership_hospital_user"),
+        ForeignKeyConstraint(["hospital_id", "role_id"], ["roles.hospital_id", "roles.id"], name="fk_membership_role_tenant"),
+        ForeignKeyConstraint(["hospital_id", "department_id"], ["departments.hospital_id", "departments.id"], name="fk_membership_department_tenant"),
+    )
 
     id: Mapped[uuid.UUID] = mapped_column(Uuid(as_uuid=True), primary_key=True, default=uuid.uuid4)
     hospital_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("hospitals.id"), nullable=False, index=True)
