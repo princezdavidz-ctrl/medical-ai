@@ -79,6 +79,9 @@ class NotificationIntentRead(BaseModel):
     channel: str
     purpose: str
     status: str
+    rendered_title: str
+    rendered_body: str
+    read_at: datetime | None
     attempt_count: int
     max_attempts: int
     next_attempt_at: datetime
