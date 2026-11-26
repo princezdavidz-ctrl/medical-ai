@@ -1,5 +1,4 @@
 import re
-import uuid
 from datetime import datetime, timezone
 from string import Formatter
 from uuid import UUID
@@ -52,6 +51,28 @@ def _restore_context(db: Session, user_id: UUID, hospital_id: UUID) -> None:
 def _audit(db: Session, hospital_id: UUID, user_id: UUID, action: str, resource_type: str, resource_id: UUID) -> None:
     write_audit_event(db, hospital_id=hospital_id, actor_user_id=user_id, action=action,
                       resource_type=resource_type, resource_id=str(resource_id), metadata={})
+
+
+def _localized_template(db: Session, hospital_id: UUID, base: NotificationTemplate, locale: str) -> NotificationTemplate:
+    if locale == base.locale:
+        return base
+    candidates = [locale] if locale else []
+    if "en" not in candidates:
+        candidates.append("en")
+    for candidate_locale in candidates:
+        localized = db.scalar(select(NotificationTemplate).where(
+            NotificationTemplate.hospital_id == hospital_id,
+            NotificationTemplate.template_code == base.template_code,
+            NotificationTemplate.locale == candidate_locale,
+            NotificationTemplate.channel == base.channel,
+            NotificationTemplate.status == "published",
+        ).order_by(NotificationTemplate.version.desc()).limit(1))
+        if localized is None:
+            continue
+        required = _placeholders(localized.title_template, localized.body_template)
+        if required.issubset(set(localized.allowed_placeholders)):
+            return localized
+    return base
 
 
 def _placeholders(*templates: str) -> set[str]:
@@ -120,6 +141,7 @@ def create_notification_template(payload: NotificationTemplateCreate, context: t
     latest = db.scalar(select(NotificationTemplate).where(
         NotificationTemplate.hospital_id == hospital_id,
         NotificationTemplate.template_code == payload.template_code,
+        NotificationTemplate.locale == payload.locale,
     ).order_by(NotificationTemplate.version.desc()).limit(1))
     template = NotificationTemplate(
         hospital_id=hospital_id, version=(latest.version + 1 if latest else 1),
@@ -180,6 +202,11 @@ def enqueue_notification(payload: NotificationEnqueue, context: tuple = Depends(
     ))
     if template is None:
         raise HTTPException(status_code=404, detail={"code": "published_notification_template_not_found"})
+    preference = db.scalar(select(NotificationPreference).where(
+        NotificationPreference.hospital_id == hospital_id,
+        NotificationPreference.user_id == payload.recipient_user_id,
+    ))
+    template = _localized_template(db, hospital_id, template, preference.locale if preference else "en")
     required_placeholders = _placeholders(template.title_template, template.body_template)
     if not required_placeholders.issubset(set(template.allowed_placeholders)):
         raise HTTPException(status_code=422, detail={"code": "template_placeholder_configuration_invalid"})
@@ -217,10 +244,6 @@ def enqueue_notification(payload: NotificationEnqueue, context: tuple = Depends(
             raise HTTPException(status_code=403, detail={"code": "patient_consent_does_not_cover_notification_channel"})
     elif payload.consent_id is not None:
         raise HTTPException(status_code=422, detail={"code": "consent_requires_patient_context"})
-    preference = db.scalar(select(NotificationPreference).where(
-        NotificationPreference.hospital_id == hospital_id,
-        NotificationPreference.user_id == payload.recipient_user_id,
-    ))
     enabled = preference is not None and getattr(preference, _CHANNEL_PREF[template.channel])
     if template.channel != "in_app" and not enabled:
         raise HTTPException(status_code=403, detail={"code": "recipient_channel_not_enabled"})
@@ -401,12 +424,6 @@ def create_department_notice(payload: DepartmentNoticeCreate, context: tuple = D
     required = _placeholders(template.title_template, template.body_template)
     if not required.issubset(set(template.allowed_placeholders)) or set(payload.variables) != required:
         raise HTTPException(status_code=422, detail={"code": "notification_variables_must_match_template"})
-    try:
-        title = template.title_template.format_map(payload.variables)
-        body = template.body_template.format_map(payload.variables)
-    except (KeyError, ValueError):
-        raise HTTPException(status_code=422, detail={"code": "notification_template_render_failed"}) from None
-
     query = select(HospitalMembership.user_id, Role.name).join(
         Role, Role.id == HospitalMembership.role_id,
     ).join(User, User.id == HospitalMembership.user_id).where(
@@ -439,17 +456,27 @@ def create_department_notice(payload: DepartmentNoticeCreate, context: tuple = D
             NotificationPreference.hospital_id == hospital_id,
             NotificationPreference.user_id == recipient_user_id,
         ))
-        channel_field = _CHANNEL_PREF[template.channel]
-        enabled = (template.channel == "in_app" and preference is None) or (
+        recipient_template = _localized_template(db, hospital_id, template, preference.locale if preference else "en")
+        channel_field = _CHANNEL_PREF[recipient_template.channel]
+        enabled = (recipient_template.channel == "in_app" and preference is None) or (
             preference is not None and getattr(preference, channel_field)
         )
         if not enabled:
             skipped += 1
             continue
+        required_for_locale = _placeholders(recipient_template.title_template, recipient_template.body_template)
+        if required_for_locale != set(payload.variables):
+            recipient_template = _localized_template(db, hospital_id, template, "en")
+        try:
+            localized_title = recipient_template.title_template.format_map(payload.variables)
+            localized_body = recipient_template.body_template.format_map(payload.variables)
+        except (KeyError, ValueError):
+            skipped += 1
+            continue
         intent = NotificationIntent(
             hospital_id=hospital_id, recipient_user_id=recipient_user_id,
-            template_id=template.id, channel=template.channel, purpose=payload.purpose,
-            idempotency_key=key, rendered_title=title, rendered_body=body,
+            template_id=recipient_template.id, channel=recipient_template.channel, purpose=payload.purpose,
+            idempotency_key=key, rendered_title=localized_title, rendered_body=localized_body,
             created_by_user_id=user.id,
         )
         db.add(intent)
