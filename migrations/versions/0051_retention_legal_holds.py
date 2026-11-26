@@ -56,7 +56,7 @@ def upgrade() -> None:
         sa.UniqueConstraint("hospital_id", "hold_reference", name="uq_legal_hold_reference"),
         sa.CheckConstraint("status IN ('active', 'released', 'expired')", name="ck_legal_hold_status"),
         sa.CheckConstraint("json_typeof(scope) = 'object'", name="ck_legal_hold_scope_object"),
-        sa.CheckConstraint("(status = 'released' AND released_by_user_id IS NOT NULL AND released_at IS NOT NULL) OR (status != 'released' AND released_by_user_id IS NULL AND released_at IS NULL)", name="ck_legal_hold_release_state"),
+        sa.CheckConstraint("(status = 'released' AND released_by_user_id IS NOT NULL AND released_at IS NOT NULL AND release_reason IS NOT NULL) OR (status != 'released' AND released_by_user_id IS NULL AND released_at IS NULL AND release_reason IS NULL)", name="ck_legal_hold_release_state"),
     )
     op.create_index("ix_legal_hold_status", "legal_holds", ["hospital_id", "status", "expires_at"])
 
