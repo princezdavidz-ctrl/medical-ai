@@ -75,6 +75,7 @@ class LegalHoldRead(BaseModel):
     status: str
     released_by_user_id: UUID | None
     released_at: datetime | None
+    release_reason: str | None
 
 
 class RetentionDispositionCreate(BaseModel):
