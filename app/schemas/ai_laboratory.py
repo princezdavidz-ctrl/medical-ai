@@ -2,7 +2,7 @@ from datetime import datetime
 from typing import Any, Literal
 from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 
 class AILaboratoryInterpretationCreate(BaseModel):
@@ -11,6 +11,13 @@ class AILaboratoryInterpretationCreate(BaseModel):
     assistant_sequence: int = Field(gt=0)
     response_digest: str = Field(pattern=r"^[0-9a-f]{64}$", min_length=64, max_length=64)
     laboratory_result_ids: list[UUID] = Field(min_length=1, max_length=50)
+
+    @field_validator("laboratory_result_ids")
+    @classmethod
+    def unique_result_ids(cls, value):
+        if len(value) != len(set(value)):
+            raise ValueError("duplicate_laboratory_result_ids_not_allowed")
+        return value
 
 
 class AILaboratoryInterpretationReview(BaseModel):
@@ -32,6 +39,8 @@ class AILaboratoryInterpretationRead(BaseModel):
     source_response_digest: str
     laboratory_result_ids: list[str]
     result_snapshot: list[dict[str, Any]]
+    evidence_citation_ids: list[str]
+    evidence_citations: list[dict[str, Any]]
     status: str
     review_decision: str | None
     review_note_reference: str | None
