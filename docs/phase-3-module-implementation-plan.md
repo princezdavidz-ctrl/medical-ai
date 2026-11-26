@@ -154,3 +154,6 @@ Phase 3.27 scope: hospital-scoped communication preferences and consent-aware no
 
 
 Phase 3.27 hardening follow-up: recipient-scoped notification event-history endpoints, idempotency-key payload collision protection, and patient portal link expiry revalidation were merged in PR #71. Phase 5 verification remains pending.
+
+
+Phase 3.29 dashboard completion: the compliance dashboard has been expanded to cover policy acknowledgement obligations, security incidents, risk register, control assessments, access review campaigns/items, legal holds and retention dispositions. It exposes aggregate hospital-scoped metrics only. Phase 5 verification remains pending.
