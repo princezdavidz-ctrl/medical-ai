@@ -497,3 +497,11 @@ No item is considered passed until evidence, environment, build SHA, reviewer an
 - [ ] Staff event privacy: a staff user can inspect own notification events; only authorized communications administrators can inspect other recipients' event histories.
 - [ ] Inbox content: rendered title/body are visible only to the intended recipient or an authorized hospital communications administrator; cross-hospital identifiers return no data.
 - [ ] Portal expiry: expired patient portal links cannot be used to enqueue patient notifications and are rechecked before dispatch.
+
+- [ ] Department audience authorization: only communications administrators can enqueue department notices; department and optional role must belong to the active hospital.
+- [ ] Department recipient fan-out: only active users with active same-hospital membership in the target department are selected; cross-hospital and inactive accounts are excluded.
+- [ ] Department opt-outs: channel-disabled recipients are skipped; in-app defaults and explicit in-app opt-outs are honored.
+- [ ] Department idempotency: retrying the same audience request produces one intent per eligible recipient; key reuse with changed template or purpose is rejected.
+- [ ] Locale versioning: template versions are unique per hospital/code/locale; department fan-out selects newest published matching locale and safely falls back to the base template.
+- [ ] Locale placeholder compatibility: localized templates must use the exact supplied allow-listed variable set or fall back to the base template; incompatible base variables fail closed.
+- [ ] Dashboard privacy: aggregate counts are hospital-scoped and expose no recipient identities or message bodies; non-admin users are denied.
