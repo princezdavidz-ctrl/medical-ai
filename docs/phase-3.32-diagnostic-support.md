@@ -31,3 +31,26 @@ Phase 3 implements case records, differential/test consideration review and clin
 
 ## Verification
 Clinical safety, source grounding, patient authorization, no-auto-order, differential integrity, result provenance and escalation scenarios are recorded in docs/TEST_REGISTER_PHASE_5.md. Backend tests remain deferred to Phase 5.
+
+
+## Implemented foundation
+- Diagnostic support cases are bound to the clinician's active patient-bound AI session, patient, encounter, consent and care assignment.
+- Every case read/write revalidates the current patient-care assignment and original consent; expired sessions or changed authorization are denied.
+- Differential entries must map to an approved, currently effective medical knowledge concept with matching display term.
+- Differential and test suggestions are linked to an exact assistant message sequence and SHA-256 response digest; citation IDs must exist in that assistant message's verified citation list.
+- Test considerations must map to active same-hospital laboratory or imaging definitions; priority is advisory only.
+- Clinicians explicitly consider, rule out or confirm differential concepts and consider/decline test suggestions.
+- Case closure requires a clinician-authored assessment and review of every proposed suggestion.
+- No diagnostic code, diagnosis list, order, prescription, result or medical record is changed by this workflow.
+- Migration 0054_diagnostic_support creates tenant-isolated case, differential and test consideration tables.
+
+## API surface
+- POST/GET /api/v1/diagnostic-support/cases
+- GET /api/v1/diagnostic-support/cases/{case_id}
+- POST /api/v1/diagnostic-support/cases/{case_id}/differentials
+- GET /api/v1/diagnostic-support/cases/{case_id}/differentials
+- POST /api/v1/diagnostic-support/differentials/{item_id}/review
+- POST /api/v1/diagnostic-support/cases/{case_id}/test-considerations
+- GET /api/v1/diagnostic-support/cases/{case_id}/test-considerations
+- POST /api/v1/diagnostic-support/test-considerations/{item_id}/review
+- POST /api/v1/diagnostic-support/cases/{case_id}/close
