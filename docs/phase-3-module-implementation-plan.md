@@ -157,3 +157,6 @@ Phase 3.27 hardening follow-up: recipient-scoped notification event-history endp
 
 
 Phase 3.29 dashboard completion: the compliance dashboard has been expanded to cover policy acknowledgement obligations, security incidents, risk register, control assessments, access review campaigns/items, legal holds and retention dispositions. It exposes aggregate hospital-scoped metrics only. Phase 5 verification remains pending.
+
+
+Phase 3.31 follow-up: structured clinician feedback categories, private correction references, and session-owner review-history retrieval have been added. Feedback remains an evaluation signal only and cannot update production AI behavior. Phase 5 verification remains pending.
