@@ -32,6 +32,7 @@ class NotificationTemplateCreate(BaseModel):
     model_config = ConfigDict(extra="forbid")
     template_code: str = Field(min_length=2, max_length=80, pattern=r"^[a-z][a-z0-9_.-]+$")
     channel: Channel
+    locale: str = Field(default="en", min_length=2, max_length=12, pattern=r"^[a-z]{2}(-[A-Z]{2})?$")
     content_classification: Literal["operational", "administrative", "sensitive"] = "operational"
     title_template: str = Field(min_length=1, max_length=160)
     body_template: str = Field(min_length=1, max_length=2000)
@@ -43,6 +44,7 @@ class NotificationTemplateRead(BaseModel):
     id: UUID
     template_code: str
     version: int
+    locale: str
     channel: str
     content_classification: str
     title_template: str
