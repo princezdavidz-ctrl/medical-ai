@@ -108,6 +108,7 @@ class ComplianceRisk(Base):
     __tablename__ = "compliance_risks"
     __table_args__ = (
         ForeignKeyConstraint(["hospital_id", "owner_user_id"], ["hospital_memberships.hospital_id", "hospital_memberships.user_id"], name="fk_compliance_risk_owner"),
+        ForeignKeyConstraint(["hospital_id", "reviewed_by_user_id"], ["hospital_memberships.hospital_id", "hospital_memberships.user_id"], name="fk_compliance_risk_reviewer"),
         UniqueConstraint("hospital_id", "id", name="uq_compliance_risk_hospital_id"),
         CheckConstraint("category IN ('clinical', 'privacy', 'cybersecurity', 'operational', 'financial', 'regulatory', 'third_party', 'other')", name="ck_compliance_risk_category"),
         CheckConstraint("status IN ('open', 'mitigating', 'accepted', 'closed')", name="ck_compliance_risk_status"),
@@ -133,7 +134,7 @@ class ComplianceRisk(Base):
     due_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
     status: Mapped[str] = mapped_column(String(16), nullable=False, default="open")
     created_by_user_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id"), nullable=False)
-    reviewed_by_user_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("users.id"))
+    reviewed_by_user_id: Mapped[uuid.UUID | None] = mapped_column(Uuid(as_uuid=True))
     reviewed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False)
