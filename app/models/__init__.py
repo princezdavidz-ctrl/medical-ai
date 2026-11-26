@@ -97,6 +97,7 @@ from app.models.compliance import (
     ComplianceControl, ControlAssessment, AccessReviewCampaign, AccessReviewItem,
     RetentionPolicy, LegalHold, RetentionDispositionRequest,
 )
+from app.models.analytics import ReportDefinition, ReportRun, ReportExportJob
 from app.models.quality import (
     SafetyIncident, SafetyIncidentEvent, SafetyInvestigation, CAPAAction,
     SafetyRound, SafetyRoundFinding, QualityIndicatorDefinition, QualityIndicatorMeasurement,
@@ -265,6 +266,9 @@ __all__ = [
     "SafetyRoundFinding",
     "QualityIndicatorDefinition",
     "QualityIndicatorMeasurement",
+    "ReportDefinition",
+    "ReportRun",
+    "ReportExportJob",
     "NotificationPreference",
     "NotificationTemplate",
     "NotificationIntent",

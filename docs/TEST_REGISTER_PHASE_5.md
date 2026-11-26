@@ -574,3 +574,18 @@ No item is considered passed until evidence, environment, build SHA, reviewer an
 - [ ] No destructive side effects: approving a delete/archive request records approval only and does not delete, move or mutate source data in Phase 3.
 - [ ] Expiry behavior: expired legal holds no longer block disposition; explicit release and automatic expiry remain distinguishable.
 - [ ] Migration 0051: retention policy, legal hold and disposition tables have RLS and same-hospital issuer/approver/reviewer references.
+
+
+## Phase 3.30 — Reports & Hospital Analytics
+
+- [ ] Report definition: only approved report keys and matching data domains; reject raw SQL, query/table/join execution fields.
+- [ ] Report publication: publisher differs from author; published definition is immutable and new versions are required for changes.
+- [ ] Role authorization: finance, compliance, quality and clinical reports require the corresponding role; no cross-domain access through caller-supplied role lists.
+- [ ] Department scope: department/nurse managers cannot request another department's metrics; department scope is derived from active membership.
+- [ ] Metric correctness: aggregate calculations match source modules and date filters use timezone-aware boundaries.
+- [ ] Currency integrity: billing summaries group by currency and never add unlike currencies.
+- [ ] Small-cell privacy: counts below five and associated billing totals are suppressed; suppression is consistent across report types.
+- [ ] Provenance: report run records definition version, calculation version, filters, source modules and expiry.
+- [ ] Export privacy: only run owner or authorized hospital administrator can request export; exports remain queued until Phase 4 and never expose public URLs.
+- [ ] Tenant isolation: RLS on definitions, runs and exports; cross-hospital definition/run references are rejected.
+- [ ] Migration 0052: report catalog, run and export tables upgrade/downgrade cleanly; published-definition immutability trigger works.
