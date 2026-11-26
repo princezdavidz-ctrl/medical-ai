@@ -58,3 +58,11 @@ All security, workflow, privacy, audit, metric integrity, CAPA and tenant-isolat
 - GET /api/v1/quality/my-capa
 
 Safety rounds, inspection checklists, indicator definitions/measurements and external accreditation reporting remain follow-on work within Phase 3.28. Backend tests remain deferred to Phase 5.
+
+
+## Safety rounds and quality indicators
+- Scheduled safety rounds can be assigned to an active same-hospital lead and scoped to a department; department/nurse managers are limited to their own department.
+- Findings capture severity, description, accountable owner and due date. Owners or safety officers can resolve findings with documented notes; a round cannot complete while open/in-progress findings remain.
+- Quality indicator definitions are versioned and activated by authorized safety roles. Measurements record period, numerator, denominator, source and source version.
+- Indicator values are calculated from the definition unit (percent, per-1000, rate or count); raw numerator/denominator and provenance are retained.
+- Migration 0048_safety_rounds_indicators adds rounds, findings, definitions and measurements with RLS and tenant-scoped references.
