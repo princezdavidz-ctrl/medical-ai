@@ -505,3 +505,9 @@ No item is considered passed until evidence, environment, build SHA, reviewer an
 - [ ] Department localization: each recipient receives the correct locale variant independently while retaining a stable recipient-specific idempotency key.
 - [ ] Migration 0045: existing templates migrate to English; upgrade/downgrade preserves data and downgrade refuses unsafe localized-data loss.
 - [ ] Quiet-hour database constraints: invalid hour/minute values are rejected by PostgreSQL check constraints.
+
+- [ ] Notification content authorization: inbox title/body is visible only to the recipient and authorized communications administrators; cross-user and cross-hospital reads are denied.
+- [ ] Read-state ownership: staff can mark only their own notifications read; patient portal users can mark only their own in-app notifications read.
+- [ ] Read-state idempotency: repeated mark-read requests preserve the original read timestamp and do not create duplicate audit events.
+- [ ] Dashboard counters: total and unread counts are scoped to the authenticated staff or patient portal identity and hospital.
+- [ ] Migration 0046: read timestamp is nullable, backfills existing notifications as unread, and downgrade removes only the read-state column.

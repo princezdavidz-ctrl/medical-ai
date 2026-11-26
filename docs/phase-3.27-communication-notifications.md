@@ -87,3 +87,10 @@ The notification service exposes provider-neutral claim and result-recording ope
 - Department notices resolve the best published locale variant per recipient and preserve per-recipient idempotency and opt-out behavior.
 - Migration 0045_notification_locales adds locale support without rewriting existing templates; existing rows default to English. Downgrade is guarded and refuses to discard localized versions.
 - The quiet-hour database check expressions in migration 0044 and the ORM model are corrected to enforce valid 24-hour clock values.
+
+
+## Recipient inbox read state
+- Notification inbox responses now include the rendered title/body and read timestamp, visible only to the recipient or authorized hospital communications administrators.
+- Staff and patient portal users can mark only their own notifications as read; patient routes are restricted to in-app notifications.
+- Staff and patient dashboard endpoints expose total and unread counts without cross-user visibility.
+- Migration 0046_notification_read_state adds the nullable read timestamp.
