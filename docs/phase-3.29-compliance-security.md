@@ -29,3 +29,28 @@ Phase 3 implements local registers, workflows, role enforcement, evidence refere
 
 ## Verification
 All access, confidentiality, tenant isolation, approval, immutability, evidence, retention and audit scenarios are registered in docs/TEST_REGISTER_PHASE_5.md. Backend tests remain deferred to Phase 5.
+
+
+## Implemented foundation
+- Versioned compliance policies stored as private vault references, with independent publication approval and effective dates.
+- Append-only policy acknowledgements for active hospital members and acknowledgement reporting for compliance officers.
+- Confidential security incident reporting, role-restricted triage, same-hospital investigator assignment, containment, breach assessment and controlled closure.
+- Risk register with likelihood/impact scoring, residual risk scoring, accountable owners and independent review.
+- Hospital-scoped compliance dashboard aggregating security incident and risk states.
+- Migration 0049_compliance_security adds five tenant-isolated tables, RLS, composite membership references and immutable policy/event/acknowledgement controls.
+
+## API surface
+- POST/GET /api/v1/compliance/policies
+- POST /api/v1/compliance/policies/{policy_id}/publish
+- POST /api/v1/compliance/policies/{policy_id}/acknowledge
+- GET /api/v1/compliance/policies/{policy_id}/acknowledgements
+- POST/GET /api/v1/compliance/security-incidents
+- POST /api/v1/compliance/security-incidents/{incident_id}/triage
+- POST /api/v1/compliance/security-incidents/{incident_id}/assign
+- PATCH /api/v1/compliance/security-incidents/{incident_id}
+- POST /api/v1/compliance/security-incidents/{incident_id}/close
+- POST/GET /api/v1/compliance/risks
+- POST /api/v1/compliance/risks/{risk_id}/review
+- GET /api/v1/compliance/dashboard
+
+Compliance control register, access review campaigns, retention schedules/legal holds and external breach reporting remain follow-on work within Phase 3.29.
