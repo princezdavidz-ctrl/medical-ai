@@ -11,6 +11,7 @@ class AICapability(StrEnum):
     MEDICATION_SAFETY = "medication_safety"
     RADIOLOGY_SUPPORT = "radiology_support"
     PATIENT_EDUCATION = "patient_education"
+    HOSPITAL_OPERATIONS_ANALYTICS = "hospital_operations_analytics"
 
 
 class OperatingMode(StrEnum):
