@@ -614,3 +614,11 @@ No item is considered passed until evidence, environment, build SHA, reviewer an
 - [ ] Patient portal expiry: an expired link cannot authorize enqueue or dispatch; active non-expired links remain eligible.
 - [ ] Staff event history: only the authenticated recipient can read events for a staff notification; another user's intent returns 404.
 - [ ] Patient event history: only the authenticated portal recipient can read events for their own in-app notification; staff or another patient's intent is not exposed.
+
+- [ ] Compliance dashboard acknowledgement denominator: expected acknowledgements equal effective published policy versions multiplied by active same-hospital users; completed counts include only active users and active memberships.
+- [ ] Compliance dashboard privacy: aggregate counts only; no incident summary, reporter identity, risk description, vault reference or personal access-review details.
+- [ ] Compliance dashboard incident/risk states: unresolved incident and open-risk totals exclude only their terminal states and remain hospital-scoped.
+- [ ] Control review metrics: pending-review assessments and overdue next-review dates are counted separately; null next-review dates are not treated as overdue.
+- [ ] Access review metrics: open and overdue campaigns are counted separately; pending-review and awaiting-approval items remain distinct.
+- [ ] Retention metrics: only active unexpired legal holds count; expired/released holds are excluded; pending disposition requests are counted without triggering destructive actions.
+- [ ] Compliance dashboard authorization: only designated compliance/security roles can access aggregate governance metrics.
