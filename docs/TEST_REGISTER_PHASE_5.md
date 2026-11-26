@@ -610,6 +610,10 @@ No item is considered passed until evidence, environment, build SHA, reviewer an
 - [ ] Clinical response structure gate: clinical decision support output missing any required section is withheld and usage outcome is recorded as withheld.
 - [ ] Clinical response digest: SHA-256 digest matches the exact encrypted assistant message and cannot be replayed against another sequence/session.
 
+- [ ] Idempotency collision: reuse a key with a different recipient/patient/consent/purpose/template code returns HTTP 409; localized versions sharing the same template code remain equivalent.
+- [ ] Patient portal expiry: an expired link cannot authorize enqueue or dispatch; active non-expired links remain eligible.
+- [ ] Staff event history: only the authenticated recipient can read events for a staff notification; another user's intent returns 404.
+- [ ] Patient event history: only the authenticated portal recipient can read events for their own in-app notification; staff or another patient's intent is not exposed.
 
 ## Phase 3.32 — AI Diagnostic Support
 
