@@ -630,3 +630,8 @@ No item is considered passed until evidence, environment, build SHA, reviewer an
 - [ ] Review history authorization: only the session owner can list reviews for their active clinical session; other users and hospitals receive no data.
 - [ ] Review history reauthorization: revoked/expired consent, changed care assignment or expired session blocks review-history access.
 - [ ] Migration 0054: feedback category and correction reference constraints/index upgrade and downgrade cleanly without changing existing review records.
+
+- [ ] Clinical session revocation: only the session owner in the same hospital can revoke; other users/hospitals receive no session data.
+- [ ] Revocation enforcement: after revocation, new clinical AI requests, review submissions and review-history reads are denied even if the generic AI session has not expired.
+- [ ] Revocation audit: controlled reason code and timestamp are recorded without patient narrative or prompt/response content.
+- [ ] Revocation idempotency: repeated owner revocation is safe and does not create duplicate revocation events; expired sessions cannot be reopened.

@@ -45,6 +45,8 @@ Clinical safety, authorization, prompt injection, source grounding, medication s
 ## API additions
 - POST /api/v1/ai/clinical-sessions
 - POST /api/v1/ai/clinical-sessions/{session_id}/reviews
+- GET /api/v1/ai/clinical-sessions/{session_id}/reviews
+- POST /api/v1/ai/clinical-sessions/{session_id}/revoke
 - Existing POST /api/v1/ai/requests accepts the created session ID plus the same patient and encounter references; it returns session ID, assistant sequence and response digest.
 
 
@@ -57,3 +59,7 @@ Clinical safety, authorization, prompt injection, source grounding, medication s
 
 ## Additional API
 - GET /api/v1/ai/clinical-sessions/{session_id}/reviews
+
+
+## Session revocation
+The session owner can explicitly revoke a patient-bound clinical AI session. Revocation is recorded with a controlled reason code and timestamp; subsequent AI requests and review-history reads fail because they require an active clinical session. Revocation does not delete encrypted history or bypass the configured retention policy.

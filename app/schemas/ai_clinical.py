@@ -18,6 +18,11 @@ class ClinicalAISessionRead(BaseModel):
     clinical_use_enabled: Literal[False] = False
 
 
+class ClinicalAISessionRevoke(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    reason: Literal["user_requested", "consent_withdrawn", "assignment_changed", "security_concern"]
+
+
 class AIClinicalReviewCreate(BaseModel):
     model_config = ConfigDict(extra="forbid")
     assistant_sequence: int = Field(gt=0)
