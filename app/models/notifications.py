@@ -18,9 +18,9 @@ class NotificationPreference(Base):
         UniqueConstraint("hospital_id", "user_id", name="uq_notification_preference_hospital_user"),
         CheckConstraint("locale ~ '^[a-z]{2}(-[A-Z]{2})?$'", name="ck_notification_preference_locale"),
         CheckConstraint("timezone_name <> ''", name="ck_notification_preference_timezone"),
-        CheckConstraint("quiet_start IS NULL OR quiet_start ~ '^([01][0-9]|2[0-3]):[0-5][0-9]"ck_notification_quiet_start"),
-        CheckConstraint("quiet_end IS NULL OR quiet_end ~ '^([01][0-9]|2[0-3]):[0-5][0-9]"ck_notification_quiet_end"),
-        CheckConstraint("(quiet_start IS NULL) = (quiet_end IS NULL)", name="ck_notification_quiet_pair"),
+        CheckConstraint("quiet_start IS NULL OR quiet_start ~ '^([01][0-9]|2[0-3]):[0-5][0-9]$'", name="ck_notification_quiet_start"),
+        CheckConstraint("quiet_end IS NULL OR quiet_end ~ '^([01][0-9]|2[0-3]):[0-5][0-9]$'", name="ck_notification_quiet_end"),
+        CheckConstraint("quiet_start IS NULL OR quiet_start ~ '^([01][0-9]|2[0-3]):[0-5][0-9]$'", name="ck_notification_quiet_start"),
     )
     id: Mapped[uuid.UUID] = mapped_column(Uuid(as_uuid=True), primary_key=True, default=uuid.uuid4)
     hospital_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("hospitals.id"), nullable=False)
@@ -138,8 +138,8 @@ class NotificationEvent(Base):
     event_metadata: Mapped[dict[str, Any]] = mapped_column(JSON, nullable=False, default=dict)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
 ", name="ck_notification_quiet_start"),
-        CheckConstraint("quiet_end IS NULL OR quiet_end ~ '^[0-2][0-9]:[0-5][0-9]$'", name="ck_notification_quiet_end"),
-        CheckConstraint("(quiet_start IS NULL) = (quiet_end IS NULL)", name="ck_notification_quiet_pair"),
+        CheckConstraint("quiet_end IS NULL OR quiet_end ~ '^([01][0-9]|2[0-3]):[0-5][0-9]$'", name="ck_notification_quiet_end"),
+        CheckConstraint("quiet_start IS NULL OR quiet_start ~ '^([01][0-9]|2[0-3]):[0-5][0-9]$'", name="ck_notification_quiet_start"),
     )
     id: Mapped[uuid.UUID] = mapped_column(Uuid(as_uuid=True), primary_key=True, default=uuid.uuid4)
     hospital_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("hospitals.id"), nullable=False)
@@ -257,7 +257,7 @@ class NotificationEvent(Base):
     event_metadata: Mapped[dict[str, Any]] = mapped_column(JSON, nullable=False, default=dict)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
 ", name="ck_notification_quiet_end"),
-        CheckConstraint("(quiet_start IS NULL) = (quiet_end IS NULL)", name="ck_notification_quiet_pair"),
+        CheckConstraint("quiet_start IS NULL OR quiet_start ~ '^([01][0-9]|2[0-3]):[0-5][0-9]$'", name="ck_notification_quiet_start"),
     )
     id: Mapped[uuid.UUID] = mapped_column(Uuid(as_uuid=True), primary_key=True, default=uuid.uuid4)
     hospital_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("hospitals.id"), nullable=False)
@@ -375,8 +375,8 @@ class NotificationEvent(Base):
     event_metadata: Mapped[dict[str, Any]] = mapped_column(JSON, nullable=False, default=dict)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
 ", name="ck_notification_quiet_start"),
-        CheckConstraint("quiet_end IS NULL OR quiet_end ~ '^[0-2][0-9]:[0-5][0-9]$'", name="ck_notification_quiet_end"),
-        CheckConstraint("(quiet_start IS NULL) = (quiet_end IS NULL)", name="ck_notification_quiet_pair"),
+        CheckConstraint("quiet_end IS NULL OR quiet_end ~ '^([01][0-9]|2[0-3]):[0-5][0-9]$'", name="ck_notification_quiet_end"),
+        CheckConstraint("quiet_start IS NULL OR quiet_start ~ '^([01][0-9]|2[0-3]):[0-5][0-9]$'", name="ck_notification_quiet_start"),
     )
     id: Mapped[uuid.UUID] = mapped_column(Uuid(as_uuid=True), primary_key=True, default=uuid.uuid4)
     hospital_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("hospitals.id"), nullable=False)
@@ -494,8 +494,8 @@ class NotificationEvent(Base):
     event_metadata: Mapped[dict[str, Any]] = mapped_column(JSON, nullable=False, default=dict)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
 ", name="ck_notification_quiet_start"),
-        CheckConstraint("quiet_end IS NULL OR quiet_end ~ '^([01][0-9]|2[0-3]):[0-5][0-9]", name="ck_notification_quiet_end"),
-        CheckConstraint("(quiet_start IS NULL) = (quiet_end IS NULL)", name="ck_notification_quiet_pair"),
+        CheckConstraint("quiet_end IS NULL OR quiet_end ~ '^([01][0-9]|2[0-3]):[0-5][0-9]$'", name="ck_notification_quiet_end"),
+        CheckConstraint("quiet_start IS NULL OR quiet_start ~ '^([01][0-9]|2[0-3]):[0-5][0-9]$'", name="ck_notification_quiet_start"),
     )
     id: Mapped[uuid.UUID] = mapped_column(Uuid(as_uuid=True), primary_key=True, default=uuid.uuid4)
     hospital_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("hospitals.id"), nullable=False)
@@ -613,8 +613,8 @@ class NotificationEvent(Base):
     event_metadata: Mapped[dict[str, Any]] = mapped_column(JSON, nullable=False, default=dict)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
 ", name="ck_notification_quiet_start"),
-        CheckConstraint("quiet_end IS NULL OR quiet_end ~ '^[0-2][0-9]:[0-5][0-9]$'", name="ck_notification_quiet_end"),
-        CheckConstraint("(quiet_start IS NULL) = (quiet_end IS NULL)", name="ck_notification_quiet_pair"),
+        CheckConstraint("quiet_end IS NULL OR quiet_end ~ '^([01][0-9]|2[0-3]):[0-5][0-9]$'", name="ck_notification_quiet_end"),
+        CheckConstraint("quiet_start IS NULL OR quiet_start ~ '^([01][0-9]|2[0-3]):[0-5][0-9]$'", name="ck_notification_quiet_start"),
     )
     id: Mapped[uuid.UUID] = mapped_column(Uuid(as_uuid=True), primary_key=True, default=uuid.uuid4)
     hospital_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("hospitals.id"), nullable=False)
@@ -732,7 +732,7 @@ class NotificationEvent(Base):
     event_metadata: Mapped[dict[str, Any]] = mapped_column(JSON, nullable=False, default=dict)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
 ", name="ck_notification_quiet_end"),
-        CheckConstraint("(quiet_start IS NULL) = (quiet_end IS NULL)", name="ck_notification_quiet_pair"),
+        CheckConstraint("quiet_start IS NULL OR quiet_start ~ '^([01][0-9]|2[0-3]):[0-5][0-9]$'", name="ck_notification_quiet_start"),
     )
     id: Mapped[uuid.UUID] = mapped_column(Uuid(as_uuid=True), primary_key=True, default=uuid.uuid4)
     hospital_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("hospitals.id"), nullable=False)
@@ -850,8 +850,8 @@ class NotificationEvent(Base):
     event_metadata: Mapped[dict[str, Any]] = mapped_column(JSON, nullable=False, default=dict)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
 ", name="ck_notification_quiet_start"),
-        CheckConstraint("quiet_end IS NULL OR quiet_end ~ '^[0-2][0-9]:[0-5][0-9]$'", name="ck_notification_quiet_end"),
-        CheckConstraint("(quiet_start IS NULL) = (quiet_end IS NULL)", name="ck_notification_quiet_pair"),
+        CheckConstraint("quiet_end IS NULL OR quiet_end ~ '^([01][0-9]|2[0-3]):[0-5][0-9]$'", name="ck_notification_quiet_end"),
+        CheckConstraint("quiet_start IS NULL OR quiet_start ~ '^([01][0-9]|2[0-3]):[0-5][0-9]$'", name="ck_notification_quiet_start"),
     )
     id: Mapped[uuid.UUID] = mapped_column(Uuid(as_uuid=True), primary_key=True, default=uuid.uuid4)
     hospital_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("hospitals.id"), nullable=False)
@@ -969,7 +969,7 @@ class NotificationEvent(Base):
     event_metadata: Mapped[dict[str, Any]] = mapped_column(JSON, nullable=False, default=dict)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
 ", name="ck_notification_quiet_end"),
-        CheckConstraint("(quiet_start IS NULL) = (quiet_end IS NULL)", name="ck_notification_quiet_pair"),
+        CheckConstraint("quiet_start IS NULL OR quiet_start ~ '^([01][0-9]|2[0-3]):[0-5][0-9]$'", name="ck_notification_quiet_start"),
     )
     id: Mapped[uuid.UUID] = mapped_column(Uuid(as_uuid=True), primary_key=True, default=uuid.uuid4)
     hospital_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("hospitals.id"), nullable=False)
@@ -1087,8 +1087,8 @@ class NotificationEvent(Base):
     event_metadata: Mapped[dict[str, Any]] = mapped_column(JSON, nullable=False, default=dict)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
 ", name="ck_notification_quiet_start"),
-        CheckConstraint("quiet_end IS NULL OR quiet_end ~ '^[0-2][0-9]:[0-5][0-9]$'", name="ck_notification_quiet_end"),
-        CheckConstraint("(quiet_start IS NULL) = (quiet_end IS NULL)", name="ck_notification_quiet_pair"),
+        CheckConstraint("quiet_end IS NULL OR quiet_end ~ '^([01][0-9]|2[0-3]):[0-5][0-9]$'", name="ck_notification_quiet_end"),
+        CheckConstraint("quiet_start IS NULL OR quiet_start ~ '^([01][0-9]|2[0-3]):[0-5][0-9]$'", name="ck_notification_quiet_start"),
     )
     id: Mapped[uuid.UUID] = mapped_column(Uuid(as_uuid=True), primary_key=True, default=uuid.uuid4)
     hospital_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("hospitals.id"), nullable=False)
@@ -1206,7 +1206,7 @@ class NotificationEvent(Base):
     event_metadata: Mapped[dict[str, Any]] = mapped_column(JSON, nullable=False, default=dict)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
 ", name="ck_notification_quiet_end"),
-        CheckConstraint("(quiet_start IS NULL) = (quiet_end IS NULL)", name="ck_notification_quiet_pair"),
+        CheckConstraint("quiet_start IS NULL OR quiet_start ~ '^([01][0-9]|2[0-3]):[0-5][0-9]$'", name="ck_notification_quiet_start"),
     )
     id: Mapped[uuid.UUID] = mapped_column(Uuid(as_uuid=True), primary_key=True, default=uuid.uuid4)
     hospital_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("hospitals.id"), nullable=False)
@@ -1324,8 +1324,8 @@ class NotificationEvent(Base):
     event_metadata: Mapped[dict[str, Any]] = mapped_column(JSON, nullable=False, default=dict)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
 ", name="ck_notification_quiet_start"),
-        CheckConstraint("quiet_end IS NULL OR quiet_end ~ '^[0-2][0-9]:[0-5][0-9]$'", name="ck_notification_quiet_end"),
-        CheckConstraint("(quiet_start IS NULL) = (quiet_end IS NULL)", name="ck_notification_quiet_pair"),
+        CheckConstraint("quiet_end IS NULL OR quiet_end ~ '^([01][0-9]|2[0-3]):[0-5][0-9]$'", name="ck_notification_quiet_end"),
+        CheckConstraint("quiet_start IS NULL OR quiet_start ~ '^([01][0-9]|2[0-3]):[0-5][0-9]$'", name="ck_notification_quiet_start"),
     )
     id: Mapped[uuid.UUID] = mapped_column(Uuid(as_uuid=True), primary_key=True, default=uuid.uuid4)
     hospital_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("hospitals.id"), nullable=False)
@@ -1443,8 +1443,8 @@ class NotificationEvent(Base):
     event_metadata: Mapped[dict[str, Any]] = mapped_column(JSON, nullable=False, default=dict)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
 ", name="ck_notification_quiet_start"),
-        CheckConstraint("quiet_end IS NULL OR quiet_end ~ '^([01][0-9]|2[0-3]):[0-5][0-9]", name="ck_notification_quiet_end"),
-        CheckConstraint("(quiet_start IS NULL) = (quiet_end IS NULL)", name="ck_notification_quiet_pair"),
+        CheckConstraint("quiet_end IS NULL OR quiet_end ~ '^([01][0-9]|2[0-3]):[0-5][0-9]$'", name="ck_notification_quiet_end"),
+        CheckConstraint("quiet_start IS NULL OR quiet_start ~ '^([01][0-9]|2[0-3]):[0-5][0-9]$'", name="ck_notification_quiet_start"),
     )
     id: Mapped[uuid.UUID] = mapped_column(Uuid(as_uuid=True), primary_key=True, default=uuid.uuid4)
     hospital_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("hospitals.id"), nullable=False)
@@ -1562,8 +1562,8 @@ class NotificationEvent(Base):
     event_metadata: Mapped[dict[str, Any]] = mapped_column(JSON, nullable=False, default=dict)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
 ", name="ck_notification_quiet_start"),
-        CheckConstraint("quiet_end IS NULL OR quiet_end ~ '^[0-2][0-9]:[0-5][0-9]$'", name="ck_notification_quiet_end"),
-        CheckConstraint("(quiet_start IS NULL) = (quiet_end IS NULL)", name="ck_notification_quiet_pair"),
+        CheckConstraint("quiet_end IS NULL OR quiet_end ~ '^([01][0-9]|2[0-3]):[0-5][0-9]$'", name="ck_notification_quiet_end"),
+        CheckConstraint("quiet_start IS NULL OR quiet_start ~ '^([01][0-9]|2[0-3]):[0-5][0-9]$'", name="ck_notification_quiet_start"),
     )
     id: Mapped[uuid.UUID] = mapped_column(Uuid(as_uuid=True), primary_key=True, default=uuid.uuid4)
     hospital_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("hospitals.id"), nullable=False)
@@ -1681,7 +1681,7 @@ class NotificationEvent(Base):
     event_metadata: Mapped[dict[str, Any]] = mapped_column(JSON, nullable=False, default=dict)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
 ", name="ck_notification_quiet_end"),
-        CheckConstraint("(quiet_start IS NULL) = (quiet_end IS NULL)", name="ck_notification_quiet_pair"),
+        CheckConstraint("quiet_start IS NULL OR quiet_start ~ '^([01][0-9]|2[0-3]):[0-5][0-9]$'", name="ck_notification_quiet_start"),
     )
     id: Mapped[uuid.UUID] = mapped_column(Uuid(as_uuid=True), primary_key=True, default=uuid.uuid4)
     hospital_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("hospitals.id"), nullable=False)
@@ -1799,8 +1799,8 @@ class NotificationEvent(Base):
     event_metadata: Mapped[dict[str, Any]] = mapped_column(JSON, nullable=False, default=dict)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
 ", name="ck_notification_quiet_start"),
-        CheckConstraint("quiet_end IS NULL OR quiet_end ~ '^[0-2][0-9]:[0-5][0-9]$'", name="ck_notification_quiet_end"),
-        CheckConstraint("(quiet_start IS NULL) = (quiet_end IS NULL)", name="ck_notification_quiet_pair"),
+        CheckConstraint("quiet_end IS NULL OR quiet_end ~ '^([01][0-9]|2[0-3]):[0-5][0-9]$'", name="ck_notification_quiet_end"),
+        CheckConstraint("quiet_start IS NULL OR quiet_start ~ '^([01][0-9]|2[0-3]):[0-5][0-9]$'", name="ck_notification_quiet_start"),
     )
     id: Mapped[uuid.UUID] = mapped_column(Uuid(as_uuid=True), primary_key=True, default=uuid.uuid4)
     hospital_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("hospitals.id"), nullable=False)
@@ -1918,8 +1918,8 @@ class NotificationEvent(Base):
     event_metadata: Mapped[dict[str, Any]] = mapped_column(JSON, nullable=False, default=dict)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
 ", name="ck_notification_quiet_start"),
-        CheckConstraint("quiet_end IS NULL OR quiet_end ~ '^([01][0-9]|2[0-3]):[0-5][0-9]", name="ck_notification_quiet_end"),
-        CheckConstraint("(quiet_start IS NULL) = (quiet_end IS NULL)", name="ck_notification_quiet_pair"),
+        CheckConstraint("quiet_end IS NULL OR quiet_end ~ '^([01][0-9]|2[0-3]):[0-5][0-9]$'", name="ck_notification_quiet_end"),
+        CheckConstraint("quiet_start IS NULL OR quiet_start ~ '^([01][0-9]|2[0-3]):[0-5][0-9]$'", name="ck_notification_quiet_start"),
     )
     id: Mapped[uuid.UUID] = mapped_column(Uuid(as_uuid=True), primary_key=True, default=uuid.uuid4)
     hospital_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("hospitals.id"), nullable=False)
@@ -2037,8 +2037,8 @@ class NotificationEvent(Base):
     event_metadata: Mapped[dict[str, Any]] = mapped_column(JSON, nullable=False, default=dict)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
 ", name="ck_notification_quiet_start"),
-        CheckConstraint("quiet_end IS NULL OR quiet_end ~ '^[0-2][0-9]:[0-5][0-9]$'", name="ck_notification_quiet_end"),
-        CheckConstraint("(quiet_start IS NULL) = (quiet_end IS NULL)", name="ck_notification_quiet_pair"),
+        CheckConstraint("quiet_end IS NULL OR quiet_end ~ '^([01][0-9]|2[0-3]):[0-5][0-9]$'", name="ck_notification_quiet_end"),
+        CheckConstraint("quiet_start IS NULL OR quiet_start ~ '^([01][0-9]|2[0-3]):[0-5][0-9]$'", name="ck_notification_quiet_start"),
     )
     id: Mapped[uuid.UUID] = mapped_column(Uuid(as_uuid=True), primary_key=True, default=uuid.uuid4)
     hospital_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("hospitals.id"), nullable=False)
@@ -2156,7 +2156,7 @@ class NotificationEvent(Base):
     event_metadata: Mapped[dict[str, Any]] = mapped_column(JSON, nullable=False, default=dict)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
 ", name="ck_notification_quiet_end"),
-        CheckConstraint("(quiet_start IS NULL) = (quiet_end IS NULL)", name="ck_notification_quiet_pair"),
+        CheckConstraint("quiet_start IS NULL OR quiet_start ~ '^([01][0-9]|2[0-3]):[0-5][0-9]$'", name="ck_notification_quiet_start"),
     )
     id: Mapped[uuid.UUID] = mapped_column(Uuid(as_uuid=True), primary_key=True, default=uuid.uuid4)
     hospital_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("hospitals.id"), nullable=False)
@@ -2274,8 +2274,8 @@ class NotificationEvent(Base):
     event_metadata: Mapped[dict[str, Any]] = mapped_column(JSON, nullable=False, default=dict)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
 ", name="ck_notification_quiet_start"),
-        CheckConstraint("quiet_end IS NULL OR quiet_end ~ '^[0-2][0-9]:[0-5][0-9]$'", name="ck_notification_quiet_end"),
-        CheckConstraint("(quiet_start IS NULL) = (quiet_end IS NULL)", name="ck_notification_quiet_pair"),
+        CheckConstraint("quiet_end IS NULL OR quiet_end ~ '^([01][0-9]|2[0-3]):[0-5][0-9]$'", name="ck_notification_quiet_end"),
+        CheckConstraint("quiet_start IS NULL OR quiet_start ~ '^([01][0-9]|2[0-3]):[0-5][0-9]$'", name="ck_notification_quiet_start"),
     )
     id: Mapped[uuid.UUID] = mapped_column(Uuid(as_uuid=True), primary_key=True, default=uuid.uuid4)
     hospital_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("hospitals.id"), nullable=False)
@@ -2393,8 +2393,8 @@ class NotificationEvent(Base):
     event_metadata: Mapped[dict[str, Any]] = mapped_column(JSON, nullable=False, default=dict)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
 ", name="ck_notification_quiet_start"),
-        CheckConstraint("quiet_end IS NULL OR quiet_end ~ '^([01][0-9]|2[0-3]):[0-5][0-9]", name="ck_notification_quiet_end"),
-        CheckConstraint("(quiet_start IS NULL) = (quiet_end IS NULL)", name="ck_notification_quiet_pair"),
+        CheckConstraint("quiet_end IS NULL OR quiet_end ~ '^([01][0-9]|2[0-3]):[0-5][0-9]$'", name="ck_notification_quiet_end"),
+        CheckConstraint("quiet_start IS NULL OR quiet_start ~ '^([01][0-9]|2[0-3]):[0-5][0-9]$'", name="ck_notification_quiet_start"),
     )
     id: Mapped[uuid.UUID] = mapped_column(Uuid(as_uuid=True), primary_key=True, default=uuid.uuid4)
     hospital_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("hospitals.id"), nullable=False)
@@ -2512,8 +2512,8 @@ class NotificationEvent(Base):
     event_metadata: Mapped[dict[str, Any]] = mapped_column(JSON, nullable=False, default=dict)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
 ", name="ck_notification_quiet_start"),
-        CheckConstraint("quiet_end IS NULL OR quiet_end ~ '^[0-2][0-9]:[0-5][0-9]$'", name="ck_notification_quiet_end"),
-        CheckConstraint("(quiet_start IS NULL) = (quiet_end IS NULL)", name="ck_notification_quiet_pair"),
+        CheckConstraint("quiet_end IS NULL OR quiet_end ~ '^([01][0-9]|2[0-3]):[0-5][0-9]$'", name="ck_notification_quiet_end"),
+        CheckConstraint("quiet_start IS NULL OR quiet_start ~ '^([01][0-9]|2[0-3]):[0-5][0-9]$'", name="ck_notification_quiet_start"),
     )
     id: Mapped[uuid.UUID] = mapped_column(Uuid(as_uuid=True), primary_key=True, default=uuid.uuid4)
     hospital_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("hospitals.id"), nullable=False)
@@ -2631,7 +2631,7 @@ class NotificationEvent(Base):
     event_metadata: Mapped[dict[str, Any]] = mapped_column(JSON, nullable=False, default=dict)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
 ", name="ck_notification_quiet_end"),
-        CheckConstraint("(quiet_start IS NULL) = (quiet_end IS NULL)", name="ck_notification_quiet_pair"),
+        CheckConstraint("quiet_start IS NULL OR quiet_start ~ '^([01][0-9]|2[0-3]):[0-5][0-9]$'", name="ck_notification_quiet_start"),
     )
     id: Mapped[uuid.UUID] = mapped_column(Uuid(as_uuid=True), primary_key=True, default=uuid.uuid4)
     hospital_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("hospitals.id"), nullable=False)
@@ -2749,8 +2749,8 @@ class NotificationEvent(Base):
     event_metadata: Mapped[dict[str, Any]] = mapped_column(JSON, nullable=False, default=dict)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
 ", name="ck_notification_quiet_start"),
-        CheckConstraint("quiet_end IS NULL OR quiet_end ~ '^[0-2][0-9]:[0-5][0-9]$'", name="ck_notification_quiet_end"),
-        CheckConstraint("(quiet_start IS NULL) = (quiet_end IS NULL)", name="ck_notification_quiet_pair"),
+        CheckConstraint("quiet_end IS NULL OR quiet_end ~ '^([01][0-9]|2[0-3]):[0-5][0-9]$'", name="ck_notification_quiet_end"),
+        CheckConstraint("quiet_start IS NULL OR quiet_start ~ '^([01][0-9]|2[0-3]):[0-5][0-9]$'", name="ck_notification_quiet_start"),
     )
     id: Mapped[uuid.UUID] = mapped_column(Uuid(as_uuid=True), primary_key=True, default=uuid.uuid4)
     hospital_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("hospitals.id"), nullable=False)
@@ -2868,7 +2868,7 @@ class NotificationEvent(Base):
     event_metadata: Mapped[dict[str, Any]] = mapped_column(JSON, nullable=False, default=dict)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
 ", name="ck_notification_quiet_end"),
-        CheckConstraint("(quiet_start IS NULL) = (quiet_end IS NULL)", name="ck_notification_quiet_pair"),
+        CheckConstraint("quiet_start IS NULL OR quiet_start ~ '^([01][0-9]|2[0-3]):[0-5][0-9]$'", name="ck_notification_quiet_start"),
     )
     id: Mapped[uuid.UUID] = mapped_column(Uuid(as_uuid=True), primary_key=True, default=uuid.uuid4)
     hospital_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("hospitals.id"), nullable=False)
@@ -2986,8 +2986,8 @@ class NotificationEvent(Base):
     event_metadata: Mapped[dict[str, Any]] = mapped_column(JSON, nullable=False, default=dict)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
 ", name="ck_notification_quiet_start"),
-        CheckConstraint("quiet_end IS NULL OR quiet_end ~ '^[0-2][0-9]:[0-5][0-9]$'", name="ck_notification_quiet_end"),
-        CheckConstraint("(quiet_start IS NULL) = (quiet_end IS NULL)", name="ck_notification_quiet_pair"),
+        CheckConstraint("quiet_end IS NULL OR quiet_end ~ '^([01][0-9]|2[0-3]):[0-5][0-9]$'", name="ck_notification_quiet_end"),
+        CheckConstraint("quiet_start IS NULL OR quiet_start ~ '^([01][0-9]|2[0-3]):[0-5][0-9]$'", name="ck_notification_quiet_start"),
     )
     id: Mapped[uuid.UUID] = mapped_column(Uuid(as_uuid=True), primary_key=True, default=uuid.uuid4)
     hospital_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("hospitals.id"), nullable=False)
@@ -3105,7 +3105,7 @@ class NotificationEvent(Base):
     event_metadata: Mapped[dict[str, Any]] = mapped_column(JSON, nullable=False, default=dict)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
 ", name="ck_notification_quiet_end"),
-        CheckConstraint("(quiet_start IS NULL) = (quiet_end IS NULL)", name="ck_notification_quiet_pair"),
+        CheckConstraint("quiet_start IS NULL OR quiet_start ~ '^([01][0-9]|2[0-3]):[0-5][0-9]$'", name="ck_notification_quiet_start"),
     )
     id: Mapped[uuid.UUID] = mapped_column(Uuid(as_uuid=True), primary_key=True, default=uuid.uuid4)
     hospital_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("hospitals.id"), nullable=False)
@@ -3223,8 +3223,8 @@ class NotificationEvent(Base):
     event_metadata: Mapped[dict[str, Any]] = mapped_column(JSON, nullable=False, default=dict)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
 ", name="ck_notification_quiet_start"),
-        CheckConstraint("quiet_end IS NULL OR quiet_end ~ '^[0-2][0-9]:[0-5][0-9]$'", name="ck_notification_quiet_end"),
-        CheckConstraint("(quiet_start IS NULL) = (quiet_end IS NULL)", name="ck_notification_quiet_pair"),
+        CheckConstraint("quiet_end IS NULL OR quiet_end ~ '^([01][0-9]|2[0-3]):[0-5][0-9]$'", name="ck_notification_quiet_end"),
+        CheckConstraint("quiet_start IS NULL OR quiet_start ~ '^([01][0-9]|2[0-3]):[0-5][0-9]$'", name="ck_notification_quiet_start"),
     )
     id: Mapped[uuid.UUID] = mapped_column(Uuid(as_uuid=True), primary_key=True, default=uuid.uuid4)
     hospital_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("hospitals.id"), nullable=False)
@@ -3342,8 +3342,8 @@ class NotificationEvent(Base):
     event_metadata: Mapped[dict[str, Any]] = mapped_column(JSON, nullable=False, default=dict)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
 ", name="ck_notification_quiet_start"),
-        CheckConstraint("quiet_end IS NULL OR quiet_end ~ '^([01][0-9]|2[0-3]):[0-5][0-9]", name="ck_notification_quiet_end"),
-        CheckConstraint("(quiet_start IS NULL) = (quiet_end IS NULL)", name="ck_notification_quiet_pair"),
+        CheckConstraint("quiet_end IS NULL OR quiet_end ~ '^([01][0-9]|2[0-3]):[0-5][0-9]$'", name="ck_notification_quiet_end"),
+        CheckConstraint("quiet_start IS NULL OR quiet_start ~ '^([01][0-9]|2[0-3]):[0-5][0-9]$'", name="ck_notification_quiet_start"),
     )
     id: Mapped[uuid.UUID] = mapped_column(Uuid(as_uuid=True), primary_key=True, default=uuid.uuid4)
     hospital_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("hospitals.id"), nullable=False)
@@ -3461,8 +3461,8 @@ class NotificationEvent(Base):
     event_metadata: Mapped[dict[str, Any]] = mapped_column(JSON, nullable=False, default=dict)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
 ", name="ck_notification_quiet_start"),
-        CheckConstraint("quiet_end IS NULL OR quiet_end ~ '^[0-2][0-9]:[0-5][0-9]$'", name="ck_notification_quiet_end"),
-        CheckConstraint("(quiet_start IS NULL) = (quiet_end IS NULL)", name="ck_notification_quiet_pair"),
+        CheckConstraint("quiet_end IS NULL OR quiet_end ~ '^([01][0-9]|2[0-3]):[0-5][0-9]$'", name="ck_notification_quiet_end"),
+        CheckConstraint("quiet_start IS NULL OR quiet_start ~ '^([01][0-9]|2[0-3]):[0-5][0-9]$'", name="ck_notification_quiet_start"),
     )
     id: Mapped[uuid.UUID] = mapped_column(Uuid(as_uuid=True), primary_key=True, default=uuid.uuid4)
     hospital_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("hospitals.id"), nullable=False)
@@ -3580,7 +3580,7 @@ class NotificationEvent(Base):
     event_metadata: Mapped[dict[str, Any]] = mapped_column(JSON, nullable=False, default=dict)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
 ", name="ck_notification_quiet_end"),
-        CheckConstraint("(quiet_start IS NULL) = (quiet_end IS NULL)", name="ck_notification_quiet_pair"),
+        CheckConstraint("quiet_start IS NULL OR quiet_start ~ '^([01][0-9]|2[0-3]):[0-5][0-9]$'", name="ck_notification_quiet_start"),
     )
     id: Mapped[uuid.UUID] = mapped_column(Uuid(as_uuid=True), primary_key=True, default=uuid.uuid4)
     hospital_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("hospitals.id"), nullable=False)
@@ -3698,8 +3698,8 @@ class NotificationEvent(Base):
     event_metadata: Mapped[dict[str, Any]] = mapped_column(JSON, nullable=False, default=dict)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
 ", name="ck_notification_quiet_start"),
-        CheckConstraint("quiet_end IS NULL OR quiet_end ~ '^[0-2][0-9]:[0-5][0-9]$'", name="ck_notification_quiet_end"),
-        CheckConstraint("(quiet_start IS NULL) = (quiet_end IS NULL)", name="ck_notification_quiet_pair"),
+        CheckConstraint("quiet_end IS NULL OR quiet_end ~ '^([01][0-9]|2[0-3]):[0-5][0-9]$'", name="ck_notification_quiet_end"),
+        CheckConstraint("quiet_start IS NULL OR quiet_start ~ '^([01][0-9]|2[0-3]):[0-5][0-9]$'", name="ck_notification_quiet_start"),
     )
     id: Mapped[uuid.UUID] = mapped_column(Uuid(as_uuid=True), primary_key=True, default=uuid.uuid4)
     hospital_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("hospitals.id"), nullable=False)
@@ -3817,7 +3817,7 @@ class NotificationEvent(Base):
     event_metadata: Mapped[dict[str, Any]] = mapped_column(JSON, nullable=False, default=dict)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
 ", name="ck_notification_quiet_end"),
-        CheckConstraint("(quiet_start IS NULL) = (quiet_end IS NULL)", name="ck_notification_quiet_pair"),
+        CheckConstraint("quiet_start IS NULL OR quiet_start ~ '^([01][0-9]|2[0-3]):[0-5][0-9]$'", name="ck_notification_quiet_start"),
     )
     id: Mapped[uuid.UUID] = mapped_column(Uuid(as_uuid=True), primary_key=True, default=uuid.uuid4)
     hospital_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("hospitals.id"), nullable=False)
@@ -3935,8 +3935,8 @@ class NotificationEvent(Base):
     event_metadata: Mapped[dict[str, Any]] = mapped_column(JSON, nullable=False, default=dict)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
 ", name="ck_notification_quiet_start"),
-        CheckConstraint("quiet_end IS NULL OR quiet_end ~ '^[0-2][0-9]:[0-5][0-9]$'", name="ck_notification_quiet_end"),
-        CheckConstraint("(quiet_start IS NULL) = (quiet_end IS NULL)", name="ck_notification_quiet_pair"),
+        CheckConstraint("quiet_end IS NULL OR quiet_end ~ '^([01][0-9]|2[0-3]):[0-5][0-9]$'", name="ck_notification_quiet_end"),
+        CheckConstraint("quiet_start IS NULL OR quiet_start ~ '^([01][0-9]|2[0-3]):[0-5][0-9]$'", name="ck_notification_quiet_start"),
     )
     id: Mapped[uuid.UUID] = mapped_column(Uuid(as_uuid=True), primary_key=True, default=uuid.uuid4)
     hospital_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("hospitals.id"), nullable=False)
@@ -4054,7 +4054,7 @@ class NotificationEvent(Base):
     event_metadata: Mapped[dict[str, Any]] = mapped_column(JSON, nullable=False, default=dict)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
 ", name="ck_notification_quiet_end"),
-        CheckConstraint("(quiet_start IS NULL) = (quiet_end IS NULL)", name="ck_notification_quiet_pair"),
+        CheckConstraint("quiet_start IS NULL OR quiet_start ~ '^([01][0-9]|2[0-3]):[0-5][0-9]$'", name="ck_notification_quiet_start"),
     )
     id: Mapped[uuid.UUID] = mapped_column(Uuid(as_uuid=True), primary_key=True, default=uuid.uuid4)
     hospital_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("hospitals.id"), nullable=False)
@@ -4172,8 +4172,8 @@ class NotificationEvent(Base):
     event_metadata: Mapped[dict[str, Any]] = mapped_column(JSON, nullable=False, default=dict)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
 ", name="ck_notification_quiet_start"),
-        CheckConstraint("quiet_end IS NULL OR quiet_end ~ '^[0-2][0-9]:[0-5][0-9]$'", name="ck_notification_quiet_end"),
-        CheckConstraint("(quiet_start IS NULL) = (quiet_end IS NULL)", name="ck_notification_quiet_pair"),
+        CheckConstraint("quiet_end IS NULL OR quiet_end ~ '^([01][0-9]|2[0-3]):[0-5][0-9]$'", name="ck_notification_quiet_end"),
+        CheckConstraint("quiet_start IS NULL OR quiet_start ~ '^([01][0-9]|2[0-3]):[0-5][0-9]$'", name="ck_notification_quiet_start"),
     )
     id: Mapped[uuid.UUID] = mapped_column(Uuid(as_uuid=True), primary_key=True, default=uuid.uuid4)
     hospital_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("hospitals.id"), nullable=False)
@@ -4291,8 +4291,8 @@ class NotificationEvent(Base):
     event_metadata: Mapped[dict[str, Any]] = mapped_column(JSON, nullable=False, default=dict)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
 ", name="ck_notification_quiet_start"),
-        CheckConstraint("quiet_end IS NULL OR quiet_end ~ '^([01][0-9]|2[0-3]):[0-5][0-9]", name="ck_notification_quiet_end"),
-        CheckConstraint("(quiet_start IS NULL) = (quiet_end IS NULL)", name="ck_notification_quiet_pair"),
+        CheckConstraint("quiet_end IS NULL OR quiet_end ~ '^([01][0-9]|2[0-3]):[0-5][0-9]$'", name="ck_notification_quiet_end"),
+        CheckConstraint("quiet_start IS NULL OR quiet_start ~ '^([01][0-9]|2[0-3]):[0-5][0-9]$'", name="ck_notification_quiet_start"),
     )
     id: Mapped[uuid.UUID] = mapped_column(Uuid(as_uuid=True), primary_key=True, default=uuid.uuid4)
     hospital_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("hospitals.id"), nullable=False)
@@ -4410,8 +4410,8 @@ class NotificationEvent(Base):
     event_metadata: Mapped[dict[str, Any]] = mapped_column(JSON, nullable=False, default=dict)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
 ", name="ck_notification_quiet_start"),
-        CheckConstraint("quiet_end IS NULL OR quiet_end ~ '^[0-2][0-9]:[0-5][0-9]$'", name="ck_notification_quiet_end"),
-        CheckConstraint("(quiet_start IS NULL) = (quiet_end IS NULL)", name="ck_notification_quiet_pair"),
+        CheckConstraint("quiet_end IS NULL OR quiet_end ~ '^([01][0-9]|2[0-3]):[0-5][0-9]$'", name="ck_notification_quiet_end"),
+        CheckConstraint("quiet_start IS NULL OR quiet_start ~ '^([01][0-9]|2[0-3]):[0-5][0-9]$'", name="ck_notification_quiet_start"),
     )
     id: Mapped[uuid.UUID] = mapped_column(Uuid(as_uuid=True), primary_key=True, default=uuid.uuid4)
     hospital_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("hospitals.id"), nullable=False)
@@ -4529,7 +4529,7 @@ class NotificationEvent(Base):
     event_metadata: Mapped[dict[str, Any]] = mapped_column(JSON, nullable=False, default=dict)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
 ", name="ck_notification_quiet_end"),
-        CheckConstraint("(quiet_start IS NULL) = (quiet_end IS NULL)", name="ck_notification_quiet_pair"),
+        CheckConstraint("quiet_start IS NULL OR quiet_start ~ '^([01][0-9]|2[0-3]):[0-5][0-9]$'", name="ck_notification_quiet_start"),
     )
     id: Mapped[uuid.UUID] = mapped_column(Uuid(as_uuid=True), primary_key=True, default=uuid.uuid4)
     hospital_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("hospitals.id"), nullable=False)
@@ -4647,8 +4647,8 @@ class NotificationEvent(Base):
     event_metadata: Mapped[dict[str, Any]] = mapped_column(JSON, nullable=False, default=dict)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
 ", name="ck_notification_quiet_start"),
-        CheckConstraint("quiet_end IS NULL OR quiet_end ~ '^[0-2][0-9]:[0-5][0-9]$'", name="ck_notification_quiet_end"),
-        CheckConstraint("(quiet_start IS NULL) = (quiet_end IS NULL)", name="ck_notification_quiet_pair"),
+        CheckConstraint("quiet_end IS NULL OR quiet_end ~ '^([01][0-9]|2[0-3]):[0-5][0-9]$'", name="ck_notification_quiet_end"),
+        CheckConstraint("quiet_start IS NULL OR quiet_start ~ '^([01][0-9]|2[0-3]):[0-5][0-9]$'", name="ck_notification_quiet_start"),
     )
     id: Mapped[uuid.UUID] = mapped_column(Uuid(as_uuid=True), primary_key=True, default=uuid.uuid4)
     hospital_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("hospitals.id"), nullable=False)
@@ -4766,7 +4766,7 @@ class NotificationEvent(Base):
     event_metadata: Mapped[dict[str, Any]] = mapped_column(JSON, nullable=False, default=dict)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
 ", name="ck_notification_quiet_end"),
-        CheckConstraint("(quiet_start IS NULL) = (quiet_end IS NULL)", name="ck_notification_quiet_pair"),
+        CheckConstraint("quiet_start IS NULL OR quiet_start ~ '^([01][0-9]|2[0-3]):[0-5][0-9]$'", name="ck_notification_quiet_start"),
     )
     id: Mapped[uuid.UUID] = mapped_column(Uuid(as_uuid=True), primary_key=True, default=uuid.uuid4)
     hospital_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("hospitals.id"), nullable=False)
@@ -4884,8 +4884,8 @@ class NotificationEvent(Base):
     event_metadata: Mapped[dict[str, Any]] = mapped_column(JSON, nullable=False, default=dict)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
 ", name="ck_notification_quiet_start"),
-        CheckConstraint("quiet_end IS NULL OR quiet_end ~ '^[0-2][0-9]:[0-5][0-9]$'", name="ck_notification_quiet_end"),
-        CheckConstraint("(quiet_start IS NULL) = (quiet_end IS NULL)", name="ck_notification_quiet_pair"),
+        CheckConstraint("quiet_end IS NULL OR quiet_end ~ '^([01][0-9]|2[0-3]):[0-5][0-9]$'", name="ck_notification_quiet_end"),
+        CheckConstraint("quiet_start IS NULL OR quiet_start ~ '^([01][0-9]|2[0-3]):[0-5][0-9]$'", name="ck_notification_quiet_start"),
     )
     id: Mapped[uuid.UUID] = mapped_column(Uuid(as_uuid=True), primary_key=True, default=uuid.uuid4)
     hospital_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("hospitals.id"), nullable=False)
@@ -5003,7 +5003,7 @@ class NotificationEvent(Base):
     event_metadata: Mapped[dict[str, Any]] = mapped_column(JSON, nullable=False, default=dict)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
 ", name="ck_notification_quiet_end"),
-        CheckConstraint("(quiet_start IS NULL) = (quiet_end IS NULL)", name="ck_notification_quiet_pair"),
+        CheckConstraint("quiet_start IS NULL OR quiet_start ~ '^([01][0-9]|2[0-3]):[0-5][0-9]$'", name="ck_notification_quiet_start"),
     )
     id: Mapped[uuid.UUID] = mapped_column(Uuid(as_uuid=True), primary_key=True, default=uuid.uuid4)
     hospital_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("hospitals.id"), nullable=False)
@@ -5121,8 +5121,8 @@ class NotificationEvent(Base):
     event_metadata: Mapped[dict[str, Any]] = mapped_column(JSON, nullable=False, default=dict)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
 ", name="ck_notification_quiet_start"),
-        CheckConstraint("quiet_end IS NULL OR quiet_end ~ '^[0-2][0-9]:[0-5][0-9]$'", name="ck_notification_quiet_end"),
-        CheckConstraint("(quiet_start IS NULL) = (quiet_end IS NULL)", name="ck_notification_quiet_pair"),
+        CheckConstraint("quiet_end IS NULL OR quiet_end ~ '^([01][0-9]|2[0-3]):[0-5][0-9]$'", name="ck_notification_quiet_end"),
+        CheckConstraint("quiet_start IS NULL OR quiet_start ~ '^([01][0-9]|2[0-3]):[0-5][0-9]$'", name="ck_notification_quiet_start"),
     )
     id: Mapped[uuid.UUID] = mapped_column(Uuid(as_uuid=True), primary_key=True, default=uuid.uuid4)
     hospital_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("hospitals.id"), nullable=False)
@@ -5240,8 +5240,8 @@ class NotificationEvent(Base):
     event_metadata: Mapped[dict[str, Any]] = mapped_column(JSON, nullable=False, default=dict)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
 ", name="ck_notification_quiet_start"),
-        CheckConstraint("quiet_end IS NULL OR quiet_end ~ '^([01][0-9]|2[0-3]):[0-5][0-9]", name="ck_notification_quiet_end"),
-        CheckConstraint("(quiet_start IS NULL) = (quiet_end IS NULL)", name="ck_notification_quiet_pair"),
+        CheckConstraint("quiet_end IS NULL OR quiet_end ~ '^([01][0-9]|2[0-3]):[0-5][0-9]$'", name="ck_notification_quiet_end"),
+        CheckConstraint("quiet_start IS NULL OR quiet_start ~ '^([01][0-9]|2[0-3]):[0-5][0-9]$'", name="ck_notification_quiet_start"),
     )
     id: Mapped[uuid.UUID] = mapped_column(Uuid(as_uuid=True), primary_key=True, default=uuid.uuid4)
     hospital_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("hospitals.id"), nullable=False)
@@ -5359,8 +5359,8 @@ class NotificationEvent(Base):
     event_metadata: Mapped[dict[str, Any]] = mapped_column(JSON, nullable=False, default=dict)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
 ", name="ck_notification_quiet_start"),
-        CheckConstraint("quiet_end IS NULL OR quiet_end ~ '^[0-2][0-9]:[0-5][0-9]$'", name="ck_notification_quiet_end"),
-        CheckConstraint("(quiet_start IS NULL) = (quiet_end IS NULL)", name="ck_notification_quiet_pair"),
+        CheckConstraint("quiet_end IS NULL OR quiet_end ~ '^([01][0-9]|2[0-3]):[0-5][0-9]$'", name="ck_notification_quiet_end"),
+        CheckConstraint("quiet_start IS NULL OR quiet_start ~ '^([01][0-9]|2[0-3]):[0-5][0-9]$'", name="ck_notification_quiet_start"),
     )
     id: Mapped[uuid.UUID] = mapped_column(Uuid(as_uuid=True), primary_key=True, default=uuid.uuid4)
     hospital_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("hospitals.id"), nullable=False)
@@ -5478,7 +5478,7 @@ class NotificationEvent(Base):
     event_metadata: Mapped[dict[str, Any]] = mapped_column(JSON, nullable=False, default=dict)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
 ", name="ck_notification_quiet_end"),
-        CheckConstraint("(quiet_start IS NULL) = (quiet_end IS NULL)", name="ck_notification_quiet_pair"),
+        CheckConstraint("quiet_start IS NULL OR quiet_start ~ '^([01][0-9]|2[0-3]):[0-5][0-9]$'", name="ck_notification_quiet_start"),
     )
     id: Mapped[uuid.UUID] = mapped_column(Uuid(as_uuid=True), primary_key=True, default=uuid.uuid4)
     hospital_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("hospitals.id"), nullable=False)
@@ -5596,8 +5596,8 @@ class NotificationEvent(Base):
     event_metadata: Mapped[dict[str, Any]] = mapped_column(JSON, nullable=False, default=dict)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
 ", name="ck_notification_quiet_start"),
-        CheckConstraint("quiet_end IS NULL OR quiet_end ~ '^[0-2][0-9]:[0-5][0-9]$'", name="ck_notification_quiet_end"),
-        CheckConstraint("(quiet_start IS NULL) = (quiet_end IS NULL)", name="ck_notification_quiet_pair"),
+        CheckConstraint("quiet_end IS NULL OR quiet_end ~ '^([01][0-9]|2[0-3]):[0-5][0-9]$'", name="ck_notification_quiet_end"),
+        CheckConstraint("quiet_start IS NULL OR quiet_start ~ '^([01][0-9]|2[0-3]):[0-5][0-9]$'", name="ck_notification_quiet_start"),
     )
     id: Mapped[uuid.UUID] = mapped_column(Uuid(as_uuid=True), primary_key=True, default=uuid.uuid4)
     hospital_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("hospitals.id"), nullable=False)
@@ -5715,8 +5715,8 @@ class NotificationEvent(Base):
     event_metadata: Mapped[dict[str, Any]] = mapped_column(JSON, nullable=False, default=dict)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
 ", name="ck_notification_quiet_start"),
-        CheckConstraint("quiet_end IS NULL OR quiet_end ~ '^([01][0-9]|2[0-3]):[0-5][0-9]", name="ck_notification_quiet_end"),
-        CheckConstraint("(quiet_start IS NULL) = (quiet_end IS NULL)", name="ck_notification_quiet_pair"),
+        CheckConstraint("quiet_end IS NULL OR quiet_end ~ '^([01][0-9]|2[0-3]):[0-5][0-9]$'", name="ck_notification_quiet_end"),
+        CheckConstraint("quiet_start IS NULL OR quiet_start ~ '^([01][0-9]|2[0-3]):[0-5][0-9]$'", name="ck_notification_quiet_start"),
     )
     id: Mapped[uuid.UUID] = mapped_column(Uuid(as_uuid=True), primary_key=True, default=uuid.uuid4)
     hospital_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("hospitals.id"), nullable=False)
@@ -5834,8 +5834,8 @@ class NotificationEvent(Base):
     event_metadata: Mapped[dict[str, Any]] = mapped_column(JSON, nullable=False, default=dict)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
 ", name="ck_notification_quiet_start"),
-        CheckConstraint("quiet_end IS NULL OR quiet_end ~ '^[0-2][0-9]:[0-5][0-9]$'", name="ck_notification_quiet_end"),
-        CheckConstraint("(quiet_start IS NULL) = (quiet_end IS NULL)", name="ck_notification_quiet_pair"),
+        CheckConstraint("quiet_end IS NULL OR quiet_end ~ '^([01][0-9]|2[0-3]):[0-5][0-9]$'", name="ck_notification_quiet_end"),
+        CheckConstraint("quiet_start IS NULL OR quiet_start ~ '^([01][0-9]|2[0-3]):[0-5][0-9]$'", name="ck_notification_quiet_start"),
     )
     id: Mapped[uuid.UUID] = mapped_column(Uuid(as_uuid=True), primary_key=True, default=uuid.uuid4)
     hospital_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("hospitals.id"), nullable=False)
@@ -5953,7 +5953,7 @@ class NotificationEvent(Base):
     event_metadata: Mapped[dict[str, Any]] = mapped_column(JSON, nullable=False, default=dict)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
 ", name="ck_notification_quiet_end"),
-        CheckConstraint("(quiet_start IS NULL) = (quiet_end IS NULL)", name="ck_notification_quiet_pair"),
+        CheckConstraint("quiet_start IS NULL OR quiet_start ~ '^([01][0-9]|2[0-3]):[0-5][0-9]$'", name="ck_notification_quiet_start"),
     )
     id: Mapped[uuid.UUID] = mapped_column(Uuid(as_uuid=True), primary_key=True, default=uuid.uuid4)
     hospital_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("hospitals.id"), nullable=False)
@@ -6071,8 +6071,8 @@ class NotificationEvent(Base):
     event_metadata: Mapped[dict[str, Any]] = mapped_column(JSON, nullable=False, default=dict)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
 ", name="ck_notification_quiet_start"),
-        CheckConstraint("quiet_end IS NULL OR quiet_end ~ '^[0-2][0-9]:[0-5][0-9]$'", name="ck_notification_quiet_end"),
-        CheckConstraint("(quiet_start IS NULL) = (quiet_end IS NULL)", name="ck_notification_quiet_pair"),
+        CheckConstraint("quiet_end IS NULL OR quiet_end ~ '^([01][0-9]|2[0-3]):[0-5][0-9]$'", name="ck_notification_quiet_end"),
+        CheckConstraint("quiet_start IS NULL OR quiet_start ~ '^([01][0-9]|2[0-3]):[0-5][0-9]$'", name="ck_notification_quiet_start"),
     )
     id: Mapped[uuid.UUID] = mapped_column(Uuid(as_uuid=True), primary_key=True, default=uuid.uuid4)
     hospital_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("hospitals.id"), nullable=False)
@@ -6190,8 +6190,8 @@ class NotificationEvent(Base):
     event_metadata: Mapped[dict[str, Any]] = mapped_column(JSON, nullable=False, default=dict)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
 ", name="ck_notification_quiet_start"),
-        CheckConstraint("quiet_end IS NULL OR quiet_end ~ '^([01][0-9]|2[0-3]):[0-5][0-9]", name="ck_notification_quiet_end"),
-        CheckConstraint("(quiet_start IS NULL) = (quiet_end IS NULL)", name="ck_notification_quiet_pair"),
+        CheckConstraint("quiet_end IS NULL OR quiet_end ~ '^([01][0-9]|2[0-3]):[0-5][0-9]$'", name="ck_notification_quiet_end"),
+        CheckConstraint("quiet_start IS NULL OR quiet_start ~ '^([01][0-9]|2[0-3]):[0-5][0-9]$'", name="ck_notification_quiet_start"),
     )
     id: Mapped[uuid.UUID] = mapped_column(Uuid(as_uuid=True), primary_key=True, default=uuid.uuid4)
     hospital_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("hospitals.id"), nullable=False)
@@ -6309,8 +6309,8 @@ class NotificationEvent(Base):
     event_metadata: Mapped[dict[str, Any]] = mapped_column(JSON, nullable=False, default=dict)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
 ", name="ck_notification_quiet_start"),
-        CheckConstraint("quiet_end IS NULL OR quiet_end ~ '^[0-2][0-9]:[0-5][0-9]$'", name="ck_notification_quiet_end"),
-        CheckConstraint("(quiet_start IS NULL) = (quiet_end IS NULL)", name="ck_notification_quiet_pair"),
+        CheckConstraint("quiet_end IS NULL OR quiet_end ~ '^([01][0-9]|2[0-3]):[0-5][0-9]$'", name="ck_notification_quiet_end"),
+        CheckConstraint("quiet_start IS NULL OR quiet_start ~ '^([01][0-9]|2[0-3]):[0-5][0-9]$'", name="ck_notification_quiet_start"),
     )
     id: Mapped[uuid.UUID] = mapped_column(Uuid(as_uuid=True), primary_key=True, default=uuid.uuid4)
     hospital_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("hospitals.id"), nullable=False)
@@ -6428,7 +6428,7 @@ class NotificationEvent(Base):
     event_metadata: Mapped[dict[str, Any]] = mapped_column(JSON, nullable=False, default=dict)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
 ", name="ck_notification_quiet_end"),
-        CheckConstraint("(quiet_start IS NULL) = (quiet_end IS NULL)", name="ck_notification_quiet_pair"),
+        CheckConstraint("quiet_start IS NULL OR quiet_start ~ '^([01][0-9]|2[0-3]):[0-5][0-9]$'", name="ck_notification_quiet_start"),
     )
     id: Mapped[uuid.UUID] = mapped_column(Uuid(as_uuid=True), primary_key=True, default=uuid.uuid4)
     hospital_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("hospitals.id"), nullable=False)
@@ -6546,8 +6546,8 @@ class NotificationEvent(Base):
     event_metadata: Mapped[dict[str, Any]] = mapped_column(JSON, nullable=False, default=dict)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
 ", name="ck_notification_quiet_start"),
-        CheckConstraint("quiet_end IS NULL OR quiet_end ~ '^[0-2][0-9]:[0-5][0-9]$'", name="ck_notification_quiet_end"),
-        CheckConstraint("(quiet_start IS NULL) = (quiet_end IS NULL)", name="ck_notification_quiet_pair"),
+        CheckConstraint("quiet_end IS NULL OR quiet_end ~ '^([01][0-9]|2[0-3]):[0-5][0-9]$'", name="ck_notification_quiet_end"),
+        CheckConstraint("quiet_start IS NULL OR quiet_start ~ '^([01][0-9]|2[0-3]):[0-5][0-9]$'", name="ck_notification_quiet_start"),
     )
     id: Mapped[uuid.UUID] = mapped_column(Uuid(as_uuid=True), primary_key=True, default=uuid.uuid4)
     hospital_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("hospitals.id"), nullable=False)
@@ -6665,7 +6665,7 @@ class NotificationEvent(Base):
     event_metadata: Mapped[dict[str, Any]] = mapped_column(JSON, nullable=False, default=dict)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
 ", name="ck_notification_quiet_end"),
-        CheckConstraint("(quiet_start IS NULL) = (quiet_end IS NULL)", name="ck_notification_quiet_pair"),
+        CheckConstraint("quiet_start IS NULL OR quiet_start ~ '^([01][0-9]|2[0-3]):[0-5][0-9]$'", name="ck_notification_quiet_start"),
     )
     id: Mapped[uuid.UUID] = mapped_column(Uuid(as_uuid=True), primary_key=True, default=uuid.uuid4)
     hospital_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("hospitals.id"), nullable=False)
@@ -6783,8 +6783,8 @@ class NotificationEvent(Base):
     event_metadata: Mapped[dict[str, Any]] = mapped_column(JSON, nullable=False, default=dict)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
 ", name="ck_notification_quiet_start"),
-        CheckConstraint("quiet_end IS NULL OR quiet_end ~ '^[0-2][0-9]:[0-5][0-9]$'", name="ck_notification_quiet_end"),
-        CheckConstraint("(quiet_start IS NULL) = (quiet_end IS NULL)", name="ck_notification_quiet_pair"),
+        CheckConstraint("quiet_end IS NULL OR quiet_end ~ '^([01][0-9]|2[0-3]):[0-5][0-9]$'", name="ck_notification_quiet_end"),
+        CheckConstraint("quiet_start IS NULL OR quiet_start ~ '^([01][0-9]|2[0-3]):[0-5][0-9]$'", name="ck_notification_quiet_start"),
     )
     id: Mapped[uuid.UUID] = mapped_column(Uuid(as_uuid=True), primary_key=True, default=uuid.uuid4)
     hospital_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("hospitals.id"), nullable=False)
@@ -6902,7 +6902,7 @@ class NotificationEvent(Base):
     event_metadata: Mapped[dict[str, Any]] = mapped_column(JSON, nullable=False, default=dict)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
 ", name="ck_notification_quiet_end"),
-        CheckConstraint("(quiet_start IS NULL) = (quiet_end IS NULL)", name="ck_notification_quiet_pair"),
+        CheckConstraint("quiet_start IS NULL OR quiet_start ~ '^([01][0-9]|2[0-3]):[0-5][0-9]$'", name="ck_notification_quiet_start"),
     )
     id: Mapped[uuid.UUID] = mapped_column(Uuid(as_uuid=True), primary_key=True, default=uuid.uuid4)
     hospital_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("hospitals.id"), nullable=False)
@@ -7020,8 +7020,8 @@ class NotificationEvent(Base):
     event_metadata: Mapped[dict[str, Any]] = mapped_column(JSON, nullable=False, default=dict)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
 ", name="ck_notification_quiet_start"),
-        CheckConstraint("quiet_end IS NULL OR quiet_end ~ '^[0-2][0-9]:[0-5][0-9]$'", name="ck_notification_quiet_end"),
-        CheckConstraint("(quiet_start IS NULL) = (quiet_end IS NULL)", name="ck_notification_quiet_pair"),
+        CheckConstraint("quiet_end IS NULL OR quiet_end ~ '^([01][0-9]|2[0-3]):[0-5][0-9]$'", name="ck_notification_quiet_end"),
+        CheckConstraint("quiet_start IS NULL OR quiet_start ~ '^([01][0-9]|2[0-3]):[0-5][0-9]$'", name="ck_notification_quiet_start"),
     )
     id: Mapped[uuid.UUID] = mapped_column(Uuid(as_uuid=True), primary_key=True, default=uuid.uuid4)
     hospital_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("hospitals.id"), nullable=False)
@@ -7139,8 +7139,8 @@ class NotificationEvent(Base):
     event_metadata: Mapped[dict[str, Any]] = mapped_column(JSON, nullable=False, default=dict)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
 ", name="ck_notification_quiet_start"),
-        CheckConstraint("quiet_end IS NULL OR quiet_end ~ '^([01][0-9]|2[0-3]):[0-5][0-9]", name="ck_notification_quiet_end"),
-        CheckConstraint("(quiet_start IS NULL) = (quiet_end IS NULL)", name="ck_notification_quiet_pair"),
+        CheckConstraint("quiet_end IS NULL OR quiet_end ~ '^([01][0-9]|2[0-3]):[0-5][0-9]$'", name="ck_notification_quiet_end"),
+        CheckConstraint("quiet_start IS NULL OR quiet_start ~ '^([01][0-9]|2[0-3]):[0-5][0-9]$'", name="ck_notification_quiet_start"),
     )
     id: Mapped[uuid.UUID] = mapped_column(Uuid(as_uuid=True), primary_key=True, default=uuid.uuid4)
     hospital_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("hospitals.id"), nullable=False)
@@ -7258,8 +7258,8 @@ class NotificationEvent(Base):
     event_metadata: Mapped[dict[str, Any]] = mapped_column(JSON, nullable=False, default=dict)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
 ", name="ck_notification_quiet_start"),
-        CheckConstraint("quiet_end IS NULL OR quiet_end ~ '^[0-2][0-9]:[0-5][0-9]$'", name="ck_notification_quiet_end"),
-        CheckConstraint("(quiet_start IS NULL) = (quiet_end IS NULL)", name="ck_notification_quiet_pair"),
+        CheckConstraint("quiet_end IS NULL OR quiet_end ~ '^([01][0-9]|2[0-3]):[0-5][0-9]$'", name="ck_notification_quiet_end"),
+        CheckConstraint("quiet_start IS NULL OR quiet_start ~ '^([01][0-9]|2[0-3]):[0-5][0-9]$'", name="ck_notification_quiet_start"),
     )
     id: Mapped[uuid.UUID] = mapped_column(Uuid(as_uuid=True), primary_key=True, default=uuid.uuid4)
     hospital_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("hospitals.id"), nullable=False)
@@ -7377,7 +7377,7 @@ class NotificationEvent(Base):
     event_metadata: Mapped[dict[str, Any]] = mapped_column(JSON, nullable=False, default=dict)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
 ", name="ck_notification_quiet_end"),
-        CheckConstraint("(quiet_start IS NULL) = (quiet_end IS NULL)", name="ck_notification_quiet_pair"),
+        CheckConstraint("quiet_start IS NULL OR quiet_start ~ '^([01][0-9]|2[0-3]):[0-5][0-9]$'", name="ck_notification_quiet_start"),
     )
     id: Mapped[uuid.UUID] = mapped_column(Uuid(as_uuid=True), primary_key=True, default=uuid.uuid4)
     hospital_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("hospitals.id"), nullable=False)
@@ -7495,8 +7495,8 @@ class NotificationEvent(Base):
     event_metadata: Mapped[dict[str, Any]] = mapped_column(JSON, nullable=False, default=dict)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
 ", name="ck_notification_quiet_start"),
-        CheckConstraint("quiet_end IS NULL OR quiet_end ~ '^[0-2][0-9]:[0-5][0-9]$'", name="ck_notification_quiet_end"),
-        CheckConstraint("(quiet_start IS NULL) = (quiet_end IS NULL)", name="ck_notification_quiet_pair"),
+        CheckConstraint("quiet_end IS NULL OR quiet_end ~ '^([01][0-9]|2[0-3]):[0-5][0-9]$'", name="ck_notification_quiet_end"),
+        CheckConstraint("quiet_start IS NULL OR quiet_start ~ '^([01][0-9]|2[0-3]):[0-5][0-9]$'", name="ck_notification_quiet_start"),
     )
     id: Mapped[uuid.UUID] = mapped_column(Uuid(as_uuid=True), primary_key=True, default=uuid.uuid4)
     hospital_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("hospitals.id"), nullable=False)
