@@ -466,3 +466,22 @@ No item is considered passed until evidence, environment, build SHA, reviewer an
 - [ ] Tenant security: RLS on sessions, notes and events; composite patient/encounter/consent/provider links reject cross-hospital or mismatched-patient IDs.
 - [ ] Migration: 0043 follows 0042; three tables, constraints, indexes, RLS and immutable triggers create/downgrade without affecting earlier modules.
 - [ ] Phase 4 integrations: connect live video/audio provider, meeting link issuance, secure vault verification, patient-side booking/readiness, notifications, medical-record document indexing, prescribing, referrals and billing.
+
+
+## Phase 3.27 — Communication & Notifications
+
+- [ ] Notification preference authorization: users can read/update only their own preferences; administrators cannot silently override patient channel consent or opt-outs.
+- [ ] Recipient resolution: same-hospital membership, active account, role/department audience scope and patient relationship are rechecked at enqueue and dispatch; cross-hospital recipients denied.
+- [ ] Consent and purpose: patient-facing messages require a valid channel consent and declared purpose; withdrawn, expired, denied or mismatched consent blocks dispatch.
+- [ ] Minimum necessary: templates reject direct identifiers and clinical narrative by default; sensitive content requires an explicitly approved template classification and authorized channel policy.
+- [ ] Template governance: only authorized communications administrators publish templates; versions are immutable, placeholders are allow-listed and rendered output is bounded.
+- [ ] Queue integrity: idempotency keys prevent duplicate logical notifications; concurrent enqueue attempts create one intent; tenant ownership is enforced by composite keys and RLS.
+- [ ] Delivery lifecycle: queued, processing, delivered, retryable failure, terminal failure and cancelled transitions are valid and serialized; provider acknowledgement is required before delivered state.
+- [ ] Retry safety: bounded exponential retry, maximum attempts, retry-after handling, dead-letter visibility and no retry after consent withdrawal or recipient deactivation.
+- [ ] Quiet hours and timezone: local quiet-hour windows, daylight-saving/timezone boundaries and emergency bypass policy are enforced; no emergency bypass exists unless separately authorized.
+- [ ] Provider boundary: Phase 3 records provider-neutral delivery attempts only; no real SMS/email/push network call or credential use occurs before Phase 4.
+- [ ] Audit/privacy: enqueue, preference changes, template publication, dispatch attempts and delivery state changes are audited without message body, OTP, credentials or clinical content; event history is append-only.
+- [ ] Tenant security: all notification tables enforce hospital RLS; composite recipient/template/intent/event relationships prevent cross-hospital UUID substitution.
+- [ ] Access control: staff can inspect only authorized departmental or assigned notification queues; patient users see only their own notification history.
+- [ ] Migration: 0044 follows 0043; constraints, indexes, RLS and immutable event triggers create/downgrade without affecting earlier modules.
+- [ ] Phase 4 integrations: verified patient contact points, SMS/email/push gateways, in-app delivery, appointment/telemedicine event publishers, localization and delivery webhooks.
