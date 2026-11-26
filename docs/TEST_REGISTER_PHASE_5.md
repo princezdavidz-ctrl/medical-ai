@@ -528,3 +528,14 @@ No item is considered passed until evidence, environment, build SHA, reviewer an
 - [ ] Tenant isolation: RLS and composite foreign keys block cross-hospital patient, encounter, department, investigator and CAPA-owner references.
 - [ ] Dashboard privacy: status/severity aggregates are hospital-wide for safety roles and department-scoped for department/nurse managers.
 - [ ] Migration 0047: creates all four quality tables, RLS policies, indexes and immutable event trigger; downgrade removes only Phase 3.28 objects.
+
+- [ ] Safety round creation: safety roles can create hospital or department rounds; department/nurse managers can create only for their own department.
+- [ ] Round lead authorization: only the assigned lead or safety officer can start, add findings and complete a round.
+- [ ] Finding ownership: findings are assigned only to active same-hospital members; only owner or safety officer can resolve with a documented note.
+- [ ] Round completion gate: round cannot complete while any finding remains open or in progress.
+- [ ] Indicator governance: only authorized safety roles create and activate versioned indicator definitions; active definitions are not silently overwritten.
+- [ ] Measurement integrity: numerator is nonnegative, denominator positive, period timezone-aware and non-overlapping duplicates rejected; value calculation matches unit.
+- [ ] Measurement provenance: source and source version are mandatory and retained with each measurement.
+- [ ] Tenant isolation: RLS and composite keys prevent cross-hospital round leads, finding owners/resolvers, indicator definitions and measurement references.
+- [ ] Department dashboard: department managers receive only their department's incident aggregates; indicator values remain hospital-scoped and contain no patient identifiers.
+- [ ] Migration 0048: all four tables, indexes, RLS policies and composite references upgrade/downgrade cleanly.

@@ -92,7 +92,10 @@ from app.models.patient_registration import (
     PatientNextOfKin,
     PatientRegistrationProfile,
 )
-from app.models.quality import SafetyIncident, SafetyIncidentEvent, SafetyInvestigation, CAPAAction
+from app.models.quality import (
+    SafetyIncident, SafetyIncidentEvent, SafetyInvestigation, CAPAAction,
+    SafetyRound, SafetyRoundFinding, QualityIndicatorDefinition, QualityIndicatorMeasurement,
+)
 from app.models.offline_sync import (
     OfflineDeliveryOutbox,
     OfflineKnowledgeInstallation,
@@ -241,6 +244,10 @@ __all__ = [
     "SafetyIncidentEvent",
     "SafetyInvestigation",
     "CAPAAction",
+    "SafetyRound",
+    "SafetyRoundFinding",
+    "QualityIndicatorDefinition",
+    "QualityIndicatorMeasurement",
     "NotificationPreference",
     "NotificationTemplate",
     "NotificationIntent",
