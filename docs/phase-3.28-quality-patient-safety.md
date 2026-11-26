@@ -32,3 +32,29 @@ Phase 3 implements database models, authorization, APIs, workflows, dashboards a
 
 ## Verification
 All security, workflow, privacy, audit, metric integrity, CAPA and tenant-isolation scenarios are recorded in docs/TEST_REGISTER_PHASE_5.md. Backend tests remain deferred to Phase 5.
+
+
+## Implemented foundation
+- Safety incident reporting with confidential reporter identity by default and optional patient/encounter linkage.
+- Safety officer and department manager visibility rules.
+- Triage classification, investigation assignment, findings submission and independent review.
+- Corrective/preventive actions with evidence vault references and independent effectiveness review.
+- Incident closure gate requiring an approved investigation and all CAPA actions completed.
+- Department-scoped and hospital-wide aggregate dashboards, plus personal CAPA worklist.
+- Migration 0047_quality_patient_safety creates tenant-isolated tables and append-only incident event history.
+
+## API surface
+- POST/GET /api/v1/quality/incidents
+- GET /api/v1/quality/incidents/{incident_id}
+- POST /api/v1/quality/incidents/{incident_id}/triage
+- POST /api/v1/quality/incidents/{incident_id}/investigation
+- PATCH /api/v1/quality/investigations/{investigation_id}
+- POST /api/v1/quality/investigations/{investigation_id}/review
+- POST /api/v1/quality/incidents/{incident_id}/capa
+- POST /api/v1/quality/capa/{action_id}/evidence
+- POST /api/v1/quality/capa/{action_id}/effectiveness-review
+- POST /api/v1/quality/incidents/{incident_id}/close
+- GET /api/v1/quality/dashboard
+- GET /api/v1/quality/my-capa
+
+Safety rounds, inspection checklists, indicator definitions/measurements and external accreditation reporting remain follow-on work within Phase 3.28. Backend tests remain deferred to Phase 5.
