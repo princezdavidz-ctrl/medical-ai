@@ -68,7 +68,7 @@ def _source_message(
         AISessionMessage.sequence_number == assistant_sequence,
         AISessionMessage.role == "assistant",
     ))
-    metadata = message.metadata_json or {} if message is not None else {}
+    metadata = (message.metadata_json or {}) if message is not None else {}
     if (
         message is None
         or metadata.get("response_digest") != response_digest
