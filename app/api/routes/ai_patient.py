@@ -101,7 +101,7 @@ def ask_patient_assistant(
     )
     try:
         response = orchestrator.execute(
-            capability=AICapability.MEDICAL_INFORMATION,
+            capability=AICapability.PATIENT_EDUCATION,
             prompt=prompt,
             hospital_id=hospital_id,
             actor_user_id=user.id,
