@@ -113,7 +113,8 @@ Every module milestone must include:
 | AI Laboratory Assistant | Phase 3.33 | Implemented; Phase 5 verification pending | PR #77 and #80 (merged) |
 | AI Radiology Assistant | Phase 3.34 | Implemented; Phase 5 verification pending | PR #78 (merged) |
 | AI Pharmacy Assistant | Phase 3.35 | Implemented; Phase 5 verification pending | PR #81 (merged) |
-| AI Patient Assistant | Phase 3.36 | Implemented; Phase 5 verification pending | PR pending |
+| AI Patient Assistant | Phase 3.36 | Implemented; Phase 5 verification pending | PR #82 (merged) |
+| AI Hospital Analytics | Phase 3.37 | Implemented; Phase 5 verification pending | PR pending |
 
 Patient Registration & Management extends the Phase 1 patient foundation with governed duplicate review, identity/document metadata, contact and next-of-kin details, consent/lawful-basis recording, patient status and audit history. Automatic patient merging is prohibited.
 
