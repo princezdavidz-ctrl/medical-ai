@@ -1,4 +1,4 @@
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, status
@@ -803,7 +803,7 @@ def request_retention_disposition(payload: RetentionDispositionCreate, context: 
     ))
     if policy is None:
         raise HTTPException(status_code=404, detail={"code": "active_matching_retention_policy_not_found"})
-    eligible_at = payload.resource_created_at + __import__("datetime").timedelta(days=policy.retention_days)
+    eligible_at = payload.resource_created_at + timedelta(days=policy.retention_days)
     now = datetime.now(timezone.utc)
     if now < eligible_at:
         raise HTTPException(status_code=409, detail={"code": "retention_period_not_elapsed", "eligible_at": eligible_at.isoformat()})
