@@ -711,3 +711,20 @@ No item is considered passed until evidence, environment, build SHA, reviewer an
 - [ ] Tenant isolation: RLS and composite references prevent cross-hospital session, patient, encounter, consent, order and reviewer access.
 - [ ] Migration 0058: AI pharmacy safety case constraints, index, RLS policy and downgrade behavior are verified.
 - [ ] Offline/degraded mode: capability remains local-only for patient context; no hosted fallback or patient-data transfer when local runtime is unavailable.
+
+
+## Phase 3.36 — AI Patient Assistant
+
+- [ ] Patient portal authentication: reject inactive user/hospital, missing portal link, revoked link, expired link and links belonging to another patient or hospital.
+- [ ] Explicit portal scope: reject use unless the verified portal link includes `ai_assistant`; confirm existing scopes remain functional.
+- [ ] Patient AI consent: require granted, unexpired, non-withdrawn `patient_ai_assistance` consent with `ai_processing=true`; withdrawal/expiry blocks new requests.
+- [ ] Privacy: direct identifiers in question text are rejected; audit metadata never contains the question, answer, patient name, MRN, phone or clinical narrative.
+- [ ] Local-only route: patient education requires the local provider; hosted provider must never be invoked in hybrid mode or when local runtime is unavailable.
+- [ ] Knowledge grounding: only current approved knowledge sources/documents are retrieved; missing evidence, invalid citations and unsafe output fail closed.
+- [ ] Capability isolation: `patient_education` is independently allow-listed, has its own prompt version/digest, and cannot inherit staff clinical decision support permissions.
+- [ ] Scope boundary: endpoint does not retrieve chart, encounters, diagnoses, laboratory results, medications, invoices or appointment data.
+- [ ] Clinical boundary: no diagnosis, personal test interpretation, individualized treatment recommendation, prescribing, dose calculation/change, medication discontinuation or clinical record write.
+- [ ] Emergency escalation: severe/rapidly worsening symptoms trigger clear immediate emergency assessment language; no false reassurance.
+- [ ] Audit and usage: success and denial events are recorded without free text; quota and hospital AI pause gates are enforced.
+- [ ] Proxy access: guardian/caregiver/legal representative use is bounded by the same verified portal link scope and consent; revoked/expired proxy authority blocks access.
+- [ ] Phase 4 boundary: personal chart summarization, result interpretation, appointment booking, persistent conversation history and clinical messaging remain disabled until separate authorization and integration design.
