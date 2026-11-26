@@ -138,3 +138,105 @@ class ComplianceRisk(Base):
     reviewed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False)
+
+
+class ComplianceControl(Base):
+    __tablename__ = "compliance_controls"
+    __table_args__ = (
+        UniqueConstraint("hospital_id", "code", "version", name="uq_compliance_control_version"),
+        UniqueConstraint("hospital_id", "id", name="uq_compliance_control_hospital_id"),
+        ForeignKeyConstraint(["hospital_id", "owner_user_id"], ["hospital_memberships.hospital_id", "hospital_memberships.user_id"], name="fk_compliance_control_owner"),
+        CheckConstraint("version >= 1", name="ck_compliance_control_version"),
+        CheckConstraint("status IN ('draft', 'active', 'retired')", name="ck_compliance_control_status"),
+        CheckConstraint("length(trim(code)) BETWEEN 2 AND 80", name="ck_compliance_control_code"),
+        CheckConstraint("framework IN ('kenya_dpa', 'hipaa', 'iso27001', 'iso27799', 'gdpr', 'internal', 'other')", name="ck_compliance_control_framework"),
+        Index("ix_compliance_control_status", "hospital_id", "status", "framework"),
+    )
+    id: Mapped[uuid.UUID] = mapped_column(Uuid(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    hospital_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("hospitals.id"), nullable=False)
+    code: Mapped[str] = mapped_column(String(80), nullable=False)
+    version: Mapped[int] = mapped_column(nullable=False, default=1)
+    framework: Mapped[str] = mapped_column(String(24), nullable=False)
+    title: Mapped[str] = mapped_column(String(180), nullable=False)
+    description: Mapped[str] = mapped_column(Text, nullable=False)
+    owner_user_id: Mapped[uuid.UUID] = mapped_column(Uuid(as_uuid=True), nullable=False)
+    evidence_requirements: Mapped[list] = mapped_column(JSON, nullable=False, default=list)
+    status: Mapped[str] = mapped_column(String(16), nullable=False, default="draft")
+    created_by_user_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id"), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+
+
+class ControlAssessment(Base):
+    __tablename__ = "compliance_control_assessments"
+    __table_args__ = (
+        ForeignKeyConstraint(["hospital_id", "control_id"], ["compliance_controls.hospital_id", "compliance_controls.id"], name="fk_control_assessment_control"),
+        ForeignKeyConstraint(["hospital_id", "assessor_user_id"], ["hospital_memberships.hospital_id", "hospital_memberships.user_id"], name="fk_control_assessment_assessor"),
+        ForeignKeyConstraint(["hospital_id", "reviewed_by_user_id"], ["hospital_memberships.hospital_id", "hospital_memberships.user_id"], name="fk_control_assessment_reviewer"),
+        CheckConstraint("status IN ('pending_review', 'compliant', 'partially_compliant', 'non_compliant', 'not_applicable')", name="ck_control_assessment_status"),
+        CheckConstraint("evidence_reference IS NULL OR evidence_reference ~ '^vault://[0-9a-fA-F-]{36}$'", name="ck_control_assessment_evidence"),
+        CheckConstraint("next_review_at IS NULL OR next_review_at > assessed_at", name="ck_control_assessment_next_review"),
+        CheckConstraint("(status = 'pending_review' AND reviewed_by_user_id IS NULL AND reviewed_at IS NULL) OR (status != 'pending_review' AND reviewed_by_user_id IS NOT NULL AND reviewed_at IS NOT NULL)", name="ck_control_assessment_review_state"),
+        Index("ix_control_assessment_history", "hospital_id", "control_id", "assessed_at"),
+    )
+    id: Mapped[uuid.UUID] = mapped_column(Uuid(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    hospital_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("hospitals.id"), nullable=False)
+    control_id: Mapped[uuid.UUID] = mapped_column(Uuid(as_uuid=True), nullable=False)
+    assessor_user_id: Mapped[uuid.UUID] = mapped_column(Uuid(as_uuid=True), nullable=False)
+    status: Mapped[str] = mapped_column(String(24), nullable=False, default="pending_review")
+    findings: Mapped[str] = mapped_column(Text, nullable=False)
+    evidence_reference: Mapped[str | None] = mapped_column(String(80))
+    assessed_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+    next_review_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    reviewed_by_user_id: Mapped[uuid.UUID | None] = mapped_column(Uuid(as_uuid=True))
+    reviewed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+
+class AccessReviewCampaign(Base):
+    __tablename__ = "access_review_campaigns"
+    __table_args__ = (
+        UniqueConstraint("hospital_id", "id", name="uq_access_review_campaign_hospital_id"),
+        CheckConstraint("status IN ('draft', 'open', 'completed', 'cancelled')", name="ck_access_review_campaign_status"),
+        CheckConstraint("period_end > period_start", name="ck_access_review_campaign_period"),
+        CheckConstraint("completed_at IS NULL OR status = 'completed'", name="ck_access_review_campaign_completion"),
+        Index("ix_access_review_campaign_status", "hospital_id", "status", "due_at"),
+    )
+    id: Mapped[uuid.UUID] = mapped_column(Uuid(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    hospital_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("hospitals.id"), nullable=False)
+    title: Mapped[str] = mapped_column(String(180), nullable=False)
+    period_start: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    period_end: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    due_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    status: Mapped[str] = mapped_column(String(16), nullable=False, default="draft")
+    created_by_user_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id"), nullable=False)
+    completed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+
+
+class AccessReviewItem(Base):
+    __tablename__ = "access_review_items"
+    __table_args__ = (
+        ForeignKeyConstraint(["hospital_id", "campaign_id"], ["access_review_campaigns.hospital_id", "access_review_campaigns.id"], name="fk_access_review_item_campaign"),
+        ForeignKeyConstraint(["hospital_id", "subject_user_id"], ["hospital_memberships.hospital_id", "hospital_memberships.user_id"], name="fk_access_review_item_subject"),
+        ForeignKeyConstraint(["hospital_id", "reviewed_by_user_id"], ["hospital_memberships.hospital_id", "hospital_memberships.user_id"], name="fk_access_review_item_reviewer"),
+        ForeignKeyConstraint(["hospital_id", "approved_by_user_id"], ["hospital_memberships.hospital_id", "hospital_memberships.user_id"], name="fk_access_review_item_approver"),
+        UniqueConstraint("hospital_id", "campaign_id", "subject_user_id", name="uq_access_review_campaign_subject"),
+        CheckConstraint("decision IN ('pending', 'keep', 'change', 'revoke')", name="ck_access_review_item_decision"),
+        CheckConstraint("review_status IN ('pending', 'awaiting_approval', 'approved')", name="ck_access_review_item_status"),
+        CheckConstraint("(review_status = 'pending' AND decision = 'pending' AND reviewed_by_user_id IS NULL AND reviewed_at IS NULL AND approved_by_user_id IS NULL AND approved_at IS NULL) OR (review_status = 'awaiting_approval' AND decision IN ('keep', 'change', 'revoke') AND reviewed_by_user_id IS NOT NULL AND reviewed_at IS NOT NULL AND approved_by_user_id IS NULL AND approved_at IS NULL) OR (review_status = 'approved' AND decision IN ('keep', 'change', 'revoke') AND reviewed_by_user_id IS NOT NULL AND reviewed_at IS NOT NULL AND approved_by_user_id IS NOT NULL AND approved_at IS NOT NULL)", name="ck_access_review_item_workflow"),
+        Index("ix_access_review_item_subject", "hospital_id", "subject_user_id", "review_status"),
+    )
+    id: Mapped[uuid.UUID] = mapped_column(Uuid(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    hospital_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("hospitals.id"), nullable=False)
+    campaign_id: Mapped[uuid.UUID] = mapped_column(Uuid(as_uuid=True), nullable=False)
+    subject_user_id: Mapped[uuid.UUID] = mapped_column(Uuid(as_uuid=True), nullable=False)
+    role_name_snapshot: Mapped[str] = mapped_column(String(80), nullable=False)
+    department_id: Mapped[uuid.UUID | None] = mapped_column(Uuid(as_uuid=True))
+    decision: Mapped[str] = mapped_column(String(16), nullable=False, default="pending")
+    justification: Mapped[str | None] = mapped_column(Text)
+    review_status: Mapped[str] = mapped_column(String(24), nullable=False, default="pending")
+    reviewed_by_user_id: Mapped[uuid.UUID | None] = mapped_column(Uuid(as_uuid=True))
+    reviewed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    approved_by_user_id: Mapped[uuid.UUID | None] = mapped_column(Uuid(as_uuid=True))
+    approved_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    approval_note: Mapped[str | None] = mapped_column(Text)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
