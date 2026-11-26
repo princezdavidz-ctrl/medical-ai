@@ -240,3 +240,81 @@ class AccessReviewItem(Base):
     approved_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     approval_note: Mapped[str | None] = mapped_column(Text)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+
+
+class RetentionPolicy(Base):
+    __tablename__ = "retention_policies"
+    __table_args__ = (
+        UniqueConstraint("hospital_id", "policy_code", "version", name="uq_retention_policy_version"),
+        UniqueConstraint("hospital_id", "id", name="uq_retention_policy_hospital_id"),
+        CheckConstraint("data_domain IN ('clinical_records', 'billing_records', 'audit_logs', 'communications', 'security_logs', 'hr_records', 'other')", name="ck_retention_policy_domain"),
+        CheckConstraint("status IN ('draft', 'active', 'retired')", name="ck_retention_policy_status"),
+        CheckConstraint("retention_days BETWEEN 1 AND 36500", name="ck_retention_policy_days"),
+        CheckConstraint("(status = 'active' AND approved_by_user_id IS NOT NULL AND approved_at IS NOT NULL AND effective_at IS NOT NULL) OR (status != 'active' AND approved_by_user_id IS NULL AND approved_at IS NULL)", name="ck_retention_policy_approval"),
+        Index("ix_retention_policy_domain", "hospital_id", "data_domain", "status"),
+    )
+    id: Mapped[uuid.UUID] = mapped_column(Uuid(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    hospital_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("hospitals.id"), nullable=False)
+    policy_code: Mapped[str] = mapped_column(String(80), nullable=False)
+    version: Mapped[int] = mapped_column(nullable=False, default=1)
+    data_domain: Mapped[str] = mapped_column(String(24), nullable=False)
+    retention_days: Mapped[int] = mapped_column(nullable=False)
+    legal_basis: Mapped[str] = mapped_column(Text, nullable=False)
+    status: Mapped[str] = mapped_column(String(16), nullable=False, default="draft")
+    effective_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    created_by_user_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id"), nullable=False)
+    approved_by_user_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("users.id"))
+    approved_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+
+
+class LegalHold(Base):
+    __tablename__ = "legal_holds"
+    __table_args__ = (
+        UniqueConstraint("hospital_id", "id", name="uq_legal_hold_hospital_id"),
+        ForeignKeyConstraint(["hospital_id", "issued_by_user_id"], ["hospital_memberships.hospital_id", "hospital_memberships.user_id"], name="fk_legal_hold_issuer"),
+        ForeignKeyConstraint(["hospital_id", "released_by_user_id"], ["hospital_memberships.hospital_id", "hospital_memberships.user_id"], name="fk_legal_hold_releaser"),
+        CheckConstraint("status IN ('active', 'released', 'expired')", name="ck_legal_hold_status"),
+        CheckConstraint("json_typeof(scope) = 'object'", name="ck_legal_hold_scope_object"),
+        CheckConstraint("(status = 'released' AND released_by_user_id IS NOT NULL AND released_at IS NOT NULL) OR (status != 'released' AND released_by_user_id IS NULL AND released_at IS NULL)", name="ck_legal_hold_release_state"),
+        Index("ix_legal_hold_status", "hospital_id", "status", "expires_at"),
+    )
+    id: Mapped[uuid.UUID] = mapped_column(Uuid(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    hospital_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("hospitals.id"), nullable=False)
+    hold_reference: Mapped[str] = mapped_column(String(80), nullable=False)
+    scope: Mapped[dict[str, Any]] = mapped_column(JSON, nullable=False)
+    reason: Mapped[str] = mapped_column(Text, nullable=False)
+    issued_by_user_id: Mapped[uuid.UUID] = mapped_column(Uuid(as_uuid=True), nullable=False)
+    issued_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+    expires_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    status: Mapped[str] = mapped_column(String(16), nullable=False, default="active")
+    released_by_user_id: Mapped[uuid.UUID | None] = mapped_column(Uuid(as_uuid=True))
+    released_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+
+class RetentionDispositionRequest(Base):
+    __tablename__ = "retention_disposition_requests"
+    __table_args__ = (
+        ForeignKeyConstraint(["hospital_id", "policy_id"], ["retention_policies.hospital_id", "retention_policies.id"], name="fk_retention_disposition_policy"),
+        ForeignKeyConstraint(["hospital_id", "requested_by_user_id"], ["hospital_memberships.hospital_id", "hospital_memberships.user_id"], name="fk_retention_disposition_requester"),
+        ForeignKeyConstraint(["hospital_id", "reviewed_by_user_id"], ["hospital_memberships.hospital_id", "hospital_memberships.user_id"], name="fk_retention_disposition_reviewer"),
+        CheckConstraint("action IN ('archive', 'delete')", name="ck_retention_disposition_action"),
+        CheckConstraint("status IN ('pending', 'approved', 'rejected', 'blocked_by_legal_hold')", name="ck_retention_disposition_status"),
+        CheckConstraint("resource_reference ~ '^vault://[0-9a-fA-F-]{36}$'", name="ck_retention_disposition_resource_ref"),
+        CheckConstraint("(status = 'pending' AND reviewed_by_user_id IS NULL AND reviewed_at IS NULL) OR (status IN ('approved', 'rejected', 'blocked_by_legal_hold') AND reviewed_by_user_id IS NOT NULL AND reviewed_at IS NOT NULL)", name="ck_retention_disposition_review_state"),
+        Index("ix_retention_disposition_queue", "hospital_id", "status", "eligible_at"),
+    )
+    id: Mapped[uuid.UUID] = mapped_column(Uuid(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    hospital_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("hospitals.id"), nullable=False)
+    policy_id: Mapped[uuid.UUID] = mapped_column(Uuid(as_uuid=True), nullable=False)
+    resource_type: Mapped[str] = mapped_column(String(80), nullable=False)
+    resource_reference: Mapped[str] = mapped_column(String(80), nullable=False)
+    action: Mapped[str] = mapped_column(String(16), nullable=False)
+    reason: Mapped[str] = mapped_column(Text, nullable=False)
+    eligible_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    status: Mapped[str] = mapped_column(String(24), nullable=False, default="pending")
+    requested_by_user_id: Mapped[uuid.UUID] = mapped_column(Uuid(as_uuid=True), nullable=False)
+    reviewed_by_user_id: Mapped[uuid.UUID | None] = mapped_column(Uuid(as_uuid=True))
+    reviewed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    review_note: Mapped[str | None] = mapped_column(Text)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
