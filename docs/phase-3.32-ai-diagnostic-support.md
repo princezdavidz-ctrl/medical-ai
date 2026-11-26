@@ -4,7 +4,7 @@
 Provide a clinician-governed diagnostic support workflow that organizes evidence-grounded differential considerations and possible diagnostic tests around one authorized patient, encounter and AI response. It is a structured decision-support module, not a diagnosis engine.
 
 ## Functional scope
-- Create a diagnostic support case from an exact assistant message sequence and SHA-256 response digest in an active patient-bound clinical AI session.
+- Create a diagnostic support case from an exact `clinical_decision_support` assistant message sequence and SHA-256 response digest in an active patient-bound clinical AI session.
 - Keep each case bound to one hospital, clinician, patient, encounter, consent and care assignment.
 - Add differential suggestions only when the concept code and display name exactly match a currently effective, approved disease concept in the governed medical knowledge base.
 - Add laboratory or imaging test considerations only when the code/name match an active definition in the same hospital.
