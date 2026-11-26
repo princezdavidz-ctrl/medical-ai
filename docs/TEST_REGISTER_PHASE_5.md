@@ -511,3 +511,20 @@ No item is considered passed until evidence, environment, build SHA, reviewer an
 - [ ] Read-state idempotency: repeated mark-read requests preserve the original read timestamp and do not create duplicate audit events.
 - [ ] Dashboard counters: total and unread counts are scoped to the authenticated staff or patient portal identity and hospital.
 - [ ] Migration 0046: read timestamp is nullable, backfills existing notifications as unread, and downgrade removes only the read-state column.
+
+
+## Phase 3.28 — Quality Assurance & Patient Safety
+
+- [ ] Incident creation: active hospital staff can report an incident; department, patient and encounter references must belong to the same hospital and patient.
+- [ ] Confidential reporter: reporter identity is hidden from ordinary staff and department managers when confidentiality is enabled; safety officers have authorized access; reporters can access their own report.
+- [ ] Incident visibility: ordinary staff see only their own reports; department/nurse managers see only their own department; safety officers see hospital-wide incidents.
+- [ ] Triage: only safety officers and designated administrators can classify severity/harm; invalid or out-of-order transitions are rejected.
+- [ ] Investigation assignment: only active same-hospital members can be assigned; one investigation per incident; assignment and re-assignment are audited.
+- [ ] Investigation independence: assigned investigator can submit findings; a different authorized safety reviewer must approve/reject.
+- [ ] CAPA ownership: CAPA owners must be active hospital members; owners can submit evidence only for their own actions.
+- [ ] CAPA effectiveness: an authorized reviewer distinct from the owner must document effectiveness before completion.
+- [ ] Incident closure: closure requires an approved investigation and no outstanding CAPA actions.
+- [ ] Audit integrity: incident events are append-only; audit metadata excludes incident narratives and confidential reporter identity.
+- [ ] Tenant isolation: RLS and composite foreign keys block cross-hospital patient, encounter, department, investigator and CAPA-owner references.
+- [ ] Dashboard privacy: status/severity aggregates are hospital-wide for safety roles and department-scoped for department/nurse managers.
+- [ ] Migration 0047: creates all four quality tables, RLS policies, indexes and immutable event trigger; downgrade removes only Phase 3.28 objects.

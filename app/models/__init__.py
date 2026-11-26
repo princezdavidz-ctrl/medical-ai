@@ -92,6 +92,7 @@ from app.models.patient_registration import (
     PatientNextOfKin,
     PatientRegistrationProfile,
 )
+from app.models.quality import SafetyIncident, SafetyIncidentEvent, SafetyInvestigation, CAPAAction
 from app.models.offline_sync import (
     OfflineDeliveryOutbox,
     OfflineKnowledgeInstallation,
@@ -236,6 +237,10 @@ __all__ = [
     "TelemedicineSession",
     "TelemedicineClinicalNote",
     "TelemedicineEvent",
+    "SafetyIncident",
+    "SafetyIncidentEvent",
+    "SafetyInvestigation",
+    "CAPAAction",
     "NotificationPreference",
     "NotificationTemplate",
     "NotificationIntent",
