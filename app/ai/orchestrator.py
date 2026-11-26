@@ -148,6 +148,31 @@ class AIOrchestrator:
                 outcome="withheld",
             )
             raise UnsafeModelOutput("model_response_failed_evidence_citation_validation") from exc
+        if capability == AICapability.CLINICAL_DECISION_SUPPORT:
+            required_headings = (
+                "problem representation",
+                "differential considerations",
+                "red flags and escalation",
+                "diagnostic considerations",
+                "medication safety",
+                "missing information and uncertainty",
+                "evidence and limitations",
+            )
+            response_text = response.content.casefold()
+            missing_headings = [heading for heading in required_headings if heading not in response_text]
+            if missing_headings:
+                self.usage_meter.settle(
+                    reservation,
+                    hospital_id=hospital_id,
+                    actor_user_id=actor_user_id,
+                    input_tokens=input_tokens,
+                    output_tokens=output_tokens,
+                    latency_ms=latency_ms,
+                    usage_is_estimated=usage_is_estimated,
+                    outcome="withheld",
+                )
+                raise UnsafeModelOutput("clinical_response_missing_required_sections")
+
         self.usage_meter.settle(
             reservation,
             hospital_id=hospital_id,

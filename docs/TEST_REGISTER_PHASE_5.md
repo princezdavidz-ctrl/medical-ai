@@ -589,3 +589,23 @@ No item is considered passed until evidence, environment, build SHA, reviewer an
 - [ ] Export privacy: only run owner or authorized hospital administrator can request export; exports remain queued until Phase 4 and never expose public URLs.
 - [ ] Tenant isolation: RLS on definitions, runs and exports; cross-hospital definition/run references are rejected.
 - [ ] Migration 0052: report catalog, run and export tables upgrade/downgrade cleanly; published-definition immutability trigger works.
+
+
+## Phase 3.31 — AI Medical Assistant
+
+- [ ] Clinical session creation: require active clinical role, active patient, in-progress encounter, current patient-care assignment and active purpose-bound consent.
+- [ ] Session binding: a clinical AI session is bound to one patient/encounter/owner/hospital; switching patient or encounter in the same session is denied.
+- [ ] Reauthorization: every AI request and clinician review revalidates the same consent and assignment; revoked/expired/changed authorization blocks further use.
+- [ ] Local-only patient data: patient-context requests require approved local provider; hosted transfer is never attempted.
+- [ ] Structured clinical response: prompt v2 includes required sections and distinguishes chart facts, user statements, inference, missing data and evidence limitations.
+- [ ] Citation grounding: only approved current medical evidence citations are accepted; invalid or missing citations withhold output.
+- [ ] Clinician review binding: review references an actual assistant message sequence and matching SHA-256 digest; tampered or stale digests are rejected.
+- [ ] Review independence/ownership: only the session owner with current clinical authorization can record review; duplicate review of the same assistant response is rejected.
+- [ ] Medical record boundary: review decision does not itself write a note or trigger orders/prescriptions; any note reference must be a private vault reference.
+- [ ] Session privacy: conversation content remains encrypted at rest; review table stores digest/decision metadata, not plaintext response.
+- [ ] Audit: session creation and review decisions are audited without prompt text, response content or direct identifiers.
+- [ ] Offline/degraded behavior: no silent hosted fallback; runtime unavailability yields explicit safe failure and no patient data transfer.
+- [ ] Migration 0053: patient-bound session and review tables enforce RLS and composite patient/encounter/consent/session ownership.
+
+- [ ] Clinical response structure gate: clinical decision support output missing any required section is withheld and usage outcome is recorded as withheld.
+- [ ] Clinical response digest: SHA-256 digest matches the exact encrypted assistant message and cannot be replayed against another sequence/session.

@@ -98,6 +98,7 @@ from app.models.compliance import (
     RetentionPolicy, LegalHold, RetentionDispositionRequest,
 )
 from app.models.analytics import ReportDefinition, ReportRun, ReportExportJob
+from app.models.ai_clinical import ClinicalAISessionContext, AIClinicalReviewRecord
 from app.models.quality import (
     SafetyIncident, SafetyIncidentEvent, SafetyInvestigation, CAPAAction,
     SafetyRound, SafetyRoundFinding, QualityIndicatorDefinition, QualityIndicatorMeasurement,
@@ -269,6 +270,8 @@ __all__ = [
     "ReportDefinition",
     "ReportRun",
     "ReportExportJob",
+    "ClinicalAISessionContext",
+    "AIClinicalReviewRecord",
     "NotificationPreference",
     "NotificationTemplate",
     "NotificationIntent",
