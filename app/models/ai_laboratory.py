@@ -43,10 +43,30 @@ class AILaboratoryInterpretationCase(Base):
         UniqueConstraint("hospital_id", "session_id", "source_assistant_sequence", name="uq_ai_lab_case_source"),
         CheckConstraint("source_assistant_sequence > 0", name="ck_ai_lab_case_sequence"),
         CheckConstraint("source_response_digest ~ '^[0-9a-f]{64}$'", name="ck_ai_lab_case_digest"),
-        CheckConstraint("json_typeof(laboratory_result_ids) = 'array' AND json_array_length(laboratory_result_ids) > 0", name="ck_ai_lab_case_result_ids"),
-        CheckConstraint("json_typeof(result_snapshot) = 'array' AND json_array_length(result_snapshot) > 0", name="ck_ai_lab_case_snapshot"),
+        CheckConstraint(
+            "json_typeof(laboratory_result_ids) = 'array' AND json_array_length(laboratory_result_ids) > 0",
+            name="ck_ai_lab_case_result_ids",
+        ),
+        CheckConstraint(
+            "json_typeof(result_snapshot) = 'array' AND json_array_length(result_snapshot) > 0",
+            name="ck_ai_lab_case_snapshot",
+        ),
+        CheckConstraint("json_typeof(evidence_citation_ids) = 'array'", name="ck_ai_lab_case_citations"),
+        CheckConstraint("json_typeof(evidence_citations) = 'array'", name="ck_ai_lab_case_citation_details"),
         CheckConstraint("status IN ('pending_review', 'reviewed')", name="ck_ai_lab_case_status"),
-        CheckConstraint("review_reference IS NULL OR review_reference ~ '^vault://[0-9a-fA-F-]{36}$'", name="ck_ai_lab_case_review_reference"),
+        CheckConstraint(
+            "review_reference IS NULL OR review_reference ~ '^vault://[0-9a-fA-F-]{36}$'",
+            name="ck_ai_lab_case_review_reference",
+        ),
+        CheckConstraint(
+            "review_note_reference IS NULL OR review_note_reference ~ '^vault://[0-9a-fA-F-]{36}$'",
+            name="ck_ai_lab_case_note_reference",
+        ),
+        CheckConstraint(
+            "review_decision IS NULL OR review_decision IN "
+            "('accepted_for_clinical_consideration', 'needs_correction', 'not_applicable')",
+            name="ck_ai_lab_case_review_decision",
+        ),
         CheckConstraint(
             "(status = 'pending_review' AND reviewed_by_user_id IS NULL AND reviewed_at IS NULL AND review_decision IS NULL) OR "
             "(status = 'reviewed' AND reviewed_by_user_id IS NOT NULL AND reviewed_at IS NOT NULL AND review_decision IS NOT NULL)",
@@ -54,6 +74,7 @@ class AILaboratoryInterpretationCase(Base):
         ),
         Index("ix_ai_lab_case_patient_created", "hospital_id", "patient_id", "created_at"),
     )
+
     id: Mapped[uuid.UUID] = mapped_column(Uuid(as_uuid=True), primary_key=True, default=uuid.uuid4)
     hospital_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("hospitals.id"), nullable=False)
     session_id: Mapped[uuid.UUID] = mapped_column(Uuid(as_uuid=True), nullable=False)
@@ -66,8 +87,10 @@ class AILaboratoryInterpretationCase(Base):
     source_response_digest: Mapped[str] = mapped_column(String(64), nullable=False)
     laboratory_result_ids: Mapped[list[str]] = mapped_column(JSON, nullable=False)
     result_snapshot: Mapped[list[dict[str, Any]]] = mapped_column(JSON, nullable=False)
+    evidence_citation_ids: Mapped[list[str]] = mapped_column(JSON, nullable=False, default=list)
+    evidence_citations: Mapped[list[dict[str, Any]]] = mapped_column(JSON, nullable=False, default=list)
     status: Mapped[str] = mapped_column(String(24), nullable=False, default="pending_review")
-    review_decision: Mapped[str | None] = mapped_column(String(24))
+    review_decision: Mapped[str | None] = mapped_column(String(40))
     review_note_reference: Mapped[str | None] = mapped_column(String(80))
     review_reference: Mapped[str | None] = mapped_column(String(80))
     reviewed_by_user_id: Mapped[uuid.UUID | None] = mapped_column(Uuid(as_uuid=True))
