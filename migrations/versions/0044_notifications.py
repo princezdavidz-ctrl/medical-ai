@@ -166,7 +166,7 @@ def downgrade() -> None:
         op.execute(sa.text(f'ALTER TABLE "{table}" DISABLE ROW LEVEL SECURITY'))
         op.drop_table(table)
 ", name="ck_notification_quiet_start"),
-        sa.CheckConstraint("quiet_end IS NULL OR quiet_end ~ '^[0-2][0-9]:[0-5][0-9]$'", name="ck_notification_quiet_end"),
+        sa.CheckConstraint("quiet_end IS NULL OR quiet_end ~ '^([01][0-9]|2[0-3]):[0-5][0-9]", name="ck_notification_quiet_end"),
         sa.CheckConstraint("(quiet_start IS NULL) = (quiet_end IS NULL)", name="ck_notification_quiet_pair"),
     )
     op.create_table(
@@ -425,7 +425,7 @@ def downgrade() -> None:
         op.execute(sa.text(f'ALTER TABLE "{table}" DISABLE ROW LEVEL SECURITY'))
         op.drop_table(table)
 ", name="ck_notification_quiet_start"),
-        sa.CheckConstraint("quiet_end IS NULL OR quiet_end ~ '^[0-2][0-9]:[0-5][0-9]$'", name="ck_notification_quiet_end"),
+        sa.CheckConstraint("quiet_end IS NULL OR quiet_end ~ '^([01][0-9]|2[0-3]):[0-5][0-9]", name="ck_notification_quiet_end"),
         sa.CheckConstraint("(quiet_start IS NULL) = (quiet_end IS NULL)", name="ck_notification_quiet_pair"),
     )
     op.create_table(
