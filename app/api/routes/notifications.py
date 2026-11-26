@@ -209,6 +209,9 @@ def enqueue_notification(payload: NotificationEnqueue, context: tuple = Depends(
         now = datetime.now(timezone.utc)
         if consent is None or (consent.expires_at is not None and consent.expires_at <= now):
             raise HTTPException(status_code=403, detail={"code": "active_purpose_matched_patient_consent_required"})
+        allowed_channels = consent.scope.get("channels", []) if isinstance(consent.scope, dict) else []
+        if template.channel not in allowed_channels:
+            raise HTTPException(status_code=403, detail={"code": "patient_consent_does_not_cover_notification_channel"})
     elif payload.consent_id is not None:
         raise HTTPException(status_code=422, detail={"code": "consent_requires_patient_context"})
     preference = db.scalar(select(NotificationPreference).where(
@@ -269,3 +272,45 @@ def get_staff_notifications(context: tuple = Depends(get_current_context), db: S
         NotificationIntent.hospital_id == hospital_id,
         NotificationIntent.recipient_user_id == user.id,
     ).order_by(NotificationIntent.created_at.desc()).limit(100)).all()
+
+
+@router.get("/patient/preferences")
+def get_patient_notification_preferences(context: tuple = Depends(get_current_patient_context), db: Session = Depends(get_db)):
+    user, hospital_id = context
+    preference = db.scalar(select(NotificationPreference).where(
+        NotificationPreference.hospital_id == hospital_id,
+        NotificationPreference.user_id == user.id,
+    ))
+    if preference is None:
+        return {
+            "hospital_id": hospital_id, "user_id": user.id,
+            "in_app_enabled": True, "email_enabled": False, "sms_enabled": False, "push_enabled": False,
+            "locale": "en", "timezone_name": "Africa/Nairobi", "quiet_start": None, "quiet_end": None,
+        }
+    return preference
+
+
+@router.put("/patient/preferences")
+def update_patient_notification_preferences(payload: NotificationPreferenceUpdate, context: tuple = Depends(get_current_patient_context), db: Session = Depends(get_db)):
+    user, hospital_id = context
+    values = payload.model_dump(exclude_unset=True)
+    if not values:
+        raise HTTPException(status_code=422, detail={"code": "notification_preference_update_required"})
+    if ("quiet_start" in values) != ("quiet_end" in values):
+        raise HTTPException(status_code=422, detail={"code": "quiet_hours_must_be_updated_together"})
+    preference = db.scalar(select(NotificationPreference).where(
+        NotificationPreference.hospital_id == hospital_id,
+        NotificationPreference.user_id == user.id,
+    ).with_for_update())
+    if preference is None:
+        preference = NotificationPreference(hospital_id=hospital_id, user_id=user.id)
+        db.add(preference)
+    for key, value in values.items():
+        setattr(preference, key, value)
+    _audit(db, hospital_id, user.id, "notifications.patient_preferences_updated", "notification_preference", preference.id)
+    db.commit()
+    from sqlalchemy import text
+    db.execute(text("SELECT set_config('app.current_hospital_id', :v, true)"), {"v": str(hospital_id)})
+    db.execute(text("SELECT set_config('app.current_user_id', :v, true)"), {"v": str(user.id)})
+    db.refresh(preference)
+    return preference
