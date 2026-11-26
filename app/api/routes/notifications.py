@@ -346,6 +346,27 @@ def list_notification_queue(context: tuple = Depends(get_current_context), db: S
     ).order_by(NotificationIntent.created_at.desc()).limit(300)).all()
 
 
+@router.get("/{intent_id}/events")
+def get_notification_events(intent_id: UUID, context: tuple = Depends(get_current_context), db: Session = Depends(get_db)):
+    user, hospital_id = context
+    intent = db.scalar(select(NotificationIntent).where(
+        NotificationIntent.hospital_id == hospital_id,
+        NotificationIntent.id == intent_id,
+    ))
+    if intent is None:
+        raise HTTPException(status_code=404, detail={"code": "notification_intent_not_found"})
+    if intent.recipient_user_id != user.id and _role(db, user.id, hospital_id) not in _ADMIN_ROLES:
+        raise HTTPException(status_code=403, detail={"code": "notification_history_access_denied"})
+    events = db.scalars(select(NotificationEvent).where(
+        NotificationEvent.hospital_id == hospital_id,
+        NotificationEvent.intent_id == intent_id,
+    ).order_by(NotificationEvent.created_at.asc()).limit(200)).all()
+    return [
+        {"id": event.id, "event_type": event.event_type, "created_at": event.created_at}
+        for event in events
+    ]
+
+
 @router.post("/{intent_id}/cancel", response_model=NotificationIntentRead)
 def cancel_notification(intent_id: UUID, context: tuple = Depends(get_current_context), db: Session = Depends(get_db)):
     user, hospital_id = context
