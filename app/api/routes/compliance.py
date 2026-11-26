@@ -430,12 +430,15 @@ def get_compliance_dashboard(context: tuple = Depends(get_current_context), db: 
         (HospitalMembership.hospital_id == PolicyAcknowledgement.hospital_id)
         & (HospitalMembership.user_id == PolicyAcknowledgement.user_id),
     ).join(
+        User, User.id == PolicyAcknowledgement.user_id,
+    ).join(
         CompliancePolicy,
         (CompliancePolicy.hospital_id == PolicyAcknowledgement.hospital_id)
         & (CompliancePolicy.id == PolicyAcknowledgement.policy_id),
     ).where(
         PolicyAcknowledgement.hospital_id == hospital_id,
         HospitalMembership.status == "active",
+        User.is_active.is_(True),
         CompliancePolicy.status == "published",
         CompliancePolicy.effective_at <= now,
     )) or 0
@@ -453,6 +456,15 @@ def get_compliance_dashboard(context: tuple = Depends(get_current_context), db: 
     open_access_campaigns = db.scalar(select(func.count(AccessReviewCampaign.id)).where(
         AccessReviewCampaign.hospital_id == hospital_id,
         AccessReviewCampaign.status == "open",
+    )) or 0
+    overdue_access_campaigns = db.scalar(select(func.count(AccessReviewCampaign.id)).where(
+        AccessReviewCampaign.hospital_id == hospital_id,
+        AccessReviewCampaign.status == "open",
+        AccessReviewCampaign.due_at <= now,
+    )) or 0
+    active_compliance_controls = db.scalar(select(func.count(ComplianceControl.id)).where(
+        ComplianceControl.hospital_id == hospital_id,
+        ComplianceControl.status == "active",
     )) or 0
     access_items_pending_review = db.scalar(select(func.count(AccessReviewItem.id)).where(
         AccessReviewItem.hospital_id == hospital_id,
@@ -491,6 +503,8 @@ def get_compliance_dashboard(context: tuple = Depends(get_current_context), db: 
         "control_assessments_pending_review": control_assessments_pending,
         "overdue_control_reviews": overdue_control_reviews,
         "open_access_review_campaigns": open_access_campaigns,
+        "overdue_access_review_campaigns": overdue_access_campaigns,
+        "active_compliance_controls": active_compliance_controls,
         "access_review_items_pending_review": access_items_pending_review,
         "access_review_items_awaiting_approval": access_items_awaiting_approval,
         "active_legal_holds": active_legal_holds,
