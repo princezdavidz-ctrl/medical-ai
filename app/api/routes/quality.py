@@ -2,7 +2,7 @@ from datetime import datetime, timezone
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy import func, select, text
+from sqlalchemy import func, or_, select, text
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
@@ -145,7 +145,7 @@ def list_safety_incidents(context: tuple = Depends(get_current_context), db: Ses
     if role not in _SAFETY_ROLES:
         if role in _DEPARTMENT_ROLES:
             department_id = _department_scope(db, user.id, hospital_id, role)
-            query = query.where(SafetyIncident.department_id == department_id)
+            query = query.where(or_(SafetyIncident.department_id == department_id, SafetyIncident.reporter_user_id == user.id))
         else:
             query = query.where(SafetyIncident.reporter_user_id == user.id)
     incidents = db.scalars(query.order_by(SafetyIncident.reported_at.desc()).limit(300)).all()
@@ -160,7 +160,7 @@ def get_safety_incident(incident_id: UUID, context: tuple = Depends(get_current_
     incident = _incident(db, hospital_id, incident_id)
     allowed = role in _SAFETY_ROLES or incident.reporter_user_id == user.id
     if role in _DEPARTMENT_ROLES:
-        allowed = incident.department_id == _department_scope(db, user.id, hospital_id, role)
+        allowed = incident.reporter_user_id == user.id or incident.department_id == _department_scope(db, user.id, hospital_id, role)
     if not allowed:
         raise HTTPException(status_code=404, detail={"code": "safety_incident_not_found"})
     _audit(db, hospital_id, user.id, "quality.incident_viewed", "safety_incident", incident.id)
@@ -368,6 +368,8 @@ def close_safety_incident(incident_id: UUID, context: tuple = Depends(get_curren
     user, hospital_id = context
     _require_safety_role(db, user.id, hospital_id)
     incident = _incident(db, hospital_id, incident_id, lock=True)
+    if incident.status == "closed":
+        raise HTTPException(status_code=409, detail={"code": "safety_incident_already_closed"})
     investigation = db.scalar(select(SafetyInvestigation).where(
         SafetyInvestigation.hospital_id == hospital_id,
         SafetyInvestigation.incident_id == incident.id,
@@ -394,13 +396,11 @@ def get_safety_investigation(incident_id: UUID, context: tuple = Depends(get_cur
     user, hospital_id = context
     incident = _incident(db, hospital_id, incident_id)
     role = _role(db, user.id, hospital_id)
-    if role not in _SAFETY_ROLES and incident.reporter_user_id != user.id:
-        raise HTTPException(status_code=404, detail={"code": "safety_investigation_not_found"})
     investigation = db.scalar(select(SafetyInvestigation).where(
         SafetyInvestigation.hospital_id == hospital_id,
         SafetyInvestigation.incident_id == incident_id,
     ))
-    if investigation is None:
+    if investigation is None or (role not in _SAFETY_ROLES and investigation.assigned_to_user_id != user.id):
         raise HTTPException(status_code=404, detail={"code": "safety_investigation_not_found"})
     return investigation
 
@@ -408,14 +408,15 @@ def get_safety_investigation(incident_id: UUID, context: tuple = Depends(get_cur
 @router.get("/incidents/{incident_id}/capa", response_model=list[CAPARead])
 def list_incident_capa(incident_id: UUID, context: tuple = Depends(get_current_context), db: Session = Depends(get_db)):
     user, hospital_id = context
-    incident = _incident(db, hospital_id, incident_id)
+    _incident(db, hospital_id, incident_id)
     role = _role(db, user.id, hospital_id)
-    if role not in _SAFETY_ROLES and incident.reporter_user_id != user.id:
-        raise HTTPException(status_code=404, detail={"code": "safety_capa_not_found"})
-    return db.scalars(select(CAPAAction).where(
+    query = select(CAPAAction).where(
         CAPAAction.hospital_id == hospital_id,
         CAPAAction.incident_id == incident_id,
-    ).order_by(CAPAAction.due_at)).all()
+    )
+    if role not in _SAFETY_ROLES:
+        query = query.where(CAPAAction.owner_user_id == user.id)
+    return db.scalars(query.order_by(CAPAAction.due_at)).all()
 
 
 @router.get("/dashboard")
