@@ -107,7 +107,8 @@ Every module milestone must include:
 | Communication & Notifications | Phase 3.27 | Implemented; Phase 5 verification pending | PRs #59–#62 (merged) |
 | Quality Assurance & Patient Safety | Phase 3.28 | Implemented; Phase 5 verification pending | PRs #63–#64 (merged) |
 | Compliance & Security Management | Phase 3.29 | Implemented; Phase 5 verification pending | PRs #65–#67 (merged) |
-| Reports & Hospital Analytics | Phase 3.30 | In progress | — |
+| Reports & Hospital Analytics | Phase 3.30 | Implemented; Phase 5 verification pending | PR #68 (merged) |
+| AI Medical Assistant | Phase 3.31 | In progress | — |
 
 Patient Registration & Management extends the Phase 1 patient foundation with governed duplicate review, identity/document metadata, contact and next-of-kin details, consent/lawful-basis recording, patient status and audit history. Automatic patient merging is prohibited.
 
