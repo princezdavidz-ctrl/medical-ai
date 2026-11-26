@@ -747,3 +747,25 @@ No item is considered passed until evidence, environment, build SHA, reviewer an
 - [ ] Usage and runtime: quota reservation/settlement, disabled capability, unavailable knowledge, model timeout and offline failure paths are safely handled.
 - [ ] Prompt governance: prompt/schema contract requires management review, no automated actions, no forecasting and explicit uncertainty.
 - [ ] No migration: confirm Phase 3.37 introduces no database schema changes; Phase 5 verification remains deferred.
+
+
+## Phase 3.38 — AI Voice Assistant
+
+- [ ] Authentication and tenant scope: reject missing/expired credentials, inactive users, inactive membership and mismatched hospital headers.
+- [ ] Capability governance: voice_assistant is independently allow-listed with its own prompt version/digest; disabled capability is denied.
+- [ ] Safety gates: global AI disable and hospital AI pause block voice turns and record metadata-only denial events.
+- [ ] Local-only routing: voice requests always use the configured local provider in hybrid/offline/degraded modes; local unavailability fails closed and never attempts hosted transfer.
+- [ ] On-device speech boundary: accept only a text transcript with speech_input=on_device; reject audio payloads, unexpected fields and unsupported input modes.
+- [ ] On-device synthesis boundary: return text for client-side TTS only; no server audio generation, audio files or external speech provider calls.
+- [ ] Privacy: reject obvious direct identifiers; audit events and usage metadata never contain transcript or spoken-response text.
+- [ ] Non-persistence: verify the voice workflow creates no AI session, message history, transcript store, audio object or conversation record.
+- [ ] Patient-data exclusion: no patient context, chart retrieval, encounter access, personal result interpretation or patient-specific recommendation is possible through this endpoint.
+- [ ] General-information boundary: voice assistant cannot diagnose, prescribe, calculate/change doses, book appointments, send messages, dispatch transport or execute any hospital workflow.
+- [ ] Evidence grounding: only current approved clinical references/guidelines/policies are retrieved; unsupported answers abstain and citations match the approved source response.
+- [ ] Emergency escalation: severe or rapidly worsening symptom descriptions trigger immediate emergency assessment language and do not delay care.
+- [ ] Locale handling: valid locale values are accepted; malformed/oversized locale strings are rejected; spoken-response language follows requested locale where supported and uncertainty is stated.
+- [ ] Prompt injection: spoken transcript and retrieved text are treated as untrusted data, not system instructions; no tool permissions are available.
+- [ ] Audit: success/denial records include actor, hospital, capability, locale, outcome and citation count only; no free text or audio metadata capable of identifying a patient.
+- [ ] Usage/runtime: quota limits, model timeout, knowledge unavailable, unsafe output and offline runtime failures return safe errors without transcript leakage.
+- [ ] Client compatibility: Phase 5 device/browser checks cover microphone permission denial, no speech-recognition support, unavailable local TTS voice, interrupted capture, language switching and accessible text fallback.
+- [ ] Clinical release boundary: capability remains unavailable for patient-specific or clinical decision workflows until separately evaluated and approved; clinical use remains disabled.
