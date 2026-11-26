@@ -92,6 +92,7 @@ def upgrade() -> None:
         sa.Column("reviewed_at", sa.DateTime(timezone=True)),
         sa.Column("approved_by_user_id", sa.Uuid()),
         sa.Column("approved_at", sa.DateTime(timezone=True)),
+        sa.Column("approval_note", sa.Text()),
         sa.Column("created_at", sa.DateTime(timezone=True), server_default=sa.func.now(), nullable=False),
         sa.ForeignKeyConstraint(["hospital_id", "campaign_id"], ["access_review_campaigns.hospital_id", "access_review_campaigns.id"], name="fk_access_review_item_campaign"),
         sa.ForeignKeyConstraint(["hospital_id", "subject_user_id"], ["hospital_memberships.hospital_id", "hospital_memberships.user_id"], name="fk_access_review_item_subject"),
