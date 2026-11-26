@@ -161,7 +161,17 @@ _REGISTRY = {
             "Never assign beds, alter staffing, prioritize patients, change triage, authorize spending or execute workflow actions."
         ),
         tool_permissions=(),
-        output_schema=_OUTPUT_SCHEMA,
+        output_schema={
+            "type": "object",
+            "required": ["content", "citations", "requires_management_review", "automated_actions_permitted", "forecasting_available"],
+            "properties": {
+                "content": {"type": "string"},
+                "citations": {"type": "array", "items": {"type": "object"}},
+                "requires_management_review": {"const": True},
+                "automated_actions_permitted": {"const": False},
+                "forecasting_available": {"const": False},
+            },
+        },
         workflow_contract={
             "purpose": "read_only_hospital_operations_intelligence",
             "clinical_use_enabled": False,
