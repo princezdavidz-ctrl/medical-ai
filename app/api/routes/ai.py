@@ -36,6 +36,7 @@ from app.models import (
 from app.schemas.ai import AIRequestCreate, AIResponseRead, AIOperationsControlUpdate
 from app.schemas.ai_clinical import (
     AIClinicalReviewCreate, AIClinicalReviewRead, ClinicalAISessionCreate, ClinicalAISessionRead,
+    ClinicalAISessionRevoke,
 )
 
 router = APIRouter(prefix="/ai", tags=["central-medical-ai"])
@@ -506,6 +507,50 @@ def create_clinical_ai_session(
         resource_type="ai_session", resource_id=str(session_id_value),
     )
     return {"session_id": session_id_value, "status": "active", "expires_at": expires_at_value, "clinical_use_enabled": False}
+
+
+@router.post(
+    "/clinical-sessions/{session_id}/revoke",
+    summary="Revoke the authenticated clinician's patient-bound AI session",
+    response_model=ClinicalAISessionRead,
+)
+def revoke_clinical_ai_session(
+    session_id: UUID,
+    payload: ClinicalAISessionRevoke,
+    context=Depends(get_current_context),
+    db: Session = Depends(get_db),
+) -> dict:
+    user, hospital_id = context
+    session_context = db.scalar(select(ClinicalAISessionContext).where(
+        ClinicalAISessionContext.hospital_id == hospital_id,
+        ClinicalAISessionContext.session_id == session_id,
+        ClinicalAISessionContext.owner_user_id == user.id,
+    ).with_for_update())
+    session_record = db.scalar(select(AISession).where(
+        AISession.hospital_id == hospital_id,
+        AISession.id == session_id,
+        AISession.owner_user_id == user.id,
+    ))
+    if session_context is None or session_record is None:
+        raise HTTPException(status_code=404, detail={"code": "clinical_ai_session_not_found"})
+    if session_context.status == "active":
+        session_context.status = "revoked"
+        session_context.revoked_at = datetime.now(timezone.utc)
+        _audit(
+            db, user_id=user.id, hospital_id=hospital_id,
+            action="ai.clinical_session.revoked", outcome="success",
+            reason="Clinician revoked patient-bound AI session",
+            metadata={"session_id": str(session_id), "reason": payload.reason},
+            resource_type="ai_session", resource_id=str(session_id),
+        )
+    elif session_context.status != "revoked":
+        raise HTTPException(status_code=409, detail={"code": "clinical_ai_session_not_revocable"})
+    return {
+        "session_id": session_id,
+        "status": "revoked",
+        "expires_at": session_record.expires_at,
+        "clinical_use_enabled": False,
+    }
 
 
 @router.post("/clinical-sessions/{session_id}/reviews", summary="Record clinician review of a specific AI response", response_model=AIClinicalReviewRead)
