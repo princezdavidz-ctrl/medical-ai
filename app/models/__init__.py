@@ -101,6 +101,7 @@ from app.models.analytics import ReportDefinition, ReportRun, ReportExportJob
 from app.models.ai_clinical import ClinicalAISessionContext, AIClinicalReviewRecord
 from app.models.diagnostic_support import DiagnosticSupportCase, DiagnosticDifferentialSuggestion, DiagnosticTestConsideration
 from app.models.ai_laboratory import AILaboratoryInterpretationCase
+from app.models.ai_radiology import AIRadiologyInterpretationCase
 from app.models.quality import (
     SafetyIncident, SafetyIncidentEvent, SafetyInvestigation, CAPAAction,
     SafetyRound, SafetyRoundFinding, QualityIndicatorDefinition, QualityIndicatorMeasurement,
@@ -277,6 +278,7 @@ __all__ = [
     "DiagnosticDifferentialSuggestion",
     "DiagnosticTestConsideration",
     "AIClinicalReviewRecord",
+    "AIRadiologyInterpretationCase",
     "AILaboratoryInterpretationCase",
     "NotificationPreference",
     "NotificationTemplate",
