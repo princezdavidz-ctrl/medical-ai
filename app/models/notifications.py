@@ -69,7 +69,6 @@ class NotificationTemplate(Base):
 class NotificationIntent(Base):
     __tablename__ = "notification_intents"
     __table_args__ = (
-        ForeignKeyConstraint(["hospital_id", "recipient_user_id"], ["hospital_memberships.hospital_id", "hospital_memberships.user_id"], name="fk_notification_intent_recipient"),
         ForeignKeyConstraint(["hospital_id", "template_id"], ["notification_templates.hospital_id", "notification_templates.id"], name="fk_notification_intent_template"),
         ForeignKeyConstraint(["hospital_id", "patient_id"], ["patients.hospital_id", "patients.id"], name="fk_notification_intent_patient"),
         ForeignKeyConstraint(["hospital_id", "consent_id", "patient_id"], ["patient_consents.hospital_id", "patient_consents.id", "patient_consents.patient_id"], name="fk_notification_intent_consent"),
