@@ -81,3 +81,20 @@ class NotificationIntentRead(BaseModel):
     max_attempts: int
     next_attempt_at: datetime
     created_at: datetime
+
+
+class DepartmentNoticeCreate(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    template_id: UUID
+    department_id: UUID
+    role_names: list[str] = Field(default_factory=list, max_length=30)
+    purpose: str = Field(min_length=3, max_length=120)
+    idempotency_key: str = Field(min_length=8, max_length=80)
+    variables: dict[str, str] = Field(default_factory=dict, max_length=20)
+
+
+class DepartmentNoticeResult(BaseModel):
+    department_id: UUID
+    recipients_queued: int
+    skipped_channel_opt_out: int
+    notification_ids: list[UUID]
