@@ -57,6 +57,9 @@ def _reference_interval_context(
         return None
     age_days = (now.date() - patient.date_of_birth).days if patient.date_of_birth else None
     sex = patient.administrative_sex.casefold() if patient.administrative_sex else None
+    sex = {"f": "female", "m": "male"}.get(sex, sex)
+    if age_days is not None and age_days < 0:
+        return None
     rows = db.execute(
         select(LaboratoryReferenceInterval, MedicalKnowledgeDocument, MedicalKnowledgeSource)
         .join(MedicalKnowledgeDocument, MedicalKnowledgeDocument.id == LaboratoryReferenceInterval.document_id)
@@ -76,6 +79,10 @@ def _reference_interval_context(
     ).all()
     candidates = []
     for interval, document, source in rows:
+        if interval.effective_from and interval.effective_from > now:
+            continue
+        if interval.effective_to and interval.effective_to <= now:
+            continue
         if interval.specimen and interval.specimen.casefold() != specimen_type.casefold():
             continue
         if interval.method and (not test.method or interval.method.casefold() != test.method.casefold()):
@@ -103,7 +110,7 @@ def _reference_interval_context(
         return None
     _, interval, document, source = best[0]
     comparison = "not_comparable"
-    if value_numeric is not None:
+    if value_numeric is not None and (interval.lower_bound is not None or interval.upper_bound is not None):
         below = interval.lower_bound is not None and value_numeric < interval.lower_bound
         above = interval.upper_bound is not None and value_numeric > interval.upper_bound
         comparison = "below_interval" if below else "above_interval" if above else "within_interval"
@@ -274,7 +281,10 @@ def create_laboratory_interpretation(
         consent_id=session_context.consent_id, assignment_id=session_context.assignment_id,
         source_assistant_sequence=payload.assistant_sequence, source_response_digest=payload.response_digest,
         laboratory_result_ids=[str(value) for value in sorted(set(payload.laboratory_result_ids), key=str)],
-        evidence_citation_ids=sorted(set(metadata.get("citation_ids", []))) if isinstance(metadata.get("citation_ids", []), list) else [],
+        evidence_citation_ids=sorted({
+            value for value in metadata.get("citation_ids", [])
+            if isinstance(value, str) and 0 < len(value) <= 160
+        }) if isinstance(metadata.get("citation_ids", []), list) else [],
         result_snapshot=snapshot,
     )
     db.add(case)
