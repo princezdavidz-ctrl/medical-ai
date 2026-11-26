@@ -783,6 +783,7 @@ def release_legal_hold(hold_id: UUID, payload: LegalHoldRelease, context: tuple 
     hold.status = "released"
     hold.released_by_user_id = user.id
     hold.released_at = datetime.now(timezone.utc)
+    hold.release_reason = payload.release_reason
     _audit(db, hospital_id, user.id, "compliance.legal_hold_released", "legal_hold", hold.id)
     db.commit()
     _restore_context(db, user.id, hospital_id)
