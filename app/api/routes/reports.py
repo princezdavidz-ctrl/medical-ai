@@ -29,6 +29,23 @@ _REPORT_DOMAIN = {
     "emergency_volume": "clinical", "billing_summary": "finance",
     "quality_safety": "quality", "compliance_overview": "compliance",
 }
+_REPORT_ALLOWED_ROLES = {
+    "patient_flow": {"hospital_admin", "hospital_director", "report_manager", "department_head", "nurse_manager", "doctor", "nurse", "ward_nurse"},
+    "bed_occupancy": {"hospital_admin", "hospital_director", "report_manager", "department_head", "nurse_manager", "ward_nurse"},
+    "emergency_volume": {"hospital_admin", "hospital_director", "report_manager", "department_head", "nurse_manager", "emergency_doctor", "emergency_nurse"},
+    "billing_summary": _FINANCE_ROLES | {"report_manager"},
+    "quality_safety": {"hospital_admin", "hospital_director", "report_manager", "quality_manager", "patient_safety_officer", "department_head"},
+    "compliance_overview": _COMPLIANCE_ROLES | {"report_manager"},
+}
+_PRIVACY_THRESHOLD = 5
+
+
+def _suppress_small_cells(rows):
+    return [
+        {key: ("suppressed" if key == "count" and value < _PRIVACY_THRESHOLD else value)
+         for key, value in row.items()}
+        for row in rows
+    ]
 
 
 def _role(db: Session, user_id: UUID, hospital_id: UUID) -> str:
@@ -71,8 +88,8 @@ def create_report_definition(payload: ReportDefinitionCreate, context: tuple = D
     if _REPORT_DOMAIN[payload.report_key] != payload.data_domain:
         raise HTTPException(status_code=422, detail={"code": "report_key_data_domain_mismatch"})
     roles = {name.strip().casefold().replace(" ", "_") for name in payload.required_roles}
-    if not roles or len(roles) != len(payload.required_roles):
-        raise HTTPException(status_code=422, detail={"code": "report_roles_invalid"})
+    if not roles or len(roles) != len(payload.required_roles) or not roles.issubset(_REPORT_ALLOWED_ROLES[payload.report_key]):
+        raise HTTPException(status_code=422, detail={"code": "report_roles_invalid_for_report_domain"})
     latest = db.scalar(select(ReportDefinition).where(
         ReportDefinition.hospital_id == hospital_id,
         ReportDefinition.report_code == payload.report_code,
@@ -135,13 +152,13 @@ def _run_report(db: Session, hospital_id: UUID, definition: ReportDefinition, st
         if end_at: query = query.where(InpatientAdmission.requested_at < end_at)
         if department_id: query = query.join(Ward, (Ward.hospital_id == InpatientAdmission.hospital_id) & (Ward.id == InpatientAdmission.ward_id)).where(Ward.department_id == department_id)
         rows = db.execute(query.group_by(InpatientAdmission.status)).all()
-        return {"admissions_by_status": {state: count for state, count in rows}}
+        return {"admissions_by_status": {state: ("suppressed" if count < _PRIVACY_THRESHOLD else count) for state, count in rows}}
 
     if key == "bed_occupancy":
         query = select(HospitalBed.status, func.count(HospitalBed.id)).where(HospitalBed.hospital_id == hospital_id)
         if department_id: query = query.join(Ward, (Ward.hospital_id == HospitalBed.hospital_id) & (Ward.id == HospitalBed.ward_id)).where(Ward.department_id == department_id)
         rows = db.execute(query.group_by(HospitalBed.status)).all()
-        return {"beds_by_status": {state: count for state, count in rows}}
+        return {"beds_by_status": {state: ("suppressed" if count < _PRIVACY_THRESHOLD else count) for state, count in rows}}
 
     if key == "emergency_volume":
         query = select(EmergencyVisit.status, EmergencyVisit.priority, func.count(EmergencyVisit.id)).where(EmergencyVisit.hospital_id == hospital_id)
@@ -149,7 +166,7 @@ def _run_report(db: Session, hospital_id: UUID, definition: ReportDefinition, st
         if end_at: query = query.where(EmergencyVisit.arrival_at < end_at)
         if department_id: query = query.where(EmergencyVisit.department_id == department_id)
         rows = db.execute(query.group_by(EmergencyVisit.status, EmergencyVisit.priority)).all()
-        return {"visits": [{"status": state, "priority": priority, "count": count} for state, priority, count in rows]}
+        return {"visits": [{"status": state, "priority": priority, "count": ("suppressed" if count < _PRIVACY_THRESHOLD else count)} for state, priority, count in rows]}
 
     if key == "billing_summary":
         query = select(Invoice.currency, Invoice.status, func.count(Invoice.id), func.sum(Invoice.subtotal_total), func.sum(Invoice.amount_paid_total)).where(Invoice.hospital_id == hospital_id)
@@ -157,7 +174,7 @@ def _run_report(db: Session, hospital_id: UUID, definition: ReportDefinition, st
         if end_at: query = query.where(Invoice.created_at < end_at)
         if department_id: query = query.where(Invoice.department_id == department_id)
         rows = db.execute(query.group_by(Invoice.currency, Invoice.status)).all()
-        return {"invoice_totals": [{"currency": currency, "status": state, "count": count, "invoiced": str(invoiced or 0), "paid": str(paid or 0)} for currency, state, count, invoiced, paid in rows]}
+        return {"invoice_totals": [{"currency": currency, "status": state, "count": ("suppressed" if count < _PRIVACY_THRESHOLD else count), "invoiced": ("suppressed" if count < _PRIVACY_THRESHOLD else str(invoiced or 0)), "paid": ("suppressed" if count < _PRIVACY_THRESHOLD else str(paid or 0))} for currency, state, count, invoiced, paid in rows]}
 
     if key == "quality_safety":
         query = select(SafetyIncident.status, SafetyIncident.severity, func.count(SafetyIncident.id)).where(SafetyIncident.hospital_id == hospital_id)
@@ -165,7 +182,7 @@ def _run_report(db: Session, hospital_id: UUID, definition: ReportDefinition, st
         if end_at: query = query.where(SafetyIncident.reported_at < end_at)
         if department_id: query = query.where(SafetyIncident.department_id == department_id)
         rows = db.execute(query.group_by(SafetyIncident.status, SafetyIncident.severity)).all()
-        return {"incidents": [{"status": state, "severity": severity, "count": count} for state, severity, count in rows]}
+        return {"incidents": [{"status": state, "severity": severity, "count": ("suppressed" if count < _PRIVACY_THRESHOLD else count)} for state, severity, count in rows]}
 
     if key == "compliance_overview":
         incidents = db.execute(select(SecurityIncident.status, func.count(SecurityIncident.id)).where(
@@ -175,8 +192,8 @@ def _run_report(db: Session, hospital_id: UUID, definition: ReportDefinition, st
             ComplianceRisk.hospital_id == hospital_id,
         ).group_by(ComplianceRisk.status)).all()
         return {
-            "security_incidents_by_status": {state: count for state, count in incidents},
-            "risks_by_status": {state: count for state, count in risks},
+            "security_incidents_by_status": {state: ("suppressed" if count < _PRIVACY_THRESHOLD else count) for state, count in incidents},
+            "risks_by_status": {state: ("suppressed" if count < _PRIVACY_THRESHOLD else count) for state, count in risks},
         }
     raise HTTPException(status_code=422, detail={"code": "unsupported_report_key"})
 
@@ -232,7 +249,7 @@ def list_report_runs(context: tuple = Depends(get_current_context), db: Session 
     user, hospital_id = context
     role = _role(db, user.id, hospital_id)
     query = select(ReportRun).where(ReportRun.hospital_id == hospital_id)
-    if role not in _ADMIN_ROLES | _DEFINITION_ROLES:
+    if role not in _ADMIN_ROLES | {"report_manager"}:
         query = query.where(ReportRun.requested_by_user_id == user.id)
     return db.scalars(query.order_by(ReportRun.generated_at.desc()).limit(300)).all()
 
