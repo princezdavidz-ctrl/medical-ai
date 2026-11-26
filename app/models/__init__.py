@@ -95,6 +95,7 @@ from app.models.patient_registration import (
 from app.models.compliance import (
     CompliancePolicy, PolicyAcknowledgement, SecurityIncident, SecurityIncidentEvent, ComplianceRisk,
     ComplianceControl, ControlAssessment, AccessReviewCampaign, AccessReviewItem,
+    RetentionPolicy, LegalHold, RetentionDispositionRequest,
 )
 from app.models.quality import (
     SafetyIncident, SafetyIncidentEvent, SafetyInvestigation, CAPAAction,
@@ -257,6 +258,9 @@ __all__ = [
     "ControlAssessment",
     "AccessReviewCampaign",
     "AccessReviewItem",
+    "RetentionPolicy",
+    "LegalHold",
+    "RetentionDispositionRequest",
     "SafetyRound",
     "SafetyRoundFinding",
     "QualityIndicatorDefinition",
