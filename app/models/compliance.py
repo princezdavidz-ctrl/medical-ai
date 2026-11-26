@@ -278,7 +278,7 @@ class LegalHold(Base):
         ForeignKeyConstraint(["hospital_id", "released_by_user_id"], ["hospital_memberships.hospital_id", "hospital_memberships.user_id"], name="fk_legal_hold_releaser"),
         CheckConstraint("status IN ('active', 'released', 'expired')", name="ck_legal_hold_status"),
         CheckConstraint("json_typeof(scope) = 'object'", name="ck_legal_hold_scope_object"),
-        CheckConstraint("(status = 'released' AND released_by_user_id IS NOT NULL AND released_at IS NOT NULL) OR (status != 'released' AND released_by_user_id IS NULL AND released_at IS NULL)", name="ck_legal_hold_release_state"),
+        CheckConstraint("(status = 'released' AND released_by_user_id IS NOT NULL AND released_at IS NOT NULL AND release_reason IS NOT NULL) OR (status != 'released' AND released_by_user_id IS NULL AND released_at IS NULL AND release_reason IS NULL)", name="ck_legal_hold_release_state"),
         Index("ix_legal_hold_status", "hospital_id", "status", "expires_at"),
     )
     id: Mapped[uuid.UUID] = mapped_column(Uuid(as_uuid=True), primary_key=True, default=uuid.uuid4)
