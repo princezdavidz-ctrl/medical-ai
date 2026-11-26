@@ -728,3 +728,22 @@ No item is considered passed until evidence, environment, build SHA, reviewer an
 - [ ] Audit and usage: success and denial events are recorded without free text; quota and hospital AI pause gates are enforced.
 - [ ] Proxy access: guardian/caregiver/legal representative use is bounded by the same verified portal link scope and consent; revoked/expired proxy authority blocks access.
 - [ ] Phase 4 boundary: personal chart summarization, result interpretation, appointment booking, persistent conversation history and clinical messaging remain disabled until separate authorization and integration design.
+
+
+## Phase 3.37 — AI Hospital Analytics
+
+- [ ] Capability governance: hospital_operations_analytics has an independent prompt version/digest and remains unavailable unless explicitly allow-listed; paused/disabled hospital AI gates block execution.
+- [ ] Local-only routing: operations analytics always selects the local provider in hybrid, offline and degraded modes; local runtime unavailability fails closed and never attempts hosted transfer.
+- [ ] Report-run binding: reject missing, cross-hospital, non-completed, expired or deleted report runs and unpublished/missing report definitions.
+- [ ] Authorization inheritance: insight access requires the same report role/domain authorization as the source report; finance and compliance domains retain their specialist role restrictions.
+- [ ] Department isolation: department heads and nurse managers can analyze only report runs whose resolved department exactly matches their active membership; caller-supplied department values cannot widen scope.
+- [ ] Data minimization: model input contains only the authorized aggregate report summary, report filters, source versions and timestamps; no patient rows, direct identifiers, clinical narratives or patient drill-down data are queried or supplied.
+- [ ] Aggregate privacy: suppressed cells remain explicitly suppressed and are never converted to zero or inferred; missing denominators, unavailable periods and incomplete metrics are stated as unknown.
+- [ ] Provenance: response exposes report run/definition IDs, definition version, source versions, generation and expiry timestamps, department scope, model/provider version and prompt digest.
+- [ ] Evidence grounding: only current approved operational guidelines/policies are retrieved; output citations must match supplied evidence; missing evidence or invalid citations withholds the response.
+- [ ] Forecasting boundary: no occupancy, demand, waiting-time or staffing forecast is generated or implied until a separately validated model and dataset are approved; response marks forecasting unavailable.
+- [ ] Action boundary: generated insights cannot assign beds, change staffing, change triage, prioritize patients, authorize spending, edit source reports or trigger operational workflows.
+- [ ] Audit privacy: audit events record actor, hospital, report-run reference, capability, outcome and citation count only; no manager question, report payload or generated narrative is stored.
+- [ ] Usage and runtime: quota reservation/settlement, disabled capability, unavailable knowledge, model timeout and offline failure paths are safely handled.
+- [ ] Prompt governance: prompt/schema contract requires management review, no automated actions, no forecasting and explicit uncertainty.
+- [ ] No migration: confirm Phase 3.37 introduces no database schema changes; Phase 5 verification remains deferred.
