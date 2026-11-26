@@ -29,3 +29,22 @@ Phase 3 implements report definitions, governed aggregate queries, dashboards, a
 
 ## Verification
 All authorization, metric integrity, data provenance, export privacy, tenant isolation and performance scenarios are recorded in docs/TEST_REGISTER_PHASE_5.md. Backend tests remain deferred to Phase 5.
+
+
+## Implemented foundation
+- Versioned report definitions use a fixed, whitelisted report-key set; definitions cannot execute caller-supplied SQL.
+- Independent publication approval and role/domain-specific report authorization.
+- Synchronous aggregate reports for inpatient flow, bed occupancy, emergency volume, billing summaries, quality/safety and compliance overview.
+- Department managers are automatically constrained to their assigned department; finance and compliance reports require dedicated role scopes.
+- Small-cell suppression threshold of five prevents low-count aggregate disclosure; billing amounts are suppressed with their small-cell count.
+- Report runs preserve filters, report definition version, calculation version, generation time and a 24-hour expiry.
+- CSV/PDF export requests create private export-job metadata only; actual file generation, vault storage and scheduled delivery are Phase 4.
+- Migration 0052_hospital_reporting creates the report catalog, run history and export-job tables with RLS and immutable published definitions.
+
+## API surface
+- POST /api/v1/reports/definitions
+- POST /api/v1/reports/definitions/{definition_id}/publish
+- GET /api/v1/reports/catalog
+- POST /api/v1/reports/definitions/{definition_id}/run
+- GET /api/v1/reports/runs
+- POST /api/v1/reports/runs/{run_id}/exports
