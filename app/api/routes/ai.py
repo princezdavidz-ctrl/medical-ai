@@ -4,6 +4,7 @@ from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy import func, select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.ai.contracts import AICapability
@@ -558,7 +559,7 @@ def review_clinical_ai_response(
     db.add(review)
     try:
         db.flush()
-    except Exception:
+    except IntegrityError:
         db.rollback()
         raise HTTPException(status_code=409, detail={"code": "clinical_ai_response_already_reviewed"}) from None
     review_result = AIClinicalReviewRead.model_validate(review)
