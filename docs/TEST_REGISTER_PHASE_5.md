@@ -658,3 +658,17 @@ No item is considered passed until evidence, environment, build SHA, reviewer an
 - [ ] Knowledge freshness: disease concepts from draft, rejected, superseded, archived, expired or overdue-for-review documents are rejected; only active sources and currently effective approved documents qualify.
 - [ ] Same-hospital catalog binding: lab/imaging definitions from another hospital, retired definitions or code/name mismatches are rejected.
 - [ ] Duplicate case prevention: only one diagnostic case can be created for a given hospital/session/assistant sequence.
+
+
+## Phase 3.33 — AI Laboratory Assistant
+
+- [ ] Interpretation case creation: requires active patient-bound AI session, current consent and care assignment, exact assistant sequence/digest and the laboratory-interpretation capability.
+- [ ] Result eligibility: only final, independently verified results attached to completed specimens and completed orders for the exact bound patient and encounter are eligible; preliminary, rejected, in-progress, cancelled, cross-patient and cross-hospital results are rejected.
+- [ ] Result snapshot integrity: captured result ID, value, unit, abnormality, critical flag, specimen/accession and verification timestamp match the source records at creation; later source changes do not rewrite the immutable snapshot.
+- [ ] Session reauthorization: reads and clinician review revalidate session status/expiry, consent and current care assignment; revoked or expired authorization denies access.
+- [ ] Source binding: assistant response digest, sequence, session owner and LAB_INTERPRETATION capability must all match the exact assistant message.
+- [ ] Clinician review: only the authorized case owner can submit one review decision; review requires private vault references and creates an audit event.
+- [ ] Critical-result boundary: AI workflow cannot acknowledge, suppress, downgrade or route critical results; the existing clinician critical-result acknowledgement workflow remains authoritative.
+- [ ] No clinical side effects: interpretation case creation/review cannot edit results, create lab orders, diagnoses, prescriptions or medical-record entries.
+- [ ] Tenant isolation: RLS and composite references prevent cross-hospital session, patient, encounter, consent and reviewer access.
+- [ ] Migration 0056: interpretation case table, constraints, index, RLS policy and downgrade behavior are verified.
