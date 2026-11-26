@@ -292,6 +292,7 @@ class LegalHold(Base):
     status: Mapped[str] = mapped_column(String(16), nullable=False, default="active")
     released_by_user_id: Mapped[uuid.UUID | None] = mapped_column(Uuid(as_uuid=True))
     released_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    release_reason: Mapped[str | None] = mapped_column(Text)
 
 
 class RetentionDispositionRequest(Base):
