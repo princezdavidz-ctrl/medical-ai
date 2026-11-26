@@ -143,6 +143,7 @@ class SafetyRoundFinding(Base):
     __table_args__ = (
         ForeignKeyConstraint(["hospital_id", "round_id"], ["safety_rounds.hospital_id", "safety_rounds.id"], name="fk_safety_round_finding_round"),
         ForeignKeyConstraint(["hospital_id", "owner_user_id"], ["hospital_memberships.hospital_id", "hospital_memberships.user_id"], name="fk_safety_round_finding_owner"),
+        ForeignKeyConstraint(["hospital_id", "resolved_by_user_id"], ["hospital_memberships.hospital_id", "hospital_memberships.user_id"], name="fk_safety_round_finding_resolver"),
         CheckConstraint("severity IN ('low', 'moderate', 'high', 'critical')", name="ck_safety_round_finding_severity"),
         CheckConstraint("status IN ('open', 'in_progress', 'resolved', 'accepted_risk')", name="ck_safety_round_finding_status"),
         CheckConstraint("length(trim(description)) BETWEEN 10 AND 3000", name="ck_safety_round_finding_description"),
@@ -158,7 +159,7 @@ class SafetyRoundFinding(Base):
     due_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
     status: Mapped[str] = mapped_column(String(20), nullable=False, default="open")
     resolution_note: Mapped[str | None] = mapped_column(Text)
-    resolved_by_user_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("users.id"))
+    resolved_by_user_id: Mapped[uuid.UUID | None] = mapped_column(Uuid(as_uuid=True))
     resolved_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     created_by_user_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id"), nullable=False)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
