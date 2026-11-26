@@ -14,10 +14,8 @@ from app.models import (
     AISession,
     AISessionMessage,
     ClinicalAISessionContext,
-    HospitalMembership,
     ImagingProcedureDefinition,
     LaboratoryTestDefinition,
-    User,
 )
 from app.models.clinical_taxonomy import ClinicalConcept
 from app.models.diagnostic_support import (
