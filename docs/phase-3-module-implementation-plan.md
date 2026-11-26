@@ -112,7 +112,7 @@ Every module milestone must include:
 | AI Diagnostic Support | Phase 3.32 | Implemented; Phase 5 verification pending | PR #76 (merged) |
 | AI Laboratory Assistant | Phase 3.33 | Implemented; Phase 5 verification pending | PR #77 and #80 (merged) |
 | AI Radiology Assistant | Phase 3.34 | Implemented; Phase 5 verification pending | PR #78 (merged) |
-| AI Pharmacy Assistant | Phase 3.35 | In progress | — |
+| AI Pharmacy Assistant | Phase 3.35 | Implemented; Phase 5 verification pending | PR pending |
 
 Patient Registration & Management extends the Phase 1 patient foundation with governed duplicate review, identity/document metadata, contact and next-of-kin details, consent/lawful-basis recording, patient status and audit history. Automatic patient merging is prohibited.
 
@@ -182,3 +182,6 @@ Phase 3.33 AI Laboratory Assistant adds patient/encounter-bound interpretation r
 
 
 Phase 3.35 scope: clinician/pharmacist-supervised medication safety review based only on verified medication orders and governed medication-safety evidence. Cases bind to the exact patient, encounter, medication-order set, active care assignment, consent/purpose context and exact assistant response from the MEDICATION_SAFETY capability. The workflow is read-only and cannot prescribe, change doses, discontinue medication, approve orders, dispense medication or bypass pharmacist/clinician review. Drug-interaction, allergy and contraindication claims must be traceable to current approved evidence; unavailable patient factors must be stated as unknown rather than assumed. External pharmacy, e-prescribing, dispensing and claims integrations remain Phase 4.
+
+
+Phase 3.35 AI Pharmacy Assistant adds patient/encounter-bound medication safety review cases tied to a verified medication order, active approved medication definition, active clinical AI session, exact MEDICATION_SAFETY assistant response digest, consent and current care assignment. The workflow snapshots order and medication identity/dose instructions, detects source changes, and requires an auditable clinician/pharmacist review using private vault references. Evidence claims must be grounded in current approved knowledge; missing allergy, concurrent-medication, renal/hepatic, pregnancy, age/weight or monitoring context is explicitly unknown. This is advisory and read-only: it cannot prescribe, change or discontinue doses/orders, approve an order, dispense medication, deduct stock or record administration. Phase 5 verification remains pending; live interaction checking and external pharmacy/e-prescribing integrations remain gated by validated evidence and Phase 4.
