@@ -49,6 +49,7 @@ def upgrade() -> None:
         sa.Column("status", sa.String(16), nullable=False, server_default="active"),
         sa.Column("released_by_user_id", sa.Uuid()),
         sa.Column("released_at", sa.DateTime(timezone=True)),
+        sa.Column("release_reason", sa.Text()),
         sa.ForeignKeyConstraint(["hospital_id", "issued_by_user_id"], ["hospital_memberships.hospital_id", "hospital_memberships.user_id"], name="fk_legal_hold_issuer"),
         sa.ForeignKeyConstraint(["hospital_id", "released_by_user_id"], ["hospital_memberships.hospital_id", "hospital_memberships.user_id"], name="fk_legal_hold_releaser"),
         sa.UniqueConstraint("hospital_id", "id", name="uq_legal_hold_hospital_id"),
