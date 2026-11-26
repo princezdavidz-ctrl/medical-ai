@@ -75,3 +75,20 @@ Compliance control register, access review campaigns, retention schedules/legal 
 - POST /api/v1/compliance/access-review-items/{item_id}/review
 - POST /api/v1/compliance/access-review-items/{item_id}/approve
 - POST /api/v1/compliance/access-reviews/{campaign_id}/complete
+
+
+## Retention governance and legal holds
+- Retention policies are versioned by data domain and duration, with independent approval and effective dates.
+- Legal holds capture exact vault resource references, documented reason, issuer and optional expiry; only compliance roles can release holds, and release rationale is retained.
+- Disposition requests calculate eligibility from resource creation time plus the active policy retention period.
+- Active legal holds block disposition at request time and are rechecked during approval to prevent a hold created after request from being bypassed.
+- Disposition approval records a human decision only; no archive/delete operation is executed in Phase 3. Actual retention jobs and storage actions are Phase 4 integrations.
+- Migration 0051_retention_legal_holds adds policy, legal hold and disposition tables with RLS and tenant-scoped references.
+
+## Additional API surface
+- POST/GET /api/v1/compliance/retention-policies
+- POST /api/v1/compliance/retention-policies/{policy_id}/activate
+- POST/GET /api/v1/compliance/legal-holds
+- POST /api/v1/compliance/legal-holds/{hold_id}/release
+- POST/GET /api/v1/compliance/dispositions
+- POST /api/v1/compliance/dispositions/{request_id}/review
