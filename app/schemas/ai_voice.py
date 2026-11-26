@@ -7,7 +7,7 @@ class AIVoiceTurnRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
     transcript: str = Field(min_length=1, max_length=3000)
     locale: str = Field(default="en", min_length=2, max_length=16, pattern=r"^[A-Za-z]{2,3}(-[A-Za-z0-9]{2,8})*$")
-    speech_input: Literal["on_device"] = "on_device"
+    speech_input: Literal["on_device"] = Field(default="on_device", description="Client-declared mode. Backend accepts text only and cannot independently attest the device speech engine.")
 
 
 class AIVoiceCitation(BaseModel):
