@@ -120,4 +120,5 @@ class AccessReviewItemRead(BaseModel):
     reviewed_at: datetime | None
     approved_by_user_id: UUID | None
     approved_at: datetime | None
+    approval_note: str | None
     created_at: datetime
