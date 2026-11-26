@@ -10,7 +10,7 @@ from app.api.deps import get_current_context
 from app.db.session import get_db
 from app.models import (
     EmergencyVisit, HospitalBed, HospitalMembership, InpatientAdmission,
-    Invoice, Role, SafetyIncident, SecurityIncident, ComplianceRisk, Ward, User,
+    Invoice, Role, SafetyIncident, SecurityIncident, ComplianceRisk, Ward,
 )
 from app.models.analytics import ReportDefinition, ReportRun, ReportExportJob
 from app.schemas.analytics import (
@@ -30,7 +30,7 @@ _REPORT_DOMAIN = {
     "quality_safety": "quality", "compliance_overview": "compliance",
 }
 _REPORT_ALLOWED_ROLES = {
-    "patient_flow": {"hospital_admin", "hospital_director", "report_manager", "department_head", "nurse_manager", "doctor", "nurse", "ward_nurse"},
+    "patient_flow": {"hospital_admin", "hospital_director", "report_manager", "department_head", "nurse_manager", "doctor", "physician", "consultant", "medical_officer", "nurse", "registered_nurse", "ward_nurse"},
     "bed_occupancy": {"hospital_admin", "hospital_director", "report_manager", "department_head", "nurse_manager", "ward_nurse"},
     "emergency_volume": {"hospital_admin", "hospital_director", "report_manager", "department_head", "nurse_manager", "emergency_doctor", "emergency_nurse"},
     "billing_summary": _FINANCE_ROLES | {"report_manager"},
@@ -38,14 +38,6 @@ _REPORT_ALLOWED_ROLES = {
     "compliance_overview": _COMPLIANCE_ROLES | {"report_manager"},
 }
 _PRIVACY_THRESHOLD = 5
-
-
-def _suppress_small_cells(rows):
-    return [
-        {key: ("suppressed" if key == "count" and value < _PRIVACY_THRESHOLD else value)
-         for key, value in row.items()}
-        for row in rows
-    ]
 
 
 def _role(db: Session, user_id: UUID, hospital_id: UUID) -> str:
