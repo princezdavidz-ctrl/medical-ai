@@ -39,6 +39,8 @@ class AIClinicalReviewRecord(Base):
     __tablename__ = "ai_clinical_review_records"
     __table_args__ = (
         ForeignKeyConstraint(["session_id", "hospital_id", "owner_user_id"], ["ai_sessions.id", "ai_sessions.hospital_id", "ai_sessions.owner_user_id"], name="fk_ai_clinical_review_session_owner"),
+        ForeignKeyConstraint(["hospital_id", "patient_id"], ["patients.hospital_id", "patients.id"], name="fk_ai_clinical_review_patient"),
+        ForeignKeyConstraint(["hospital_id", "encounter_id", "patient_id"], ["encounters.hospital_id", "encounters.id", "encounters.patient_id"], name="fk_ai_clinical_review_encounter"),
         ForeignKeyConstraint(["hospital_id", "reviewed_by_user_id"], ["hospital_memberships.hospital_id", "hospital_memberships.user_id"], name="fk_ai_clinical_review_reviewer"),
         UniqueConstraint("hospital_id", "session_id", "assistant_sequence", name="uq_ai_clinical_review_sequence"),
         CheckConstraint("decision IN ('accepted_for_consideration', 'rejected', 'needs_revision')", name="ck_ai_clinical_review_decision"),
