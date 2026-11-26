@@ -1,4 +1,5 @@
 from typing import Literal
+from datetime import datetime
 from uuid import UUID
 from pydantic import BaseModel, ConfigDict, Field
 from app.ai.contracts import AICapability
@@ -47,6 +48,9 @@ class AIResponseRead(BaseModel):
     citations: list[AICitationResponse]
     clinical_use_enabled: Literal[False]
     requires_clinician_review: Literal[True]
+    session_id: UUID | None = None
+    assistant_sequence: int | None = None
+    response_digest: str
 
 
 class AIOperationsControlUpdate(BaseModel):
