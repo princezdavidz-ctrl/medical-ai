@@ -491,6 +491,8 @@ def create_control_assessment(control_id: UUID, payload: ControlAssessmentCreate
     ))
     if control is None:
         raise HTTPException(status_code=404, detail={"code": "active_compliance_control_not_found"})
+    if payload.next_review_at is not None and payload.next_review_at <= datetime.now(timezone.utc):
+        raise HTTPException(status_code=422, detail={"code": "control_next_review_must_be_future"})
     assessment = ControlAssessment(
         hospital_id=hospital_id, control_id=control.id, assessor_user_id=user.id,
         findings=payload.findings, evidence_reference=payload.evidence_reference,
@@ -619,6 +621,12 @@ def approve_access_item(item_id: UUID, payload: AccessReviewItemApproval, contex
     ).with_for_update())
     if item is None:
         raise HTTPException(status_code=404, detail={"code": "access_review_item_not_found"})
+    campaign = db.scalar(select(AccessReviewCampaign).where(
+        AccessReviewCampaign.hospital_id == hospital_id,
+        AccessReviewCampaign.id == item.campaign_id,
+    ))
+    if campaign is None or campaign.status != "open":
+        raise HTTPException(status_code=409, detail={"code": "open_access_review_campaign_required"})
     if item.review_status != "awaiting_approval" or item.reviewed_by_user_id == user.id or item.subject_user_id == user.id:
         raise HTTPException(status_code=409, detail={"code": "independent_access_review_approval_required"})
     item.review_status = "approved"
