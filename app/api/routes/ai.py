@@ -461,6 +461,117 @@ def submit_ai_request(
     }
 
 
+@router.post("/clinical-sessions", summary="Create a patient-bound clinician AI session", response_model=ClinicalAISessionRead)
+def create_clinical_ai_session(
+    payload: ClinicalAISessionCreate,
+    request: Request,
+    context=Depends(get_current_context),
+    db: Session = Depends(get_db),
+) -> dict:
+    user, hospital_id = context
+    settings = get_settings()
+    _session_cipher(settings)
+    gateway = getattr(request.app.state, "ai_gateway", None)
+    decision = AIPolicyEngine(settings).evaluate(
+        capability=AICapability.CLINICAL_DECISION_SUPPORT,
+        has_patient_context=True,
+    )
+    if not decision.allowed or decision.provider_class != "local" or gateway is None or not gateway.has_provider("local"):
+        raise HTTPException(status_code=503, detail={"code": "approved_local_clinical_ai_runtime_unavailable"})
+    try:
+        authorized = load_authorized_patient_context(
+            db, hospital_id=hospital_id, actor_user_id=user.id,
+            patient_id=payload.patient_id, encounter_id=payload.encounter_id,
+        )
+    except PatientContextDenied as exc:
+        raise HTTPException(status_code=403, detail={"code": str(exc)}) from exc
+    session_record = create_ai_session(
+        db, hospital_id=hospital_id, owner_user_id=user.id,
+        retention_days=settings.ai_session_retention_days,
+    )
+    db.add(ClinicalAISessionContext(
+        hospital_id=hospital_id, session_id=session_record.id, owner_user_id=user.id,
+        patient_id=payload.patient_id, encounter_id=authorized.encounter_id,
+        consent_id=authorized.consent_id, assignment_id=authorized.assignment_id,
+    ))
+    db.flush()
+    session_id_value = session_record.id
+    expires_at_value = session_record.expires_at
+    _audit(
+        db, user_id=user.id, hospital_id=hospital_id,
+        action="ai.clinical_session.created", outcome="success",
+        reason="Authorized patient-bound clinical AI session created",
+        metadata={"session_id": str(session_id_value), "encounter_id": str(authorized.encounter_id)},
+        resource_type="ai_session", resource_id=str(session_id_value),
+    )
+    return {"session_id": session_id_value, "status": "active", "expires_at": expires_at_value, "clinical_use_enabled": False}
+
+
+@router.post("/clinical-sessions/{session_id}/reviews", summary="Record clinician review of a specific AI response", response_model=AIClinicalReviewRead)
+def review_clinical_ai_response(
+    session_id: UUID,
+    payload: AIClinicalReviewCreate,
+    context=Depends(get_current_context),
+    db: Session = Depends(get_db),
+) -> dict:
+    user, hospital_id = context
+    now = datetime.now(timezone.utc)
+    session_context = db.scalar(select(ClinicalAISessionContext).where(
+        ClinicalAISessionContext.hospital_id == hospital_id,
+        ClinicalAISessionContext.session_id == session_id,
+        ClinicalAISessionContext.owner_user_id == user.id,
+        ClinicalAISessionContext.status == "active",
+    ))
+    session_record = db.scalar(select(AISession).where(
+        AISession.hospital_id == hospital_id,
+        AISession.id == session_id,
+        AISession.owner_user_id == user.id,
+        AISession.status == "active",
+        AISession.expires_at > now,
+    ))
+    if session_context is None or session_record is None:
+        raise HTTPException(status_code=404, detail={"code": "active_clinical_ai_session_not_found"})
+    try:
+        authorized = load_authorized_patient_context(
+            db, hospital_id=hospital_id, actor_user_id=user.id,
+            patient_id=session_context.patient_id, encounter_id=session_context.encounter_id,
+        )
+    except PatientContextDenied as exc:
+        raise HTTPException(status_code=403, detail={"code": str(exc)}) from exc
+    if authorized.consent_id != session_context.consent_id or authorized.assignment_id != session_context.assignment_id:
+        raise HTTPException(status_code=403, detail={"code": "clinical_ai_session_authorization_context_changed"})
+    message = db.scalar(select(AISessionMessage).where(
+        AISessionMessage.hospital_id == hospital_id,
+        AISessionMessage.owner_user_id == user.id,
+        AISessionMessage.session_id == session_id,
+        AISessionMessage.sequence_number == payload.assistant_sequence,
+        AISessionMessage.role == "assistant",
+    ))
+    if message is None or message.metadata_json.get("response_digest") != payload.response_digest:
+        raise HTTPException(status_code=409, detail={"code": "assistant_response_digest_or_sequence_mismatch"})
+    review = AIClinicalReviewRecord(
+        hospital_id=hospital_id, session_id=session_id, owner_user_id=user.id,
+        patient_id=session_context.patient_id, encounter_id=session_context.encounter_id,
+        assistant_sequence=payload.assistant_sequence, response_digest=payload.response_digest,
+        decision=payload.decision, reviewed_by_user_id=user.id, note_reference=payload.note_reference,
+    )
+    db.add(review)
+    try:
+        db.flush()
+    except Exception:
+        db.rollback()
+        raise HTTPException(status_code=409, detail={"code": "clinical_ai_response_already_reviewed"}) from None
+    review_result = AIClinicalReviewRead.model_validate(review)
+    _audit(
+        db, user_id=user.id, hospital_id=hospital_id,
+        action="ai.clinical_response.reviewed", outcome="success",
+        reason="Clinician review decision recorded",
+        metadata={"session_id": str(session_id), "assistant_sequence": payload.assistant_sequence, "decision": payload.decision},
+        resource_type="ai_clinical_review", resource_id=str(review.id),
+    )
+    return review_result
+
+
 def _session_cipher(settings) -> SessionCipher:
     if not settings.ai_sessions_enabled or settings.ai_session_encryption_keys is None:
         raise HTTPException(status_code=503, detail={
