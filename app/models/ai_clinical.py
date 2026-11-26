@@ -45,7 +45,8 @@ class AIClinicalReviewRecord(Base):
         UniqueConstraint("hospital_id", "session_id", "assistant_sequence", name="uq_ai_clinical_review_sequence"),
         CheckConstraint("decision IN ('accepted_for_consideration', 'rejected', 'needs_revision')", name="ck_ai_clinical_review_decision"),
         CheckConstraint("assistant_sequence > 0", name="ck_ai_clinical_review_sequence"),
-        CheckConstraint("response_digest ~ '^[0-9a-f]{64}
+        CheckConstraint("response_digest ~ '^[0-9a-f]{64}$'", name="ck_ai_clinical_review_digest"),
+        CheckConstraint("note_reference IS NULL OR note_reference ~ '^vault://[0-9a-fA-F-]{36}$'", name="ck_ai_clinical_review_note_ref"),
         Index("ix_ai_clinical_review_patient", "hospital_id", "patient_id", "reviewed_at"),
     )
     id: Mapped[uuid.UUID] = mapped_column(Uuid(as_uuid=True), primary_key=True, default=uuid.uuid4)
