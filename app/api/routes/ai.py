@@ -402,6 +402,7 @@ def submit_ai_request(
                 assistant_response=response.content,
                 cipher=session_cipher,
                 assistant_metadata={
+                    "capability": payload.capability.value,
                     "provider": response.provider,
                     "model": response.model,
                     "model_version": response.model_version,
