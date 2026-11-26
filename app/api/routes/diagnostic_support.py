@@ -6,6 +6,7 @@ from sqlalchemy import func, or_, select, text
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
+from app.ai.contracts import AICapability
 from app.ai.patient_context import PatientContextDenied, load_authorized_patient_context
 from app.api.audit import write_audit_event
 from app.api.deps import get_current_context
@@ -67,7 +68,12 @@ def _source_message(
         AISessionMessage.sequence_number == assistant_sequence,
         AISessionMessage.role == "assistant",
     ))
-    if message is None or (message.metadata_json or {}).get("response_digest") != response_digest:
+    metadata = message.metadata_json or {} if message is not None else {}
+    if (
+        message is None
+        or metadata.get("response_digest") != response_digest
+        or metadata.get("capability") != AICapability.CLINICAL_DECISION_SUPPORT.value
+    ):
         raise HTTPException(status_code=409, detail={"code": "diagnostic_source_response_mismatch"})
     return message
 
@@ -85,7 +91,7 @@ def _authorized_case(
         DiagnosticSupportCase.hospital_id == hospital_id,
         DiagnosticSupportCase.id == case_id,
         DiagnosticSupportCase.owner_user_id == user_id,
-    ))
+    ).with_for_update())
     if case is None:
         raise HTTPException(status_code=404, detail={"code": "diagnostic_support_case_not_found"})
     session_context = db.scalar(select(ClinicalAISessionContext).where(
