@@ -126,9 +126,7 @@ def list_report_catalog(context: tuple = Depends(get_current_context), db: Sessi
     return [item for item in definitions if role in item.required_roles or role in _ADMIN_ROLES]
 
 
-def _run_report(db: Session, hospital_id: UUID, definition: ReportDefinition, filters: dict, department_id: UUID | None) -> dict:
-    start_at = filters.get("start_at")
-    end_at = filters.get("end_at")
+def _run_report(db: Session, hospital_id: UUID, definition: ReportDefinition, start_at: datetime | None, end_at: datetime | None, department_id: UUID | None) -> dict:
     key = definition.report_key
 
     if key == "patient_flow":
@@ -211,7 +209,7 @@ def run_report(definition_id: UUID, payload: ReportRunCreate, context: tuple = D
         raise HTTPException(status_code=422, detail={"code": "department_filter_required_for_scoped_report"})
 
     filters = payload.model_dump(mode="json", exclude_none=True)
-    summary = _run_report(db, hospital_id, definition, filters, department_id)
+    summary = _run_report(db, hospital_id, definition, payload.start_at, payload.end_at, department_id)
     now = datetime.now(timezone.utc)
     run = ReportRun(
         hospital_id=hospital_id, definition_id=definition.id, requested_by_user_id=user.id,
