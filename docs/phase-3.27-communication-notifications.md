@@ -37,3 +37,33 @@ Phase 3 implements local data models, APIs, authorization, consent checks, queue
 
 ## Verification
 All authorization, RLS, consent, idempotency, concurrency, retry, privacy and lifecycle scenarios are recorded in `docs/TEST_REGISTER_PHASE_5.md`. Backend tests remain deferred to Phase 5 by project direction.
+
+
+## Implemented foundation (Phase 3.27)
+- SQLAlchemy models and migration 0044_notifications for preferences, versioned templates, notification intents, delivery attempts and append-only events.
+- Hospital RLS on all five tables; tenant-scoped composite foreign keys for templates, patient references, consent references and delivery history.
+- User-owned staff and patient portal preferences, including channel opt-outs, locale, timezone and paired quiet-hour settings.
+- Communications-admin template creation and publication; sensitive templates require a second authorized publisher and explicit approval.
+- Idempotent enqueue API, recipient validation against same-hospital active membership or active patient portal link, purpose-matched unexpired patient consent and channel-specific consent scope.
+- Patient/staff inbox reads, template/queue administration and cancellation before dispatch.
+- Provider-neutral queue only: no external network call is made and queued items are not represented as delivered.
+
+## API surface
+- GET/PUT /api/v1/notifications/preferences
+- GET/PUT /api/v1/notifications/patient/preferences
+- POST /api/v1/notifications/templates
+- GET /api/v1/notifications/templates
+- POST /api/v1/notifications/templates/{template_id}/publish
+- POST /api/v1/notifications/enqueue
+- GET /api/v1/notifications/queue
+- POST /api/v1/notifications/{intent_id}/cancel
+- GET /api/v1/notifications/my-notifications
+- GET /api/v1/notifications/inbox
+
+## Remaining within Phase 3
+- Add a bounded dispatcher/worker lifecycle with safe claim locking, retry scheduling, dead-letter handling and provider acknowledgement contract.
+- Add department-scoped notice publishing and granular recipient audience resolution.
+- Add localized template rendering and timezone-aware quiet-hour scheduling.
+- Add operational metrics and staff-facing dashboard surfaces.
+
+Backend verification remains deferred to Phase 5 per project direction. External SMS/email/push delivery and appointment/telemedicine publishers remain Phase 4.
