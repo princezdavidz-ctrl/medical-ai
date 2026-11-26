@@ -170,6 +170,14 @@ def enqueue_notification(payload: NotificationEnqueue, context: tuple = Depends(
         NotificationIntent.idempotency_key == payload.idempotency_key,
     ))
     if existing is not None:
+        if (
+            existing.recipient_user_id != payload.recipient_user_id
+            or existing.template_id != payload.template_id
+            or existing.patient_id != payload.patient_id
+            or existing.consent_id != payload.consent_id
+            or existing.purpose != payload.purpose
+        ):
+            raise HTTPException(status_code=409, detail={"code": "idempotency_key_reused_for_different_notification"})
         return existing
     template = db.scalar(select(NotificationTemplate).where(
         NotificationTemplate.hospital_id == hospital_id,
@@ -196,6 +204,7 @@ def enqueue_notification(payload: NotificationEnqueue, context: tuple = Depends(
             PatientPortalLink.patient_id == payload.patient_id,
             PatientPortalLink.portal_user_id == payload.recipient_user_id,
             PatientPortalLink.status == "active",
+            (PatientPortalLink.expires_at.is_(None) | (PatientPortalLink.expires_at > datetime.now(timezone.utc))),
         ))
     if membership is None and portal_link is None:
         raise HTTPException(status_code=404, detail={"code": "active_same_hospital_recipient_not_found"})
