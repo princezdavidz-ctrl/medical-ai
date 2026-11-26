@@ -114,7 +114,8 @@ Every module milestone must include:
 | AI Radiology Assistant | Phase 3.34 | Implemented; Phase 5 verification pending | PR #78 (merged) |
 | AI Pharmacy Assistant | Phase 3.35 | Implemented; Phase 5 verification pending | PR #81 (merged) |
 | AI Patient Assistant | Phase 3.36 | Implemented; Phase 5 verification pending | PR #82 (merged) |
-| AI Hospital Analytics | Phase 3.37 | Implemented; Phase 5 verification pending | PR pending |
+| AI Hospital Analytics | Phase 3.37 | Implemented; Phase 5 verification pending | PR #83 (merged) |
+| AI Voice Assistant | Phase 3.38 | In implementation; Phase 5 verification pending | PR pending |
 
 Patient Registration & Management extends the Phase 1 patient foundation with governed duplicate review, identity/document metadata, contact and next-of-kin details, consent/lawful-basis recording, patient status and audit history. Automatic patient merging is prohibited.
 
@@ -195,3 +196,8 @@ Phase 3.36 AI Patient Assistant adds a patient-portal endpoint for evidence-grou
 ## Phase 3.37 — AI Hospital Analytics
 
 AI Hospital Analytics adds a role- and department-scoped, local-only insight endpoint over existing completed, unexpired aggregate report runs. It uses only report summaries and their stored provenance; it does not query patient-level records or bypass the report authorization model. Department managers are constrained to the exact department snapshot, while finance and compliance domains retain their specialist role gates. A dedicated capability and versioned prompt require approved operational evidence, explicit missing/suppressed-data handling, transparent report provenance and management review. Predictive forecasting is explicitly unavailable until a separately validated forecasting model and dataset exist. The endpoint is read-only and cannot assign beds, change staffing, alter triage, prioritize patients, authorize spending or execute operational actions. No schema migration is required. Phase 5 verification remains pending.
+
+
+## Phase 3.38 — AI Voice Assistant
+
+AI Voice Assistant adds a privacy-preserving speech interface to the central AI platform. The required client implementation performs speech recognition and synthesis on-device; the backend accepts only a declared on-device text transcript and returns text for local playback. The backend receives no audio bytes and cannot independently attest the client's speech engine; remote browser speech services are not approved for offline mode. The dedicated voice capability is independently allow-listed, uses approved evidence and requires the local model even in hybrid mode. The initial workflow supports general medical information only: it cannot access patient records, interpret individual results, diagnose, prescribe, book appointments, send messages or execute hospital actions. Direct identifiers are rejected and audit events contain metadata only, never transcripts or spoken responses. Conversation persistence and voice-based authorization are disabled. Phase 5 verification remains pending; device/browser speech engine compatibility and accessibility validation are deferred to the test phase.
