@@ -46,3 +46,14 @@ Clinical safety, authorization, prompt injection, source grounding, medication s
 - POST /api/v1/ai/clinical-sessions
 - POST /api/v1/ai/clinical-sessions/{session_id}/reviews
 - Existing POST /api/v1/ai/requests accepts the created session ID plus the same patient and encounter references; it returns session ID, assistant sequence and response digest.
+
+
+## Clinician feedback and correction workflow
+- Each response review records a structured feedback category (`helpful`, `inaccurate`, `missing_context`, `unsafe`, `unsupported`, `needs_revision` or `other`) alongside the existing accept/reject/revise decision.
+- Detailed correction material and separately saved clinical note drafts are referenced only by private `vault://` identifiers; plaintext feedback narratives are not added to the review ledger.
+- The session owner can retrieve their review history only while the patient-bound session remains active and the original consent and care assignment still authorize access.
+- Feedback records are append-only and are governance/evaluation signals only. They do not modify production prompts, medical knowledge or model weights.
+- Migration 0054_ai_clinical_feedback adds the structured category and private correction reference to the immutable review ledger.
+
+## Additional API
+- GET /api/v1/ai/clinical-sessions/{session_id}/reviews
