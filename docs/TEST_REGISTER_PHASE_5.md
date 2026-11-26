@@ -767,5 +767,5 @@ No item is considered passed until evidence, environment, build SHA, reviewer an
 - [ ] Prompt injection: spoken transcript and retrieved text are treated as untrusted data, not system instructions; no tool permissions are available.
 - [ ] Audit: success/denial records include actor, hospital, capability, locale, outcome and citation count only; no free text or audio metadata capable of identifying a patient.
 - [ ] Usage/runtime: quota limits, model timeout, knowledge unavailable, unsafe output and offline runtime failures return safe errors without transcript leakage.
-- [ ] Client compatibility: Phase 5 device/browser checks cover microphone permission denial, no speech-recognition support, unavailable local TTS voice, interrupted capture, language switching and accessible text fallback.
+- [ ] Client compatibility: Phase 5 device/browser checks cover microphone permission denial, no on-device speech-recognition support, unavailable local TTS voice, interrupted capture, language switching and accessible text fallback; confirm no remote speech service receives microphone audio. The backend cannot attest client engine locality.
 - [ ] Clinical release boundary: capability remains unavailable for patient-specific or clinical decision workflows until separately evaluated and approved; clinical use remains disabled.
