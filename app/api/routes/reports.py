@@ -205,6 +205,8 @@ def run_report(definition_id: UUID, payload: ReportRunCreate, context: tuple = D
         raise HTTPException(status_code=403, detail={"code": "report_role_access_denied"})
     if definition.report_key == "billing_summary" and role not in _FINANCE_ROLES:
         raise HTTPException(status_code=403, detail={"code": "finance_report_access_required"})
+    if definition.report_key == "bed_occupancy" and (payload.start_at is not None or payload.end_at is not None):
+        raise HTTPException(status_code=422, detail={"code": "bed_occupancy_is_a_current_snapshot_report"})
     if definition.report_key == "compliance_overview" and role not in _COMPLIANCE_ROLES:
         raise HTTPException(status_code=403, detail={"code": "compliance_report_access_required"})
 
@@ -224,7 +226,7 @@ def run_report(definition_id: UUID, payload: ReportRunCreate, context: tuple = D
         hospital_id=hospital_id, definition_id=definition.id, requested_by_user_id=user.id,
         filters={**filters, "resolved_department_id": str(department_id) if department_id else None},
         result_summary=summary,
-        source_versions={"report_definition": definition.version, "calculation_version": "1"},
+        source_versions={"report_definition": definition.version, "calculation_version": "1", "source_modules": [definition.report_key]},
         status="completed", generated_at=now, expires_at=now + timedelta(hours=24),
     )
     db.add(run)
@@ -241,7 +243,7 @@ def list_report_runs(context: tuple = Depends(get_current_context), db: Session 
     user, hospital_id = context
     role = _role(db, user.id, hospital_id)
     query = select(ReportRun).where(ReportRun.hospital_id == hospital_id)
-    if role not in _ADMIN_ROLES | {"report_manager"}:
+    if role not in _ADMIN_ROLES:
         query = query.where(ReportRun.requested_by_user_id == user.id)
     return db.scalars(query.order_by(ReportRun.generated_at.desc()).limit(300)).all()
 
