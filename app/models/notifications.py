@@ -4,7 +4,7 @@ from typing import Any
 
 from sqlalchemy import (
     Boolean, CheckConstraint, DateTime, ForeignKey, ForeignKeyConstraint, Index,
-    Integer, JSON, String, Text, UniqueConstraint, Uuid, func,
+    Integer, JSON, String, UniqueConstraint, Uuid, func,
 )
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -495,7 +495,7 @@ class NotificationEvent(Base):
     event_type: Mapped[str] = mapped_column(String(32), nullable=False)
     event_metadata: Mapped[dict[str, Any]] = mapped_column(JSON, nullable=False, default=dict)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
-", name="ck_notification_template_locale"),
+        CheckConstraint("locale ~ '^[a-z]{2}(-[A-Z]{2})?$'", name="ck_notification_template_locale"),
         CheckConstraint("length(trim(template_code)) BETWEEN 2 AND 80", name="ck_notification_template_code"),
         CheckConstraint("length(trim(title_template)) BETWEEN 1 AND 160", name="ck_notification_template_title"),
         CheckConstraint("length(trim(body_template)) BETWEEN 1 AND 2000", name="ck_notification_template_body"),
