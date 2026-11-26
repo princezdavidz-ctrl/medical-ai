@@ -112,7 +112,8 @@ Every module milestone must include:
 | AI Diagnostic Support | Phase 3.32 | Implemented; Phase 5 verification pending | PR #76 (merged) |
 | AI Laboratory Assistant | Phase 3.33 | Implemented; Phase 5 verification pending | PR #77 and #80 (merged) |
 | AI Radiology Assistant | Phase 3.34 | Implemented; Phase 5 verification pending | PR #78 (merged) |
-| AI Pharmacy Assistant | Phase 3.35 | Implemented; Phase 5 verification pending | PR pending |
+| AI Pharmacy Assistant | Phase 3.35 | Implemented; Phase 5 verification pending | PR #81 (merged) |
+| AI Patient Assistant | Phase 3.36 | Implemented; Phase 5 verification pending | PR pending |
 
 Patient Registration & Management extends the Phase 1 patient foundation with governed duplicate review, identity/document metadata, contact and next-of-kin details, consent/lawful-basis recording, patient status and audit history. Automatic patient merging is prohibited.
 
@@ -185,3 +186,6 @@ Phase 3.35 scope: clinician/pharmacist-supervised medication safety review based
 
 
 Phase 3.35 AI Pharmacy Assistant adds patient/encounter-bound medication safety review cases tied to a verified medication order, active approved medication definition, active clinical AI session, exact MEDICATION_SAFETY assistant response digest, consent and current care assignment. The workflow snapshots order and medication identity/dose instructions, detects source changes, and requires an auditable clinician/pharmacist review using private vault references. Evidence claims must be grounded in current approved knowledge; missing allergy, concurrent-medication, renal/hepatic, pregnancy, age/weight or monitoring context is explicitly unknown. This is advisory and read-only: it cannot prescribe, change or discontinue doses/orders, approve an order, dispense medication, deduct stock or record administration. Phase 5 verification remains pending; live interaction checking and external pharmacy/e-prescribing integrations remain gated by validated evidence and Phase 4.
+
+
+Phase 3.36 AI Patient Assistant adds a patient-portal endpoint for evidence-grounded general health education and appointment preparation. It requires an active verified portal link with the explicit `ai_assistant` scope and a current granted `patient_ai_assistance` consent with AI processing enabled. It rejects direct identifiers, uses the dedicated `patient_education` capability, requires a configured local model and approved current evidence, and never accesses or summarizes the patient's chart. It cannot diagnose, interpret personal test results, prescribe, calculate doses or change treatment. No patient prompt/response text is stored in audit events. Patient-specific chart summaries, personal result interpretation, persistent conversations, booking and clinical messaging remain separately gated for later consent and integration work.

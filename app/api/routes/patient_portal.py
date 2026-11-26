@@ -27,7 +27,7 @@ from app.schemas.patient_portal import (
 
 router = APIRouter(prefix="/patient-portal", tags=["patient portal"])
 _PORTAL_STAFF = {"medical_records_officer", "hospital_admin", "hospital_director", "patient_portal_admin"}
-_ALLOWED_SCOPES = {"profile", "encounters", "lab_results", "medications", "invoices", "consents"}
+_ALLOWED_SCOPES = {"profile", "encounters", "lab_results", "medications", "invoices", "consents", "ai_assistant"}
 _SELF_VERIFICATION = {"in_person", "identity_document", "verified_email", "verified_phone"}
 _PROXY_VERIFICATION = {"guardian_document", "court_order"}
 

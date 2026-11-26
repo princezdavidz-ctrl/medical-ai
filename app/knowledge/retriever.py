@@ -14,6 +14,7 @@ CAPABILITY_CONTENT_TYPES: dict[AICapability, tuple[str, ...]] = {
     AICapability.LAB_INTERPRETATION: ("lab_catalog", "clinical_reference", "guideline"),
     AICapability.MEDICATION_SAFETY: ("clinical_reference", "guideline", "policy"),
     AICapability.RADIOLOGY_SUPPORT: ("clinical_reference", "guideline", "policy"),
+    AICapability.PATIENT_EDUCATION: ("clinical_reference", "guideline", "policy"),
 }
 
 
