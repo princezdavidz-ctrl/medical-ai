@@ -110,7 +110,8 @@ Every module milestone must include:
 | Reports & Hospital Analytics | Phase 3.30 | Implemented; Phase 5 verification pending | PR #68 (merged) |
 | AI Medical Assistant | Phase 3.31 | Implemented; Phase 5 verification pending | PRs #69, #74–#75 (merged) |
 | AI Diagnostic Support | Phase 3.32 | Implemented; Phase 5 verification pending | PR #76 (merged) |
-| AI Laboratory Assistant | Phase 3.33 | Implemented; Phase 5 verification pending | PR #77 merged; hardening PR in progress |
+| AI Laboratory Assistant | Phase 3.33 | Implemented; Phase 5 verification pending | PR #77 and PR #80 merged; Phase 5 verification pending |
+| AI Radiology Assistant | Phase 3.34 | In progress | — |
 
 Patient Registration & Management extends the Phase 1 patient foundation with governed duplicate review, identity/document metadata, contact and next-of-kin details, consent/lawful-basis recording, patient status and audit history. Automatic patient merging is prohibited.
 
@@ -177,3 +178,6 @@ Phase 3.32 implementation status: diagnostic support cases are bound to patient-
 
 
 Phase 3.33 AI Laboratory Assistant adds patient/encounter-bound interpretation review records for exact verified final laboratory results. It accepts only completed orders and specimens, binds each case to an active patient-bound AI session and the exact assistant response digest under the laboratory-interpretation capability, and snapshots the source result values, units, abnormality flags, specimen/accession and verification timestamp. Clinicians can record an auditable review decision using private vault references. The workflow is read-only: it cannot alter laboratory results, acknowledge critical results, create orders or diagnoses. Context-specific reference intervals are attached only when test concept, unit, specimen, method, age and sex context match one current governed interval unambiguously; pregnancy/population-specific intervals are withheld when those contexts are unavailable. AI response citations are retained as structured source metadata and exposed with interval provenance. Reference comparisons remain advisory and never override verified laboratory flags. Phase 5 verification is pending.
+
+
+Phase 3.34 scope: clinician-supervised review of verified, finalized radiology reports and study metadata. Each case must bind to one hospital, patient, encounter, imaging order, completed study, exact report version/digest, active care assignment, consent/purpose context and exact assistant response from the dedicated radiology capability. The module is read-only: no report edits, critical-result acknowledgement, diagnoses, orders, referrals or treatment actions. Phase 3 excludes raw DICOM/image uploads, PACS/RIS connectivity and image-model inference; those require separately governed Phase 4 integrations. All output is advisory and requires clinician review.
