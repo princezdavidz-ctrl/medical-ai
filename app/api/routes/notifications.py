@@ -330,12 +330,13 @@ def enqueue_notification(payload: NotificationEnqueue, context: tuple = Depends(
     ))
     if template is None:
         raise HTTPException(status_code=404, detail={"code": "published_notification_template_not_found"})
-    if preference := db.scalar(select(NotificationPreference).where(
+    preference = db.scalar(select(NotificationPreference).where(
         NotificationPreference.hospital_id == hospital_id,
         NotificationPreference.user_id == payload.recipient_user_id,
-    )):
-        if template.locale not in (preference.locale, "en"):
-            raise HTTPException(status_code=422, detail={"code": "notification_template_locale_mismatch"})
+    ))
+    recipient_locale = preference.locale if preference is not None else "en"
+    if template.locale not in (recipient_locale, "en"):
+        raise HTTPException(status_code=422, detail={"code": "notification_template_locale_mismatch"})
     required_placeholders = _placeholders(template.title_template, template.body_template)
     if not required_placeholders.issubset(set(template.allowed_placeholders)):
         raise HTTPException(status_code=422, detail={"code": "template_placeholder_configuration_invalid"})
