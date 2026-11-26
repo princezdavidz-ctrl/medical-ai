@@ -34,7 +34,6 @@ class NotificationPreference(Base):
     quiet_start: Mapped[str | None] = mapped_column(String(5))
     quiet_end: Mapped[str | None] = mapped_column(String(5))
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False)
-    read_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
 
 class NotificationTemplate(Base):
@@ -103,6 +102,7 @@ class NotificationIntent(Base):
     created_by_user_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id"), nullable=False)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False)
+    read_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
 
 class NotificationDeliveryAttempt(Base):
