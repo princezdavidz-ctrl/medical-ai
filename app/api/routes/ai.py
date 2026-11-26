@@ -1,4 +1,5 @@
 from datetime import datetime, timezone
+from hashlib import sha256
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Request
@@ -29,8 +30,12 @@ from app.knowledge.retriever import SQLAlchemyKnowledgeRetriever
 from app.models import (
     AIHospitalControl, AIUsageEvent, AuditEvent, HospitalMembership, Role,
     OfflineDeliveryOutbox, OfflineKnowledgeInstallation, OfflineSyncConflict, OfflineSyncEvent,
+    AISession, AISessionMessage, ClinicalAISessionContext, AIClinicalReviewRecord,
 )
 from app.schemas.ai import AIRequestCreate, AIResponseRead, AIOperationsControlUpdate
+from app.schemas.ai_clinical import (
+    AIClinicalReviewCreate, AIClinicalReviewRead, ClinicalAISessionCreate, ClinicalAISessionRead,
+)
 
 router = APIRouter(prefix="/ai", tags=["central-medical-ai"])
 
@@ -171,6 +176,24 @@ def submit_ai_request(
             "message": "Sensitive or patient-specific requests must use an authorized patient context. Declare public only for non-identifiable general questions."
         })
 
+    clinical_session_context = None
+    if payload.session_id is not None:
+        clinical_session_context = db.scalar(select(ClinicalAISessionContext).where(
+            ClinicalAISessionContext.hospital_id == hospital_id,
+            ClinicalAISessionContext.session_id == payload.session_id,
+            ClinicalAISessionContext.owner_user_id == user.id,
+            ClinicalAISessionContext.status == "active",
+        ))
+        if payload.patient_context_id is not None:
+            if (
+                clinical_session_context is None
+                or clinical_session_context.patient_id != payload.patient_context_id
+                or clinical_session_context.encounter_id != payload.encounter_id
+            ):
+                raise HTTPException(status_code=403, detail={"code": "clinical_ai_session_patient_binding_mismatch"})
+        elif clinical_session_context is not None:
+            raise HTTPException(status_code=422, detail={"code": "clinical_ai_session_requires_bound_patient_context"})
+
     session_cipher = None
     conversation_history: list[dict[str, str]] = []
     if payload.session_id is not None:
@@ -284,6 +307,15 @@ def submit_ai_request(
                 encounter_id=payload.encounter_id,
             )
             patient_context = authorized_context.patient_context
+            if clinical_session_context is not None and (
+                authorized_context.encounter_id != clinical_session_context.encounter_id
+                or authorized_context.consent_id != clinical_session_context.consent_id
+                or authorized_context.assignment_id != clinical_session_context.assignment_id
+            ):
+                raise HTTPException(status_code=403, detail={
+                    "code": "clinical_ai_session_authorization_context_changed",
+                    "message": "The session must be restarted after consent or care assignment changes."
+                })
             metadata = {
                 **metadata,
                 "patient_context_requested": True,
@@ -355,9 +387,11 @@ def submit_ai_request(
             "code": reason, "message": "The approved model runtime is unavailable. No fallback was attempted."
         }) from exc
 
+    assistant_sequence = None
+    response_digest = sha256(response.content.encode("utf-8")).hexdigest()
     if payload.session_id is not None and session_cipher is not None:
         try:
-            append_ai_session_turn(
+            updated_session = append_ai_session_turn(
                 db,
                 hospital_id=hospital_id,
                 owner_user_id=user.id,
@@ -373,8 +407,10 @@ def submit_ai_request(
                     "prompt_digest": response.prompt_digest,
                     "citation_ids": [item.citation_id for item in response.citations],
                     "requires_clinician_review": True,
+                    "response_digest": response_digest,
                 },
             )
+            assistant_sequence = updated_session.message_count
         except (AISessionUnavailable, SessionEncryptionError) as exc:
             db.rollback()
             raise HTTPException(status_code=503, detail={
@@ -419,6 +455,9 @@ def submit_ai_request(
         } for item in response.citations],
         "clinical_use_enabled": False,
         "requires_clinician_review": True,
+        "session_id": payload.session_id,
+        "assistant_sequence": assistant_sequence,
+        "response_digest": response_digest,
     }
 
 
