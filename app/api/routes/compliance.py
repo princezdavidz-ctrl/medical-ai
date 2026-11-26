@@ -404,20 +404,112 @@ def review_compliance_risk(risk_id: UUID, payload: ComplianceRiskReview, context
 def get_compliance_dashboard(context: tuple = Depends(get_current_context), db: Session = Depends(get_db)):
     user, hospital_id = context
     _require_compliance(db, user.id, hospital_id)
+    now = datetime.now(timezone.utc)
     incident_rows = db.execute(select(
         SecurityIncident.status, func.count(SecurityIncident.id),
     ).where(SecurityIncident.hospital_id == hospital_id).group_by(SecurityIncident.status)).all()
     risk_rows = db.execute(select(
         ComplianceRisk.status, func.count(ComplianceRisk.id),
     ).where(ComplianceRisk.hospital_id == hospital_id).group_by(ComplianceRisk.status)).all()
-    outstanding_policy_count = db.scalar(select(func.count(CompliancePolicy.id)).where(
+
+    active_members = db.scalar(select(func.count(HospitalMembership.id)).join(
+        User, User.id == HospitalMembership.user_id,
+    ).where(
+        HospitalMembership.hospital_id == hospital_id,
+        HospitalMembership.status == "active",
+        User.is_active.is_(True),
+    )) or 0
+    effective_policies = db.scalar(select(func.count(CompliancePolicy.id)).where(
         CompliancePolicy.hospital_id == hospital_id,
         CompliancePolicy.status == "published",
+        CompliancePolicy.effective_at <= now,
     )) or 0
+    expected_acknowledgements = active_members * effective_policies
+    completed_acknowledgements = db.scalar(select(func.count(PolicyAcknowledgement.id)).join(
+        HospitalMembership,
+        (HospitalMembership.hospital_id == PolicyAcknowledgement.hospital_id)
+        & (HospitalMembership.user_id == PolicyAcknowledgement.user_id),
+    ).join(
+        User, User.id == PolicyAcknowledgement.user_id,
+    ).join(
+        CompliancePolicy,
+        (CompliancePolicy.hospital_id == PolicyAcknowledgement.hospital_id)
+        & (CompliancePolicy.id == PolicyAcknowledgement.policy_id),
+    ).where(
+        PolicyAcknowledgement.hospital_id == hospital_id,
+        HospitalMembership.status == "active",
+        User.is_active.is_(True),
+        CompliancePolicy.status == "published",
+        CompliancePolicy.effective_at <= now,
+    )) or 0
+
+    control_assessments_pending = db.scalar(select(func.count(ControlAssessment.id)).where(
+        ControlAssessment.hospital_id == hospital_id,
+        ControlAssessment.status == "pending_review",
+    )) or 0
+    overdue_control_reviews = db.scalar(select(func.count(ControlAssessment.id)).where(
+        ControlAssessment.hospital_id == hospital_id,
+        ControlAssessment.next_review_at.is_not(None),
+        ControlAssessment.next_review_at <= now,
+        ControlAssessment.status != "pending_review",
+    )) or 0
+    open_access_campaigns = db.scalar(select(func.count(AccessReviewCampaign.id)).where(
+        AccessReviewCampaign.hospital_id == hospital_id,
+        AccessReviewCampaign.status == "open",
+    )) or 0
+    overdue_access_campaigns = db.scalar(select(func.count(AccessReviewCampaign.id)).where(
+        AccessReviewCampaign.hospital_id == hospital_id,
+        AccessReviewCampaign.status == "open",
+        AccessReviewCampaign.due_at <= now,
+    )) or 0
+    active_compliance_controls = db.scalar(select(func.count(ComplianceControl.id)).where(
+        ComplianceControl.hospital_id == hospital_id,
+        ComplianceControl.status == "active",
+    )) or 0
+    access_items_pending_review = db.scalar(select(func.count(AccessReviewItem.id)).where(
+        AccessReviewItem.hospital_id == hospital_id,
+        AccessReviewItem.review_status == "pending",
+    )) or 0
+    access_items_awaiting_approval = db.scalar(select(func.count(AccessReviewItem.id)).where(
+        AccessReviewItem.hospital_id == hospital_id,
+        AccessReviewItem.review_status == "awaiting_approval",
+    )) or 0
+    active_legal_holds = db.scalar(select(func.count(LegalHold.id)).where(
+        LegalHold.hospital_id == hospital_id,
+        LegalHold.status == "active",
+        or_(LegalHold.expires_at.is_(None), LegalHold.expires_at > now),
+    )) or 0
+    pending_dispositions = db.scalar(select(func.count(RetentionDispositionRequest.id)).where(
+        RetentionDispositionRequest.hospital_id == hospital_id,
+        RetentionDispositionRequest.status == "pending",
+    )) or 0
+    active_retention_policies = db.scalar(select(func.count(RetentionPolicy.id)).where(
+        RetentionPolicy.hospital_id == hospital_id,
+        RetentionPolicy.status == "active",
+        RetentionPolicy.effective_at <= now,
+    )) or 0
+
     return {
         "security_incidents_by_status": {state: count for state, count in incident_rows},
+        "unresolved_security_incidents": sum(count for state, count in incident_rows if state not in {"resolved", "closed"}),
         "risks_by_status": {state: count for state, count in risk_rows},
-        "published_policy_versions": outstanding_policy_count,
+        "open_risks": sum(count for state, count in risk_rows if state != "closed"),
+        "published_policy_versions": effective_policies,
+        "policy_acknowledgements": {
+            "expected": expected_acknowledgements,
+            "completed": completed_acknowledgements,
+            "outstanding": max(0, expected_acknowledgements - completed_acknowledgements),
+        },
+        "control_assessments_pending_review": control_assessments_pending,
+        "overdue_control_reviews": overdue_control_reviews,
+        "open_access_review_campaigns": open_access_campaigns,
+        "overdue_access_review_campaigns": overdue_access_campaigns,
+        "active_compliance_controls": active_compliance_controls,
+        "access_review_items_pending_review": access_items_pending_review,
+        "access_review_items_awaiting_approval": access_items_awaiting_approval,
+        "active_legal_holds": active_legal_holds,
+        "pending_retention_dispositions": pending_dispositions,
+        "active_retention_policies": active_retention_policies,
     }
 
 

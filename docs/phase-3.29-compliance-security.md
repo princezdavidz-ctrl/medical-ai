@@ -36,7 +36,7 @@ All access, confidentiality, tenant isolation, approval, immutability, evidence,
 - Append-only policy acknowledgements for active hospital members and acknowledgement reporting for compliance officers.
 - Confidential security incident reporting, role-restricted triage, same-hospital investigator assignment, containment, breach assessment and controlled closure.
 - Risk register with likelihood/impact scoring, residual risk scoring, accountable owners and independent review.
-- Hospital-scoped compliance dashboard aggregating security incident and risk states.
+- Hospital-scoped compliance dashboard aggregating security incident and risk states, overdue policy acknowledgements, pending/overdue control assessments, access review queues, active legal holds and pending retention dispositions.
 - Migration 0049_compliance_security adds five tenant-isolated tables, RLS, composite membership references and immutable policy/event/acknowledgement controls.
 
 ## API surface
@@ -92,3 +92,7 @@ Compliance control register, access review campaigns, retention schedules/legal 
 - POST /api/v1/compliance/legal-holds/{hold_id}/release
 - POST/GET /api/v1/compliance/dispositions
 - POST /api/v1/compliance/dispositions/{request_id}/review
+
+
+## Dashboard completion
+The compliance dashboard now exposes tenant-scoped counts for effective published policies and expected/completed/outstanding acknowledgements across active users; unresolved security incidents; open risks; active controls; pending and overdue control reviews; open and overdue access-review campaigns; items awaiting review/approval; unexpired legal holds; active retention policies; and pending dispositions. It returns aggregate counts only and never includes incident narratives, reporter identities or evidence references.
