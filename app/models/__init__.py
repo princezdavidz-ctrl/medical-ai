@@ -92,6 +92,7 @@ from app.models.patient_registration import (
     PatientNextOfKin,
     PatientRegistrationProfile,
 )
+from app.models.compliance import CompliancePolicy, PolicyAcknowledgement, SecurityIncident, SecurityIncidentEvent, ComplianceRisk
 from app.models.quality import (
     SafetyIncident, SafetyIncidentEvent, SafetyInvestigation, CAPAAction,
     SafetyRound, SafetyRoundFinding, QualityIndicatorDefinition, QualityIndicatorMeasurement,
@@ -244,6 +245,11 @@ __all__ = [
     "SafetyIncidentEvent",
     "SafetyInvestigation",
     "CAPAAction",
+    "CompliancePolicy",
+    "PolicyAcknowledgement",
+    "SecurityIncident",
+    "SecurityIncidentEvent",
+    "ComplianceRisk",
     "SafetyRound",
     "SafetyRoundFinding",
     "QualityIndicatorDefinition",
