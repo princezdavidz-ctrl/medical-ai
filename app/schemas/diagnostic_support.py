@@ -1,3 +1,4 @@
+from datetime import datetime
 from typing import Literal
 from uuid import UUID
 
@@ -33,9 +34,9 @@ class DiagnosticSupportCaseRead(BaseModel):
     status: str
     clinician_assessment: str | None
     closed_by_user_id: UUID | None
-    closed_at: object | None
-    created_at: object
-    updated_at: object
+    closed_at: datetime | None
+    created_at: datetime
+    updated_at: datetime
 
 
 class DiagnosticDifferentialCreate(BaseModel):
@@ -52,7 +53,7 @@ class DiagnosticTestConsiderationCreate(BaseModel):
     model_config = ConfigDict(extra="forbid")
     test_code: str = Field(min_length=2, max_length=80)
     test_name: str = Field(min_length=2, max_length=180)
-    modality: Literal["laboratory", "imaging", "procedure", "other"]
+    modality: Literal["laboratory", "imaging"]
     priority: Literal["routine", "urgent", "stat_consideration"] = "routine"
     rationale: str = Field(min_length=10, max_length=3000)
     source_sequence: int = Field(gt=0)
@@ -87,7 +88,7 @@ class DiagnosticDifferentialRead(BaseModel):
     entered_by_user_id: UUID
     reviewed_by_user_id: UUID | None
     review_note: str | None
-    reviewed_at: object | None
+    reviewed_at: datetime | None
     created_at: object
 
 
