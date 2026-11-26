@@ -53,7 +53,7 @@ All access, confidentiality, tenant isolation, approval, immutability, evidence,
 - POST /api/v1/compliance/risks/{risk_id}/review
 - GET /api/v1/compliance/dashboard
 
-Compliance control register, access review campaigns, retention schedules/legal holds and external breach reporting remain follow-on work within Phase 3.29.
+The Phase 3.29 control register, access review campaigns, retention schedules/legal holds and aggregate governance dashboard are implemented. External breach reporting, external identity-provider/SIEM connections and automated retention execution remain Phase 4 integrations.
 
 
 ## Access reviews and compliance control assessments
