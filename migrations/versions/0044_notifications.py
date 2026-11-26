@@ -72,7 +72,7 @@ def upgrade() -> None:
         sa.CheckConstraint("status IN ('draft', 'published', 'retired')", name="ck_notification_template_status"),
         sa.CheckConstraint("content_classification IN ('operational', 'administrative', 'sensitive')", name="ck_notification_template_classification"),
         sa.CheckConstraint("version >= 1", name="ck_notification_template_version"),
-        sa.CheckConstraint("locale ~ '^[a-z]{2}(-[A-Z]{2})?
+        sa.CheckConstraint("locale ~ '^[a-z]{2}(-[A-Z]{2})?$'", name="ck_notification_template_locale"),
         sa.CheckConstraint("length(trim(template_code)) BETWEEN 2 AND 80", name="ck_notification_template_code"),
         sa.CheckConstraint("length(trim(title_template)) BETWEEN 1 AND 160", name="ck_notification_template_title"),
         sa.CheckConstraint("length(trim(body_template)) BETWEEN 1 AND 2000", name="ck_notification_template_body"),
