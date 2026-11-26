@@ -102,6 +102,7 @@ from app.models.ai_clinical import ClinicalAISessionContext, AIClinicalReviewRec
 from app.models.diagnostic_support import DiagnosticSupportCase, DiagnosticDifferentialSuggestion, DiagnosticTestConsideration
 from app.models.ai_laboratory import AILaboratoryInterpretationCase
 from app.models.ai_radiology import AIRadiologyInterpretationCase
+from app.models.ai_pharmacy import AIPharmacySafetyCase
 from app.models.quality import (
     SafetyIncident, SafetyIncidentEvent, SafetyInvestigation, CAPAAction,
     SafetyRound, SafetyRoundFinding, QualityIndicatorDefinition, QualityIndicatorMeasurement,
@@ -279,6 +280,7 @@ __all__ = [
     "DiagnosticTestConsideration",
     "AIClinicalReviewRecord",
     "AIRadiologyInterpretationCase",
+    "AIPharmacySafetyCase",
     "AILaboratoryInterpretationCase",
     "NotificationPreference",
     "NotificationTemplate",
