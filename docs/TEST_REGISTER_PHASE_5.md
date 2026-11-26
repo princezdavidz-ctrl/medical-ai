@@ -485,3 +485,9 @@ No item is considered passed until evidence, environment, build SHA, reviewer an
 - [ ] Access control: staff can inspect only authorized departmental or assigned notification queues; patient users see only their own notification history.
 - [ ] Migration: 0044 follows 0043; constraints, indexes, RLS and immutable event triggers create/downgrade without affecting earlier modules.
 - [ ] Phase 4 integrations: verified patient contact points, SMS/email/push gateways, in-app delivery, appointment/telemedicine event publishers, localization and delivery webhooks.
+
+- [ ] Queue worker concurrency: parallel workers claim distinct rows using skip-locked semantics; stale processing claims are recovered without exceeding attempt limits.
+- [ ] Provider idempotency: adapters use the stable intent ID as provider idempotency key so stale-claim recovery cannot create duplicate external sends.
+- [ ] Dispatch revalidation: recipient active state, same-hospital membership or portal link, channel preference and unexpired purpose/channel-matched consent are rechecked immediately before dispatch.
+- [ ] Quiet-hour scheduling: timezone-aware quiet windows defer dispatch and handle windows crossing midnight; invalid timezone configuration safely delays rather than bypasses quiet hours.
+- [ ] Acknowledgement semantics: intent remains non-delivered until provider acknowledgement; retryable failures use bounded exponential backoff; exhausted attempts become terminal failure.
