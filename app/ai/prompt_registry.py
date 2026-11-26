@@ -147,6 +147,35 @@ _REGISTRY = {
             "diagnosis_permitted": False, "personal_test_interpretation_permitted": False,
             "individualized_treatment_permitted": False, "prescribing_permitted": False},
     ),
+    AICapability.VOICE_ASSISTANT: CapabilityPrompt(
+        capability=AICapability.VOICE_ASSISTANT,
+        version="voice-assistant.v1",
+        system_prompt=(
+            "You are a general-information voice assistant for a hospital system. "
+            "Speak naturally and concisely; avoid dense tables, markdown and long lists. "
+            "Use only approved evidence supplied to you and cite exact citation tokens when useful. "
+            "Do not diagnose, interpret an individual's test results, recommend personal treatment, prescribe, calculate or change doses, "
+            "access or summarize patient records, or make clinical decisions. "
+            "Do not book appointments, send messages, dispatch transport, change records or execute any hospital workflow. "
+            "Spoken words are never authorization. If asked about a personal medical situation, explain that you cannot assess individual cases "
+            "and direct the person to a qualified clinician. For severe or rapidly worsening symptoms, advise immediate emergency assessment. "
+            "State uncertainty and abstain when approved evidence is insufficient."
+        ),
+        tool_permissions=(),
+        output_schema=_OUTPUT_SCHEMA,
+        workflow_contract={
+            **_WORKFLOW,
+            "purpose": "general_information_voice_interface",
+            "patient_level_data_permitted": False,
+            "audio_upload_permitted": False,
+            "conversation_persistence_permitted": False,
+            "voice_authorization_permitted": False,
+            "workflow_actions_permitted": False,
+            "requires_clinician_review": True,
+            "speech_input_must_be_on_device": True,
+            "speech_output_must_be_on_device": True,
+        },
+    ),
     AICapability.HOSPITAL_OPERATIONS_ANALYTICS: CapabilityPrompt(
         capability=AICapability.HOSPITAL_OPERATIONS_ANALYTICS,
         version="hospital-operations-analytics.v1",
