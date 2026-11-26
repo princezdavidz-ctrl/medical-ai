@@ -79,3 +79,11 @@ The notification service exposes provider-neutral claim and result-recording ope
 - Each recipient receives a separately idempotent intent. Channel opt-outs are honored and counted without disclosing message content.
 - Communications dashboard metrics aggregate queue counts by state and channel without exposing notification bodies or patient identifiers.
 - Endpoints added: POST /api/v1/notifications/department-notices and GET /api/v1/notifications/dashboard.
+
+
+## Localization and quiet-hour constraint correction (Phase 3.27 continuation)
+- Notification templates now carry a validated locale and versions are unique per hospital, template code, locale and version.
+- At enqueue, the recipient preference locale is selected; a published same-channel translation is preferred, with English fallback and then the explicitly selected base template.
+- Department notices resolve the best published locale variant per recipient and preserve per-recipient idempotency and opt-out behavior.
+- Migration 0045_notification_locales adds locale support without rewriting existing templates; existing rows default to English. Downgrade is guarded and refuses to discard localized versions.
+- The quiet-hour database check expressions in migration 0044 and the ORM model are corrected to enforce valid 24-hour clock values.
