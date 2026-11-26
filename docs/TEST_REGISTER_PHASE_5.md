@@ -678,3 +678,20 @@ No item is considered passed until evidence, environment, build SHA, reviewer an
 - [ ] Evidence presentation: source response citation IDs and allow-listed citation metadata (title, publisher, version, jurisdiction, evidence grade, review dates and canonical URL) are retained and displayed; interval provenance is visible.
 - [ ] Review decision storage: maximum decision length and allowed values match the database column/check constraint; vault references are validated at both schema and database layers.
 - [ ] Duplicate result IDs: request schema rejects duplicate IDs and stored snapshots are deterministically ordered.
+
+
+## Phase 3.35 — AI Pharmacy Assistant
+
+- [ ] Create case only from same-hospital active/verified medication orders linked to the bound patient and encounter; reject cancelled, discontinued, draft or unverified orders.
+- [ ] Bind case to exact medication-order IDs, medication definition IDs, normalized active ingredients, dose/route/frequency/duration snapshot, order status and source digest.
+- [ ] Require active patient-bound clinical AI session using MEDICATION_SAFETY capability and exact assistant response sequence/digest.
+- [ ] Revalidate user, hospital membership, pharmacist/clinician role, department scope, care assignment, consent and encounter state on create/read/review.
+- [ ] Deny cross-hospital UUID substitution for patient, encounter, orders, medication definitions, session, consent, assignment and review records.
+- [ ] Use only current approved medication-safety rules and active sources; preserve source IDs, evidence grade, review dates and citation identifiers.
+- [ ] Do not infer allergy status, pregnancy, renal/hepatic function, weight, age-specific dosing factors or medication adherence when absent; expose unknown/missing context explicitly.
+- [ ] Reject duplicate medication-order IDs and create deterministic, immutable order snapshots.
+- [ ] Prevent AI case APIs from creating/editing prescriptions, changing doses, discontinuing medications, approving medication orders or recording dispensing events.
+- [ ] Ensure AI recommendations cannot bypass pharmacist review, medication-order review events or existing high-alert medication controls.
+- [ ] Require clinician/pharmacist review decision with private vault references and append-only audit history.
+- [ ] Enforce hospital RLS, composite tenant foreign keys, unique source-case constraints, immutable snapshots and safe migration downgrade.
+- [ ] Verify Phase 4 boundary: e-prescribing, pharmacy systems, dispensing, medication administration, insurer formulary and external drug databases remain disabled until approved.
