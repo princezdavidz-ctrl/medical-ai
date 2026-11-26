@@ -67,3 +67,7 @@ All authorization, RLS, consent, idempotency, concurrency, retry, privacy and li
 - Add operational metrics and staff-facing dashboard surfaces.
 
 Backend verification remains deferred to Phase 5 per project direction. External SMS/email/push delivery and appointment/telemedicine publishers remain Phase 4.
+
+
+## Queue lifecycle implementation
+The notification service exposes provider-neutral claim and result-recording operations. Claims use row-level skip-locked semantics, revalidate recipient membership/portal linkage, consent and channel preference immediately before dispatch, defer quiet-hour messages, and recover stale processing claims after a bounded lease window. Retry scheduling uses bounded exponential backoff and terminal failure at the configured attempt ceiling. The service marks an intent delivered only when the adapter reports provider acknowledgement. Phase 4 adapters must use the notification intent UUID/idempotency key as the provider-side idempotency token to make stale-claim recovery safe against duplicate sends.
