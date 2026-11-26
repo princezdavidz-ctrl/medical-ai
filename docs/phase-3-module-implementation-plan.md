@@ -167,3 +167,6 @@ Phase 3.31 session-control follow-up: clinicians can explicitly revoke their pat
 
 
 Phase 3.31 implementation status: patient-bound clinician sessions, local-only clinical request authorization, structured evidence-aware responses, response digests, clinician review, governed feedback/correction references, review-history access and explicit session revocation are implemented. AI output remains advisory and does not create diagnoses, orders, prescriptions or legal medical records. Phase 5 verification is pending; module-to-clinical-API and offline synchronization integrations remain Phase 4.
+
+
+Phase 3.32 implementation started: patient-bound diagnostic cases, evidence-bound differential suggestions, same-hospital lab/imaging test considerations, clinician review and controlled case closure are being implemented against the existing central AI session workflow. Migration 0055 follows Phase 3.31 migration 0054. Phase 5 verification remains pending.
