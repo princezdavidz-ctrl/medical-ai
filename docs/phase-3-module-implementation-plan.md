@@ -160,3 +160,6 @@ Phase 3.29 dashboard completion: the compliance dashboard has been expanded to c
 
 
 Phase 3.31 follow-up: structured clinician feedback categories, private correction references, and session-owner review-history retrieval have been added. Feedback remains an evaluation signal only and cannot update production AI behavior. Phase 5 verification remains pending.
+
+
+Phase 3.31 session-control follow-up: clinicians can explicitly revoke their patient-bound AI sessions. Revocation immediately blocks further clinical requests and review access while preserving encrypted history under the configured retention policy.
