@@ -491,3 +491,9 @@ No item is considered passed until evidence, environment, build SHA, reviewer an
 - [ ] Dispatch revalidation: recipient active state, same-hospital membership or portal link, channel preference and unexpired purpose/channel-matched consent are rechecked immediately before dispatch.
 - [ ] Quiet-hour scheduling: timezone-aware quiet windows defer dispatch and handle windows crossing midnight; invalid timezone configuration safely delays rather than bypasses quiet hours.
 - [ ] Acknowledgement semantics: intent remains non-delivered until provider acknowledgement; retryable failures use bounded exponential backoff; exhausted attempts become terminal failure.
+
+- [ ] Department notice publisher authorization: communications administrators may target any active department; department and nurse managers are restricted to their own active department.
+- [ ] Department recipient resolution: only active same-hospital memberships and active users are included; role filters are normalized and cannot expand tenant scope.
+- [ ] Department notice idempotency: repeat requests do not create duplicate intents for any recipient, including concurrent submissions.
+- [ ] Department opt-outs: recipients with disabled channel preferences are skipped; in-app default behavior is explicit and external channels require opt-in.
+- [ ] Notification dashboard: aggregate counts are hospital-scoped, expose no message body or direct patient identifiers, and are restricted to authorized communications administrators.
