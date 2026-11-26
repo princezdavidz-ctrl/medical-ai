@@ -59,6 +59,8 @@ All authorization, RLS, consent, idempotency, concurrency, retry, privacy and li
 - POST /api/v1/notifications/{intent_id}/cancel
 - GET /api/v1/notifications/my-notifications
 - GET /api/v1/notifications/inbox
+- GET /api/v1/notifications/{intent_id}/events (staff recipient or communications administrator)
+- GET /api/v1/notifications/patient/{intent_id}/events (patient portal recipient)
 
 ## Remaining within Phase 3
 - Add a bounded dispatcher/worker lifecycle with safe claim locking, retry scheduling, dead-letter handling and provider acknowledgement contract.
@@ -71,3 +73,10 @@ Backend verification remains deferred to Phase 5 per project direction. External
 
 ## Queue lifecycle implementation
 The notification service exposes provider-neutral claim and result-recording operations. Claims use row-level skip-locked semantics, revalidate recipient membership/portal linkage, consent and channel preference immediately before dispatch, defer quiet-hour messages, and recover stale processing claims after a bounded lease window. Retry scheduling uses bounded exponential backoff and terminal failure at the configured attempt ceiling. The service marks an intent delivered only when the adapter reports provider acknowledgement. Phase 4 adapters must use the notification intent UUID/idempotency key as the provider-side idempotency token to make stale-claim recovery safe against duplicate sends.
+
+
+## Additional hardening
+- Idempotency-key reuse with a different recipient, template, patient, consent or purpose is rejected with HTTP 409 rather than returning an unrelated existing intent.
+- Patient portal recipient links are checked for expiry during enqueue; worker-side revalidation remains mandatory before dispatch.
+- Staff and patient inbox payloads include the rendered title/body, while event-history endpoints expose only event type and timestamp to the recipient or an authorized communications administrator.
+- Migration 0044 is a single clean Alembic revision with paired quiet-hour validation, five hospital-RLS tables, tenant-aware foreign keys and append-only attempt/event triggers.
