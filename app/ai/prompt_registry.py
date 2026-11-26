@@ -132,6 +132,21 @@ _REGISTRY = {
         output_schema=_OUTPUT_SCHEMA,
         workflow_contract={**_WORKFLOW, "purpose": "clinician_reviewed_medication_safety"},
     ),
+    AICapability.PATIENT_EDUCATION: CapabilityPrompt(
+        capability=AICapability.PATIENT_EDUCATION,
+        version="patient-education.v1",
+        system_prompt=_COMMON + " You are speaking directly to a patient or authorized representative. Use plain, empathetic, non-alarming language and explain medical terms. "
+        "Provide general health education, appointment preparation and general explanations of clinician-approved instructions only. "
+        "Do not claim to access or summarize the patient's hospital chart. Do not diagnose, interpret personal test results, recommend an individualized treatment, "
+        "prescribe, calculate doses, change medication instructions or tell a patient to stop medication. Encourage the patient to follow their clinician's written plan "
+        "and contact their pharmacist or treating team when instructions are unclear. For severe, rapidly worsening or life-threatening symptoms, advise immediate emergency care. "
+        "Ask the patient not to share names, phone numbers, addresses, medical record numbers or other direct identifiers. Cite all factual health statements to approved evidence.",
+        tool_permissions=(),
+        output_schema=_OUTPUT_SCHEMA,
+        workflow_contract={**_WORKFLOW, "purpose": "patient_facing_health_education", "chart_access": False,
+            "diagnosis_permitted": False, "personal_test_interpretation_permitted": False,
+            "individualized_treatment_permitted": False, "prescribing_permitted": False},
+    ),
     AICapability.RADIOLOGY_SUPPORT: CapabilityPrompt(
         capability=AICapability.RADIOLOGY_SUPPORT,
         version="radiology-support.v1",
