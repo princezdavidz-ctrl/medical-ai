@@ -6,7 +6,7 @@ from string import Formatter
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
@@ -469,6 +469,29 @@ def list_notification_templates(context: tuple = Depends(get_current_context), d
     return db.scalars(select(NotificationTemplate).where(
         NotificationTemplate.hospital_id == hospital_id,
     ).order_by(NotificationTemplate.template_code, NotificationTemplate.version.desc()).limit(300)).all()
+
+
+@router.get("/dashboard")
+def get_notification_dashboard(context: tuple = Depends(get_current_context), db: Session = Depends(get_db)):
+    user, hospital_id = context
+    _require_admin(db, user.id, hospital_id)
+    status_counts = {
+        state: db.scalar(select(func.count()).select_from(NotificationIntent).where(
+            NotificationIntent.hospital_id == hospital_id,
+            NotificationIntent.status == state,
+        )) or 0
+        for state in ("queued", "processing", "retry_scheduled", "delivered", "failed", "cancelled")
+    }
+    channel_rows = db.execute(
+        select(NotificationIntent.channel, func.count())
+        .where(NotificationIntent.hospital_id == hospital_id)
+        .group_by(NotificationIntent.channel)
+    ).all()
+    return {
+        "total": sum(status_counts.values()),
+        "by_status": status_counts,
+        "by_channel": {channel: count for channel, count in channel_rows},
+    }
 
 
 @router.get("/queue", response_model=list[NotificationIntentRead])
