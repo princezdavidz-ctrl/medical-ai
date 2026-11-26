@@ -2,7 +2,7 @@ from datetime import datetime, timezone
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy import select, text
+from sqlalchemy import and_, or_, select, text
 from sqlalchemy.orm import Session
 
 from app.api.audit import write_audit_event
@@ -10,7 +10,7 @@ from app.api.deps import get_current_context
 from app.db.session import get_db
 from app.models import (
     AISession, AISessionMessage, ClinicalAISessionContext, ClinicalConcept,
-    HospitalMembership, ImagingProcedureDefinition, LaboratoryTestDefinition,
+    HospitalMembership, ImagingProcedureDefinition, LaboratoryTestDefinition, MedicalKnowledgeDocument,
 )
 from app.models.diagnostic_support import (
     DiagnosticDifferential, DiagnosticSupportCase, DiagnosticTestConsideration,
@@ -146,10 +146,15 @@ def add_diagnostic_differential(case_id: UUID, payload: DiagnosticDifferentialCr
     case = _case(db, hospital_id, user.id, case_id, lock=True)
     if case.status == "closed":
         raise HTTPException(status_code=409, detail={"code": "diagnostic_support_case_closed"})
-    concept = db.scalar(select(ClinicalConcept).where(
+    concept = db.scalar(select(ClinicalConcept).join(
+        MedicalKnowledgeDocument, MedicalKnowledgeDocument.id == ClinicalConcept.document_id,
+    ).where(
         ClinicalConcept.code == payload.concept_code,
         ClinicalConcept.concept_type.in_(("disease", "symptom", "finding")),
-    ))
+        MedicalKnowledgeDocument.status == "approved",
+        or_(MedicalKnowledgeDocument.effective_from.is_(None), MedicalKnowledgeDocument.effective_from <= datetime.now(timezone.utc)),
+        or_(MedicalKnowledgeDocument.effective_to.is_(None), MedicalKnowledgeDocument.effective_to > datetime.now(timezone.utc)),
+    ).order_by(MedicalKnowledgeDocument.effective_from.desc().nullslast()).limit(1))
     if concept is None or concept.preferred_term.casefold() != payload.display_name.casefold():
         raise HTTPException(status_code=422, detail={"code": "approved_clinical_concept_code_and_name_required"})
     session_context = _authorized_session(db, user.id, hospital_id, case.session_id)
