@@ -314,3 +314,46 @@ def update_patient_notification_preferences(payload: NotificationPreferenceUpdat
     db.execute(text("SELECT set_config('app.current_user_id', :v, true)"), {"v": str(user.id)})
     db.refresh(preference)
     return preference
+
+
+@router.get("/templates", response_model=list[NotificationTemplateRead])
+def list_notification_templates(context: tuple = Depends(get_current_context), db: Session = Depends(get_db)):
+    user, hospital_id = context
+    _require_admin(db, user.id, hospital_id)
+    return db.scalars(select(NotificationTemplate).where(
+        NotificationTemplate.hospital_id == hospital_id,
+    ).order_by(NotificationTemplate.template_code, NotificationTemplate.version.desc()).limit(300)).all()
+
+
+@router.get("/queue", response_model=list[NotificationIntentRead])
+def list_notification_queue(context: tuple = Depends(get_current_context), db: Session = Depends(get_db)):
+    user, hospital_id = context
+    _require_admin(db, user.id, hospital_id)
+    return db.scalars(select(NotificationIntent).where(
+        NotificationIntent.hospital_id == hospital_id,
+        NotificationIntent.status.in_(("queued", "processing", "retry_scheduled", "failed")),
+    ).order_by(NotificationIntent.created_at.desc()).limit(300)).all()
+
+
+@router.post("/{intent_id}/cancel", response_model=NotificationIntentRead)
+def cancel_notification(intent_id: UUID, context: tuple = Depends(get_current_context), db: Session = Depends(get_db)):
+    user, hospital_id = context
+    _require_admin(db, user.id, hospital_id)
+    intent = db.scalar(select(NotificationIntent).where(
+        NotificationIntent.hospital_id == hospital_id,
+        NotificationIntent.id == intent_id,
+    ).with_for_update())
+    if intent is None:
+        raise HTTPException(status_code=404, detail={"code": "notification_intent_not_found"})
+    if intent.status not in ("queued", "retry_scheduled"):
+        raise HTTPException(status_code=409, detail={"code": "only_queued_notifications_can_be_cancelled"})
+    intent.status = "cancelled"
+    db.add(NotificationEvent(
+        hospital_id=hospital_id, intent_id=intent.id, actor_user_id=user.id,
+        event_type="cancelled", event_metadata={"reason": "administrator_cancelled_before_dispatch"},
+    ))
+    _audit(db, hospital_id, user.id, "notifications.cancelled", "notification_intent", intent.id)
+    db.commit()
+    _restore_context(db, user.id, hospital_id)
+    db.refresh(intent)
+    return intent
