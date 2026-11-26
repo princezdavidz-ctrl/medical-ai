@@ -23,6 +23,8 @@ class AIClinicalReviewCreate(BaseModel):
     assistant_sequence: int = Field(gt=0)
     response_digest: str = Field(pattern=r"^[0-9a-f]{64}$", min_length=64, max_length=64)
     decision: Literal["accepted_for_consideration", "rejected", "needs_revision"]
+    feedback_category: Literal["helpful", "inaccurate", "missing_context", "unsafe", "unsupported", "needs_revision", "other"]
+    correction_reference: str | None = Field(default=None, pattern=r"^vault://[0-9a-fA-F-]{36}$", min_length=44, max_length=44)
     note_reference: str | None = Field(default=None, pattern=r"^vault://[0-9a-fA-F-]{36}$", min_length=44, max_length=44)
 
 
@@ -37,6 +39,8 @@ class AIClinicalReviewRead(BaseModel):
     assistant_sequence: int
     response_digest: str
     decision: str
+    feedback_category: str | None
+    correction_reference: str | None
     reviewed_by_user_id: UUID
     note_reference: str | None
     reviewed_at: datetime
