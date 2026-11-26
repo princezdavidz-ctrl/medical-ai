@@ -104,6 +104,7 @@ Every module milestone must include:
 | Staff Management & Scheduling | Phase 3.24 | Implemented; Phase 5 verification pending | PR #56 (merged) |
 | Medical Records & Health Information | Phase 3.25 | Implemented; Phase 5 verification pending | PR #57 (merged) |
 | Telemedicine & Remote Care | Phase 3.26 | Implemented; Phase 5 verification pending | PR #58 (merged) |
+| Communication & Notifications | Phase 3.27 | In progress | — |
 
 Patient Registration & Management extends the Phase 1 patient foundation with governed duplicate review, identity/document metadata, contact and next-of-kin details, consent/lawful-basis recording, patient status and audit history. Automatic patient merging is prohibited.
 
@@ -143,3 +144,6 @@ Phase 3.25 introduces a hospital-scoped longitudinal document index using encryp
 
 
 Phase 3.26 adds telemedicine scheduling and session lifecycle, active verified provider and roster validation, purpose-specific telemedicine consent, patient identity/privacy/emergency readiness checks, care-team-gated session start, encounter creation, immutable signed consultation notes, and safe cancellation/no-show/closure. Live video transport, patient self-service booking, secure vault operations, notifications and department order integrations are Phase 4 work. Phase 5 verification is pending.
+
+
+Phase 3.27 scope: hospital-scoped communication preferences and consent-aware notification intents; role- and department-scoped recipient resolution; template/version governance; queued delivery with idempotency, retry scheduling and terminal failure states; provider-neutral delivery attempts and immutable event history. Notifications must contain minimum-necessary content, avoid clinical details and direct identifiers by default, respect quiet hours and channel opt-outs, and never claim delivery until a provider acknowledgement is recorded. SMS, email, push and in-app provider execution, patient contact verification, appointment integrations and external messaging credentials are Phase 4 integrations. No clinical urgency routing or emergency dispatch is introduced by this module.
