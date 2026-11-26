@@ -110,7 +110,9 @@ Every module milestone must include:
 | Reports & Hospital Analytics | Phase 3.30 | Implemented; Phase 5 verification pending | PR #68 (merged) |
 | AI Medical Assistant | Phase 3.31 | Implemented; Phase 5 verification pending | PRs #69, #74–#75 (merged) |
 | AI Diagnostic Support | Phase 3.32 | Implemented; Phase 5 verification pending | PR #76 (merged) |
-| AI Laboratory Assistant | Phase 3.33 | Implemented; Phase 5 verification pending | PR #77 merged; hardening PR in progress |
+| AI Laboratory Assistant | Phase 3.33 | Implemented; Phase 5 verification pending | PR #77 and #80 (merged) |
+| AI Radiology Assistant | Phase 3.34 | Implemented; Phase 5 verification pending | PR #78 (merged) |
+| AI Pharmacy Assistant | Phase 3.35 | Implemented; Phase 5 verification pending | PR pending |
 
 Patient Registration & Management extends the Phase 1 patient foundation with governed duplicate review, identity/document metadata, contact and next-of-kin details, consent/lawful-basis recording, patient status and audit history. Automatic patient merging is prohibited.
 
@@ -177,3 +179,9 @@ Phase 3.32 implementation status: diagnostic support cases are bound to patient-
 
 
 Phase 3.33 AI Laboratory Assistant adds patient/encounter-bound interpretation review records for exact verified final laboratory results. It accepts only completed orders and specimens, binds each case to an active patient-bound AI session and the exact assistant response digest under the laboratory-interpretation capability, and snapshots the source result values, units, abnormality flags, specimen/accession and verification timestamp. Clinicians can record an auditable review decision using private vault references. The workflow is read-only: it cannot alter laboratory results, acknowledge critical results, create orders or diagnoses. Context-specific reference intervals are attached only when test concept, unit, specimen, method, age and sex context match one current governed interval unambiguously; pregnancy/population-specific intervals are withheld when those contexts are unavailable. AI response citations are retained as structured source metadata and exposed with interval provenance. Reference comparisons remain advisory and never override verified laboratory flags. Phase 5 verification is pending.
+
+
+Phase 3.35 scope: clinician/pharmacist-supervised medication safety review based only on verified medication orders and governed medication-safety evidence. Cases bind to the exact patient, encounter, medication-order set, active care assignment, consent/purpose context and exact assistant response from the MEDICATION_SAFETY capability. The workflow is read-only and cannot prescribe, change doses, discontinue medication, approve orders, dispense medication or bypass pharmacist/clinician review. Drug-interaction, allergy and contraindication claims must be traceable to current approved evidence; unavailable patient factors must be stated as unknown rather than assumed. External pharmacy, e-prescribing, dispensing and claims integrations remain Phase 4.
+
+
+Phase 3.35 AI Pharmacy Assistant adds patient/encounter-bound medication safety review cases tied to a verified medication order, active approved medication definition, active clinical AI session, exact MEDICATION_SAFETY assistant response digest, consent and current care assignment. The workflow snapshots order and medication identity/dose instructions, detects source changes, and requires an auditable clinician/pharmacist review using private vault references. Evidence claims must be grounded in current approved knowledge; missing allergy, concurrent-medication, renal/hepatic, pregnancy, age/weight or monitoring context is explicitly unknown. This is advisory and read-only: it cannot prescribe, change or discontinue doses/orders, approve an order, dispense medication, deduct stock or record administration. Phase 5 verification remains pending; live interaction checking and external pharmacy/e-prescribing integrations remain gated by validated evidence and Phase 4.
