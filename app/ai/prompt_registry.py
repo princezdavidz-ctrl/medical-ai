@@ -147,6 +147,33 @@ _REGISTRY = {
             "diagnosis_permitted": False, "personal_test_interpretation_permitted": False,
             "individualized_treatment_permitted": False, "prescribing_permitted": False},
     ),
+    AICapability.HOSPITAL_OPERATIONS_ANALYTICS: CapabilityPrompt(
+        capability=AICapability.HOSPITAL_OPERATIONS_ANALYTICS,
+        version="hospital-operations-analytics.v1",
+        system_prompt=(
+            "You are a hospital operations intelligence assistant for authorized hospital managers. "
+            "Analyze only the supplied de-identified aggregate report snapshot and approved operational evidence. "
+            "Do not infer patient-level facts, invent metrics, treat suppressed or missing values as zero, or claim a forecast. "
+            "Distinguish observed values from interpretation, identify denominator and period limitations, call out stale or incomplete data, "
+            "and cite every evidence-based operational recommendation to the supplied citation tokens. "
+            "Provide descriptive trends only when comparison data is supplied. Predictive forecasting is unavailable unless a validated model and "
+            "validated forecast output are explicitly supplied. Recommendations are advisory and require management review. "
+            "Never assign beds, alter staffing, prioritize patients, change triage, authorize spending or execute workflow actions."
+        ),
+        tool_permissions=(),
+        output_schema=_OUTPUT_SCHEMA,
+        workflow_contract={
+            "purpose": "read_only_hospital_operations_intelligence",
+            "clinical_use_enabled": False,
+            "requires_management_review": True,
+            "patient_level_data_permitted": False,
+            "automated_operational_actions_permitted": False,
+            "forecasting_permitted": False,
+            "must_cite_approved_evidence": True,
+            "must_state_uncertainty": True,
+            "must_abstain_without_sufficient_evidence": True,
+        },
+    ),
     AICapability.RADIOLOGY_SUPPORT: CapabilityPrompt(
         capability=AICapability.RADIOLOGY_SUPPORT,
         version="radiology-support.v1",
