@@ -695,3 +695,19 @@ No item is considered passed until evidence, environment, build SHA, reviewer an
 - [ ] Require clinician/pharmacist review decision with private vault references and append-only audit history.
 - [ ] Enforce hospital RLS, composite tenant foreign keys, unique source-case constraints, immutable snapshots and safe migration downgrade.
 - [ ] Verify Phase 4 boundary: e-prescribing, pharmacy systems, dispensing, medication administration, insurer formulary and external drug databases remain disabled until approved.
+
+
+## Phase 3.35 — AI Pharmacy Assistant
+
+- [ ] Case creation requires active patient-bound clinical AI session, unexpired session, current purpose-bound consent and current care assignment.
+- [ ] Source binding: exact assistant sequence, SHA-256 response digest, session owner and MEDICATION_SAFETY capability must match the stored assistant message.
+- [ ] Order eligibility: medication order must belong to the exact bound patient and encounter, be same-hospital and not cancelled; medication definition must be approved/active.
+- [ ] Snapshot integrity: medication identity, active ingredient, strength, dosage form, prescribed dose text, route, frequency, duration, quantity, refills, indication and instructions match the immutable case snapshot.
+- [ ] Stale detection: changes to source order or medication catalog invalidate subsequent case reads/reviews and mark the case stale.
+- [ ] Evidence grounding: safety assertions must be traceable to current approved evidence attached to the source response; no unsupported interaction, allergy, contraindication, renal/hepatic, pregnancy or monitoring claims.
+- [ ] Missing context: absent allergy history, concurrent medication list, renal/hepatic function, pregnancy status, age/weight or monitoring data must be represented as unknown, never inferred as negative.
+- [ ] Review authorization: only case owner with active session and revalidated consent/care assignment may record one review; vault references and audit event are mandatory.
+- [ ] No prescribing side effects: create/read/review endpoints cannot create, modify, discontinue, approve or dispense medication orders, alter dose, deduct stock or record administration.
+- [ ] Tenant isolation: RLS and composite references prevent cross-hospital session, patient, encounter, consent, order and reviewer access.
+- [ ] Migration 0058: AI pharmacy safety case constraints, index, RLS policy and downgrade behavior are verified.
+- [ ] Offline/degraded mode: capability remains local-only for patient context; no hosted fallback or patient-data transfer when local runtime is unavailable.
