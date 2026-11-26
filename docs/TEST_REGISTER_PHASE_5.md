@@ -606,3 +606,6 @@ No item is considered passed until evidence, environment, build SHA, reviewer an
 - [ ] Audit: session creation and review decisions are audited without prompt text, response content or direct identifiers.
 - [ ] Offline/degraded behavior: no silent hosted fallback; runtime unavailability yields explicit safe failure and no patient data transfer.
 - [ ] Migration 0053: patient-bound session and review tables enforce RLS and composite patient/encounter/consent/session ownership.
+
+- [ ] Clinical response structure gate: clinical decision support output missing any required section is withheld and usage outcome is recorded as withheld.
+- [ ] Clinical response digest: SHA-256 digest matches the exact encrypted assistant message and cannot be replayed against another sequence/session.
