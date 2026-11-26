@@ -52,6 +52,7 @@ class AILaboratoryInterpretationCase(Base):
             name="ck_ai_lab_case_snapshot",
         ),
         CheckConstraint("json_typeof(evidence_citation_ids) = 'array'", name="ck_ai_lab_case_citations"),
+        CheckConstraint("json_typeof(evidence_citations) = 'array'", name="ck_ai_lab_case_citation_details"),
         CheckConstraint("status IN ('pending_review', 'reviewed')", name="ck_ai_lab_case_status"),
         CheckConstraint(
             "review_reference IS NULL OR review_reference ~ '^vault://[0-9a-fA-F-]{36}$'",
@@ -87,6 +88,7 @@ class AILaboratoryInterpretationCase(Base):
     laboratory_result_ids: Mapped[list[str]] = mapped_column(JSON, nullable=False)
     result_snapshot: Mapped[list[dict[str, Any]]] = mapped_column(JSON, nullable=False)
     evidence_citation_ids: Mapped[list[str]] = mapped_column(JSON, nullable=False, default=list)
+    evidence_citations: Mapped[list[dict[str, Any]]] = mapped_column(JSON, nullable=False, default=list)
     status: Mapped[str] = mapped_column(String(24), nullable=False, default="pending_review")
     review_decision: Mapped[str | None] = mapped_column(String(40))
     review_note_reference: Mapped[str | None] = mapped_column(String(80))
