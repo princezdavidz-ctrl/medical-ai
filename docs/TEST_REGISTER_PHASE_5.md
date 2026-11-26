@@ -678,3 +678,19 @@ No item is considered passed until evidence, environment, build SHA, reviewer an
 - [ ] Evidence presentation: source response citation IDs and allow-listed citation metadata (title, publisher, version, jurisdiction, evidence grade, review dates and canonical URL) are retained and displayed; interval provenance is visible.
 - [ ] Review decision storage: maximum decision length and allowed values match the database column/check constraint; vault references are validated at both schema and database layers.
 - [ ] Duplicate result IDs: request schema rejects duplicate IDs and stored snapshots are deterministically ordered.
+
+
+## Phase 3.34 — AI Radiology Assistant
+
+- [ ] Create case only from a same-hospital finalized and verified imaging report linked to a completed study and valid imaging order; reject preliminary, cancelled, amended/superseded or unverified reports.
+- [ ] Bind case to exact report version/digest, study/order identifiers, patient/encounter and immutable source snapshot; later report amendment invalidates or marks prior interpretation stale.
+- [ ] Require active patient-bound clinical AI session using the dedicated radiology interpretation capability and exact assistant response sequence/digest.
+- [ ] Revalidate active user, hospital membership, clinician role, department scope, care-team assignment, consent and encounter state on create/read/review.
+- [ ] Deny cross-hospital UUID substitution for patient, encounter, order, study, report, session, consent, assignment and review records.
+- [ ] Reject raw DICOM/image blobs, PACS URLs and external image references in Phase 3 APIs; no image-model inference is performed.
+- [ ] Preserve report text and metadata as read-only snapshots; no endpoint mutates source reports, studies, orders or critical-result acknowledgement records.
+- [ ] Require clinician review decision and private vault references; enforce reviewer identity, timestamps, valid transitions and audit history.
+- [ ] Ensure AI radiology interpretation cannot create diagnoses, orders, prescriptions, referrals, critical acknowledgements or clinical record entries.
+- [ ] Audit access/review without copying report text, patient identifiers, prompts or model output into generic audit metadata.
+- [ ] Enforce hospital RLS, composite tenant foreign keys, unique source-case constraints, immutable review history and safe migration downgrade.
+- [ ] Verify Phase 4 boundary: PACS/RIS, DICOMweb, image-model inference, report publication and external integrations remain disabled until separately approved.
