@@ -14,7 +14,7 @@ from app.db.base import Base
 class NotificationPreference(Base):
     __tablename__ = "notification_preferences"
     __table_args__ = (
-        ForeignKeyConstraint(["hospital_id", "user_id"], ["hospital_memberships.hospital_id", "hospital_memberships.user_id"], name="fk_notification_preference_membership"),
+        ForeignKeyConstraint(["user_id"], ["users.id"], name="fk_notification_preference_user"),
         UniqueConstraint("hospital_id", "user_id", name="uq_notification_preference_hospital_user"),
         CheckConstraint("locale ~ '^[a-z]{2}(-[A-Z]{2})?$'", name="ck_notification_preference_locale"),
         CheckConstraint("timezone_name <> ''", name="ck_notification_preference_timezone"),
