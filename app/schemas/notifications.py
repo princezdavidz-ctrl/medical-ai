@@ -76,6 +76,8 @@ class NotificationIntentRead(BaseModel):
     patient_id: UUID | None
     channel: str
     purpose: str
+    rendered_title: str
+    rendered_body: str
     status: str
     attempt_count: int
     max_attempts: int
