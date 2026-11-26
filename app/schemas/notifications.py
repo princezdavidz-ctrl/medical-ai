@@ -68,6 +68,16 @@ class NotificationEnqueue(BaseModel):
     variables: dict[str, str] = Field(default_factory=dict, max_length=20)
 
 
+class NotificationDepartmentEnqueue(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    template_id: UUID
+    department_id: UUID
+    role_id: UUID | None = None
+    purpose: str = Field(min_length=3, max_length=120)
+    idempotency_key: str = Field(min_length=8, max_length=80)
+    variables: dict[str, str] = Field(default_factory=dict, max_length=20)
+
+
 class NotificationIntentRead(BaseModel):
     model_config = ConfigDict(from_attributes=True)
     id: UUID
