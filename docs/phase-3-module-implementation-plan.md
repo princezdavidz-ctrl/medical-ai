@@ -109,6 +109,7 @@ Every module milestone must include:
 | Compliance & Security Management | Phase 3.29 | Implemented; Phase 5 verification pending | PRs #65–#67 (merged) |
 | Reports & Hospital Analytics | Phase 3.30 | Implemented; Phase 5 verification pending | PR #68 (merged) |
 | AI Medical Assistant | Phase 3.31 | Implemented; Phase 5 verification pending | PRs #69, #74–#75 (merged) |
+| AI Diagnostic Support | Phase 3.32 | In progress | — |
 
 Patient Registration & Management extends the Phase 1 patient foundation with governed duplicate review, identity/document metadata, contact and next-of-kin details, consent/lawful-basis recording, patient status and audit history. Automatic patient merging is prohibited.
 
@@ -166,3 +167,6 @@ Phase 3.31 session-control follow-up: clinicians can explicitly revoke their pat
 
 
 Phase 3.31 implementation status: patient-bound clinician sessions, local-only clinical request authorization, structured evidence-aware responses, response digests, clinician review, governed feedback/correction references, review-history access and explicit session revocation are implemented. AI output remains advisory and does not create diagnoses, orders, prescriptions or legal medical records. Phase 5 verification is pending; module-to-clinical-API and offline synchronization integrations remain Phase 4.
+
+
+Phase 3.32 implementation started: patient-bound diagnostic cases, evidence-bound differential suggestions, same-hospital lab/imaging test considerations, clinician review and controlled case closure are being implemented against the existing central AI session workflow. Migration 0055 follows Phase 3.31 migration 0054. Phase 5 verification remains pending.
