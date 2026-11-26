@@ -76,6 +76,7 @@ from app.models.hospital_admin import HospitalAdminProfile, HospitalOperationalS
 from app.models.patient_records import PatientRecordDocument, PatientRecordReleaseRequest, PatientRecordAmendmentRequest, PatientRecordEvent
 from app.models.patient_portal import PatientPortalLink, PatientPortalAccessEvent
 from app.models.telemedicine import TelemedicineSession, TelemedicineClinicalNote, TelemedicineEvent
+from app.models.notifications import NotificationPreference, NotificationTemplate, NotificationIntent, NotificationDeliveryAttempt, NotificationEvent
 from app.models.staff_portal import ClinicalStaffProfile, PatientCareTeamAssignment, StaffWorkQueueTask, StaffPortalEvent
 from app.models.staff_scheduling import StaffShiftTemplate, StaffShiftAssignment, StaffShiftSwapRequest, StaffShiftAttendance, StaffScheduleEvent
 from app.models.nursing import (
@@ -235,4 +236,9 @@ __all__ = [
     "TelemedicineSession",
     "TelemedicineClinicalNote",
     "TelemedicineEvent",
+    "NotificationPreference",
+    "NotificationTemplate",
+    "NotificationIntent",
+    "NotificationDeliveryAttempt",
+    "NotificationEvent",
 ]
