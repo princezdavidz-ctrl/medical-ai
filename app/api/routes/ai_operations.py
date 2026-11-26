@@ -55,12 +55,23 @@ def generate_operations_insight(
     capability = AICapability.HOSPITAL_OPERATIONS_ANALYTICS
     metadata = {"capability": capability.value, "report_run_id": str(payload.report_run_id)}
 
+    if capability.value not in settings.ai_enabled_capabilities:
+        raise HTTPException(status_code=403, detail={"code": "capability_not_approved"})
     if not settings.ai_requests_enabled:
+        _audit(db, user_id=user.id, hospital_id=hospital_id,
+               action="ai.operations.request.blocked", outcome="denied",
+               reason="ai_requests_disabled_by_safety_gate", metadata=metadata)
         raise HTTPException(status_code=503, detail={"code": "ai_requests_disabled_by_safety_gate"})
     control = db.get(AIHospitalControl, hospital_id)
     if control is not None and control.ai_paused:
+        _audit(db, user_id=user.id, hospital_id=hospital_id,
+               action="ai.operations.request.blocked", outcome="denied",
+               reason="hospital_ai_execution_paused", metadata=metadata)
         raise HTTPException(status_code=503, detail={"code": "hospital_ai_execution_paused"})
     if contains_obvious_personal_identifiers(payload.question):
+        _audit(db, user_id=user.id, hospital_id=hospital_id,
+               action="ai.operations.request.blocked", outcome="denied",
+               reason="direct_identifiers_not_allowed", metadata=metadata)
         raise HTTPException(status_code=422, detail={"code": "direct_identifiers_not_allowed"})
 
     run = db.scalar(select(ReportRun).where(
