@@ -2,7 +2,7 @@ from datetime import datetime, timezone
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy import select, text
+from sqlalchemy import func, select, text
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
@@ -416,3 +416,37 @@ def list_incident_capa(incident_id: UUID, context: tuple = Depends(get_current_c
         CAPAAction.hospital_id == hospital_id,
         CAPAAction.incident_id == incident_id,
     ).order_by(CAPAAction.due_at)).all()
+
+
+@router.get("/dashboard")
+def get_quality_dashboard(context: tuple = Depends(get_current_context), db: Session = Depends(get_db)):
+    user, hospital_id = context
+    role = _role(db, user.id, hospital_id)
+    if role not in _SAFETY_ROLES and role not in _DEPARTMENT_ROLES:
+        raise HTTPException(status_code=403, detail={"code": "quality_dashboard_role_required"})
+    status_query = select(
+        SafetyIncident.status, func.count(SafetyIncident.id),
+    ).where(SafetyIncident.hospital_id == hospital_id)
+    severity_query = select(
+        SafetyIncident.severity, func.count(SafetyIncident.id),
+    ).where(SafetyIncident.hospital_id == hospital_id)
+    if role in _DEPARTMENT_ROLES:
+        department_id = _department_scope(db, user.id, hospital_id, role)
+        status_query = status_query.where(SafetyIncident.department_id == department_id)
+        severity_query = severity_query.where(SafetyIncident.department_id == department_id)
+    status_rows = db.execute(status_query.group_by(SafetyIncident.status)).all()
+    severity_rows = db.execute(severity_query.group_by(SafetyIncident.severity)).all()
+    return {
+        "by_status": {state: count for state, count in status_rows},
+        "by_severity": {severity: count for severity, count in severity_rows},
+    }
+
+
+@router.get("/my-capa", response_model=list[CAPARead])
+def list_my_capa_actions(context: tuple = Depends(get_current_context), db: Session = Depends(get_db)):
+    user, hospital_id = context
+    return db.scalars(select(CAPAAction).where(
+        CAPAAction.hospital_id == hospital_id,
+        CAPAAction.owner_user_id == user.id,
+        CAPAAction.status.in_(("open", "in_progress", "pending_effectiveness_review")),
+    ).order_by(CAPAAction.due_at).limit(200)).all()
