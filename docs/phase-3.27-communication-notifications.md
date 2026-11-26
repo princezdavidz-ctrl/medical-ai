@@ -55,7 +55,9 @@ All authorization, RLS, consent, idempotency, concurrency, retry, privacy and li
 - GET /api/v1/notifications/templates
 - POST /api/v1/notifications/templates/{template_id}/publish
 - POST /api/v1/notifications/enqueue
+- POST /api/v1/notifications/enqueue-department (optional role filter; locale-aware template selection)
 - GET /api/v1/notifications/queue
+- GET /api/v1/notifications/dashboard
 - POST /api/v1/notifications/{intent_id}/cancel
 - GET /api/v1/notifications/my-notifications
 - GET /api/v1/notifications/inbox
@@ -63,10 +65,7 @@ All authorization, RLS, consent, idempotency, concurrency, retry, privacy and li
 - GET /api/v1/notifications/patient/{intent_id}/events (patient portal recipient)
 
 ## Remaining within Phase 3
-- Add a bounded dispatcher/worker lifecycle with safe claim locking, retry scheduling, dead-letter handling and provider acknowledgement contract.
-- Add department-scoped notice publishing and granular recipient audience resolution.
-- Add localized template rendering and timezone-aware quiet-hour scheduling.
-- Add operational metrics and staff-facing dashboard surfaces.
+- Integrate the provider-neutral claim/result service with a scheduled worker runner when Phase 4 delivery adapters are introduced.
 
 Backend verification remains deferred to Phase 5 per project direction. External SMS/email/push delivery and appointment/telemedicine publishers remain Phase 4.
 
@@ -80,3 +79,10 @@ The notification service exposes provider-neutral claim and result-recording ope
 - Patient portal recipient links are checked for expiry during enqueue; worker-side revalidation remains mandatory before dispatch.
 - Staff and patient inbox payloads include the rendered title/body, while event-history endpoints expose only event type and timestamp to the recipient or an authorized communications administrator.
 - Migration 0044 is a single clean Alembic revision with paired quiet-hour validation, five hospital-RLS tables, tenant-aware foreign keys and append-only attempt/event triggers.
+
+
+## Department, locale and dashboard implementation
+- Communications administrators can fan out a published template to active members of one department, optionally restricted to a hospital role. Recipients are selected from active same-hospital memberships and active user accounts; disabled channels are skipped.
+- Fan-out uses a stable per-recipient idempotency digest so retrying a department send does not create duplicate logical notifications.
+- Templates are versioned independently by locale. Department fan-out selects the newest published template matching each recipient's locale and falls back to the selected base template when a localized variant is unavailable or incompatible.
+- The communications dashboard returns hospital-scoped aggregate counts by lifecycle state and channel; it does not expose message bodies or recipient identities.
