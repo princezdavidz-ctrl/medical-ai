@@ -5,19 +5,21 @@ from string import Formatter
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.api.audit import write_audit_event
 from app.api.deps import get_current_context, get_current_patient_context
 from app.db.session import get_db
-from app.models import HospitalMembership, PatientConsent, Role
+from app.models import Department, HospitalMembership, PatientConsent, Role, User
 from app.models.notifications import NotificationEvent, NotificationIntent, NotificationPreference, NotificationTemplate
 from app.models.patient_portal import PatientPortalLink
+from app.models.hr import EmployeeProfile
 from app.schemas.notifications import (
     NotificationEnqueue, NotificationIntentRead, NotificationPreferenceUpdate,
     NotificationTemplateCreate, NotificationTemplatePublish, NotificationTemplateRead,
+    DepartmentNoticeCreate, DepartmentNoticeResult,
 )
 
 router = APIRouter(prefix="/notifications", tags=["communication and notifications"])
@@ -359,3 +361,139 @@ def cancel_notification(intent_id: UUID, context: tuple = Depends(get_current_co
     _restore_context(db, user.id, hospital_id)
     db.refresh(intent)
     return intent
+
+
+@router.post("/department-notices", response_model=DepartmentNoticeResult, status_code=status.HTTP_202_ACCEPTED)
+def create_department_notice(payload: DepartmentNoticeCreate, context: tuple = Depends(get_current_context), db: Session = Depends(get_db)):
+    user, hospital_id = context
+    role = _role(db, user.id, hospital_id)
+    manager_department_id = None
+    if role in _ADMIN_ROLES:
+        pass
+    elif role in {"department_head", "nurse_manager"}:
+        employee = db.scalar(select(EmployeeProfile).where(
+            EmployeeProfile.hospital_id == hospital_id,
+            EmployeeProfile.user_id == user.id,
+            EmployeeProfile.employment_status == "active",
+        ))
+        if employee is None or employee.department_id is None:
+            raise HTTPException(status_code=403, detail={"code": "active_department_manager_profile_required"})
+        manager_department_id = employee.department_id
+        if payload.department_id != manager_department_id:
+            raise HTTPException(status_code=403, detail={"code": "department_notice_scope_denied"})
+    else:
+        raise HTTPException(status_code=403, detail={"code": "department_notice_publisher_role_required"})
+
+    department = db.scalar(select(Department).where(
+        Department.hospital_id == hospital_id,
+        Department.id == payload.department_id,
+        Department.status == "active",
+    ))
+    if department is None:
+        raise HTTPException(status_code=404, detail={"code": "active_department_not_found"})
+    template = db.scalar(select(NotificationTemplate).where(
+        NotificationTemplate.hospital_id == hospital_id,
+        NotificationTemplate.id == payload.template_id,
+        NotificationTemplate.status == "published",
+    ))
+    if template is None:
+        raise HTTPException(status_code=404, detail={"code": "published_notification_template_not_found"})
+    required = _placeholders(template.title_template, template.body_template)
+    if not required.issubset(set(template.allowed_placeholders)) or set(payload.variables) != required:
+        raise HTTPException(status_code=422, detail={"code": "notification_variables_must_match_template"})
+    try:
+        title = template.title_template.format_map(payload.variables)
+        body = template.body_template.format_map(payload.variables)
+    except (KeyError, ValueError):
+        raise HTTPException(status_code=422, detail={"code": "notification_template_render_failed"}) from None
+
+    query = select(HospitalMembership.user_id, Role.name).join(
+        Role, Role.id == HospitalMembership.role_id,
+    ).join(User, User.id == HospitalMembership.user_id).where(
+        HospitalMembership.hospital_id == hospital_id,
+        HospitalMembership.department_id == payload.department_id,
+        HospitalMembership.status == "active",
+        User.is_active.is_(True),
+    )
+    if payload.role_names:
+        requested_roles = {name.strip().casefold().replace(" ", "_") for name in payload.role_names}
+        query = query.where(func.lower(func.replace(Role.name, " ", "_")).in_(requested_roles))
+    recipients = db.execute(query).all()
+    if not recipients:
+        raise HTTPException(status_code=409, detail={"code": "department_has_no_active_recipients"})
+
+    queued_ids = []
+    skipped = 0
+    idempotency_keys = []
+    for recipient_user_id, _role_name in recipients:
+        key = f"{payload.idempotency_key}:{recipient_user_id}"
+        idempotency_keys.append(key)
+        existing = db.scalar(select(NotificationIntent.id).where(
+            NotificationIntent.hospital_id == hospital_id,
+            NotificationIntent.idempotency_key == key,
+        ))
+        if existing is not None:
+            queued_ids.append(existing)
+            continue
+        preference = db.scalar(select(NotificationPreference).where(
+            NotificationPreference.hospital_id == hospital_id,
+            NotificationPreference.user_id == recipient_user_id,
+        ))
+        channel_field = _CHANNEL_PREF[template.channel]
+        enabled = (template.channel == "in_app" and preference is None) or (
+            preference is not None and getattr(preference, channel_field)
+        )
+        if not enabled:
+            skipped += 1
+            continue
+        intent = NotificationIntent(
+            hospital_id=hospital_id, recipient_user_id=recipient_user_id,
+            template_id=template.id, channel=template.channel, purpose=payload.purpose,
+            idempotency_key=key, rendered_title=title, rendered_body=body,
+            created_by_user_id=user.id,
+        )
+        db.add(intent)
+        db.flush()
+        db.add(NotificationEvent(
+            hospital_id=hospital_id, intent_id=intent.id, actor_user_id=user.id,
+            event_type="enqueued", event_metadata={"channel": template.channel, "audience": "department"},
+        ))
+        queued_ids.append(intent.id)
+    try:
+        _audit(db, hospital_id, user.id, "notifications.department_notice_created", "department", department.id)
+        db.commit()
+    except IntegrityError:
+        db.rollback()
+        _restore_context(db, user.id, hospital_id)
+        existing_ids = db.scalars(select(NotificationIntent.id).where(
+            NotificationIntent.hospital_id == hospital_id,
+            NotificationIntent.idempotency_key.in_(idempotency_keys),
+        )).all()
+        if existing_ids:
+            return DepartmentNoticeResult(
+                department_id=department.id, recipients_queued=len(existing_ids),
+                skipped_channel_opt_out=skipped, notification_ids=existing_ids,
+            )
+        raise HTTPException(status_code=409, detail={"code": "department_notice_enqueue_conflict"}) from None
+    _restore_context(db, user.id, hospital_id)
+    return DepartmentNoticeResult(
+        department_id=department.id, recipients_queued=len(queued_ids),
+        skipped_channel_opt_out=skipped, notification_ids=queued_ids,
+    )
+
+
+@router.get("/dashboard")
+def get_notification_dashboard(context: tuple = Depends(get_current_context), db: Session = Depends(get_db)):
+    user, hospital_id = context
+    _require_admin(db, user.id, hospital_id)
+    status_rows = db.execute(select(
+        NotificationIntent.status, func.count(NotificationIntent.id),
+    ).where(NotificationIntent.hospital_id == hospital_id).group_by(NotificationIntent.status)).all()
+    channel_rows = db.execute(select(
+        NotificationIntent.channel, func.count(NotificationIntent.id),
+    ).where(NotificationIntent.hospital_id == hospital_id).group_by(NotificationIntent.channel)).all()
+    return {
+        "hospital_id": hospital_id,
+        "by_status": {state: count for state, count in status_rows},
+        "by_channel": {channel: count for channel, count in channel_rows},
+    }
