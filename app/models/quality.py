@@ -4,7 +4,7 @@ from typing import Any
 
 from sqlalchemy import (
     Boolean, CheckConstraint, DateTime, ForeignKey, ForeignKeyConstraint, Index,
-    JSON, String, Text, UniqueConstraint, Uuid, func,
+    JSON, Numeric, String, Text, UniqueConstraint, Uuid, func,
 )
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -112,3 +112,103 @@ class CAPAAction(Base):
     created_by_user_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id"), nullable=False)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False)
+
+
+class SafetyRound(Base):
+    __tablename__ = "safety_rounds"
+    __table_args__ = (
+        ForeignKeyConstraint(["hospital_id", "department_id"], ["departments.hospital_id", "departments.id"], name="fk_safety_round_department"),
+        ForeignKeyConstraint(["hospital_id", "lead_user_id"], ["hospital_memberships.hospital_id", "hospital_memberships.user_id"], name="fk_safety_round_lead"),
+        UniqueConstraint("hospital_id", "id", name="uq_safety_round_hospital_id"),
+        CheckConstraint("status IN ('planned', 'in_progress', 'completed', 'cancelled')", name="ck_safety_round_status"),
+        CheckConstraint("completed_at IS NULL OR conducted_at IS NOT NULL", name="ck_safety_round_completion"),
+        Index("ix_safety_round_department_schedule", "hospital_id", "department_id", "scheduled_at", "status"),
+    )
+    id: Mapped[uuid.UUID] = mapped_column(Uuid(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    hospital_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("hospitals.id"), nullable=False)
+    department_id: Mapped[uuid.UUID | None] = mapped_column(Uuid(as_uuid=True))
+    lead_user_id: Mapped[uuid.UUID] = mapped_column(Uuid(as_uuid=True), nullable=False)
+    title: Mapped[str] = mapped_column(String(180), nullable=False)
+    scheduled_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    conducted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    completed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    status: Mapped[str] = mapped_column(String(20), nullable=False, default="planned")
+    summary: Mapped[str | None] = mapped_column(Text)
+    created_by_user_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id"), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+
+
+class SafetyRoundFinding(Base):
+    __tablename__ = "safety_round_findings"
+    __table_args__ = (
+        ForeignKeyConstraint(["hospital_id", "round_id"], ["safety_rounds.hospital_id", "safety_rounds.id"], name="fk_safety_round_finding_round"),
+        ForeignKeyConstraint(["hospital_id", "owner_user_id"], ["hospital_memberships.hospital_id", "hospital_memberships.user_id"], name="fk_safety_round_finding_owner"),
+        CheckConstraint("severity IN ('low', 'moderate', 'high', 'critical')", name="ck_safety_round_finding_severity"),
+        CheckConstraint("status IN ('open', 'in_progress', 'resolved', 'accepted_risk')", name="ck_safety_round_finding_status"),
+        CheckConstraint("length(trim(description)) BETWEEN 10 AND 3000", name="ck_safety_round_finding_description"),
+        CheckConstraint("(status = 'resolved' AND resolved_at IS NOT NULL AND resolved_by_user_id IS NOT NULL) OR (status != 'resolved' AND resolved_at IS NULL AND resolved_by_user_id IS NULL)", name="ck_safety_round_finding_resolution"),
+        Index("ix_safety_round_finding_owner", "hospital_id", "owner_user_id", "status", "due_at"),
+    )
+    id: Mapped[uuid.UUID] = mapped_column(Uuid(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    hospital_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("hospitals.id"), nullable=False)
+    round_id: Mapped[uuid.UUID] = mapped_column(Uuid(as_uuid=True), nullable=False)
+    owner_user_id: Mapped[uuid.UUID] = mapped_column(Uuid(as_uuid=True), nullable=False)
+    severity: Mapped[str] = mapped_column(String(16), nullable=False)
+    description: Mapped[str] = mapped_column(Text, nullable=False)
+    due_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    status: Mapped[str] = mapped_column(String(20), nullable=False, default="open")
+    resolution_note: Mapped[str | None] = mapped_column(Text)
+    resolved_by_user_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("users.id"))
+    resolved_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    created_by_user_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id"), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+
+
+class QualityIndicatorDefinition(Base):
+    __tablename__ = "quality_indicator_definitions"
+    __table_args__ = (
+        UniqueConstraint("hospital_id", "code", "version", name="uq_quality_indicator_code_version"),
+        UniqueConstraint("hospital_id", "id", name="uq_quality_indicator_hospital_id"),
+        CheckConstraint("version >= 1", name="ck_quality_indicator_version"),
+        CheckConstraint("aggregation_period IN ('daily', 'weekly', 'monthly', 'quarterly', 'annual')", name="ck_quality_indicator_period"),
+        CheckConstraint("status IN ('draft', 'active', 'retired')", name="ck_quality_indicator_status"),
+        CheckConstraint("length(trim(code)) BETWEEN 2 AND 80", name="ck_quality_indicator_code"),
+        CheckConstraint("length(trim(name)) BETWEEN 2 AND 180", name="ck_quality_indicator_name"),
+        Index("ix_quality_indicator_status", "hospital_id", "status", "code"),
+    )
+    id: Mapped[uuid.UUID] = mapped_column(Uuid(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    hospital_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("hospitals.id"), nullable=False)
+    code: Mapped[str] = mapped_column(String(80), nullable=False)
+    version: Mapped[int] = mapped_column(Integer, nullable=False, default=1)
+    name: Mapped[str] = mapped_column(String(180), nullable=False)
+    description: Mapped[str] = mapped_column(Text, nullable=False)
+    unit: Mapped[str] = mapped_column(String(40), nullable=False, default="rate")
+    numerator_definition: Mapped[str] = mapped_column(Text, nullable=False)
+    denominator_definition: Mapped[str] = mapped_column(Text, nullable=False)
+    aggregation_period: Mapped[str] = mapped_column(String(16), nullable=False)
+    status: Mapped[str] = mapped_column(String(16), nullable=False, default="draft")
+    created_by_user_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id"), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+
+
+class QualityIndicatorMeasurement(Base):
+    __tablename__ = "quality_indicator_measurements"
+    __table_args__ = (
+        ForeignKeyConstraint(["hospital_id", "indicator_id"], ["quality_indicator_definitions.hospital_id", "quality_indicator_definitions.id"], name="fk_quality_measurement_indicator"),
+        CheckConstraint("numerator >= 0 AND denominator > 0 AND value >= 0", name="ck_quality_measurement_values"),
+        CheckConstraint("period_end > period_start", name="ck_quality_measurement_period"),
+        UniqueConstraint("hospital_id", "indicator_id", "period_start", "period_end", name="uq_quality_measurement_period"),
+        Index("ix_quality_measurement_period", "hospital_id", "indicator_id", "period_start", "period_end"),
+    )
+    id: Mapped[uuid.UUID] = mapped_column(Uuid(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    hospital_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("hospitals.id"), nullable=False)
+    indicator_id: Mapped[uuid.UUID] = mapped_column(Uuid(as_uuid=True), nullable=False)
+    period_start: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    period_end: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    numerator: Mapped[int] = mapped_column(Integer, nullable=False)
+    denominator: Mapped[int] = mapped_column(Integer, nullable=False)
+    value: Mapped[float] = mapped_column(Numeric(16, 6), nullable=False)
+    data_source: Mapped[str] = mapped_column(String(120), nullable=False)
+    source_version: Mapped[str] = mapped_column(String(80), nullable=False)
+    calculated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+    created_by_user_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id"), nullable=False)
