@@ -71,3 +71,11 @@ Backend verification remains deferred to Phase 5 per project direction. External
 
 ## Queue lifecycle implementation
 The notification service exposes provider-neutral claim and result-recording operations. Claims use row-level skip-locked semantics, revalidate recipient membership/portal linkage, consent and channel preference immediately before dispatch, defer quiet-hour messages, and recover stale processing claims after a bounded lease window. Retry scheduling uses bounded exponential backoff and terminal failure at the configured attempt ceiling. The service marks an intent delivered only when the adapter reports provider acknowledgement. Phase 4 adapters must use the notification intent UUID/idempotency key as the provider-side idempotency token to make stale-claim recovery safe against duplicate sends.
+
+
+## Department notices and dashboard (Phase 3.27 continuation)
+- Department-scoped notice creation is available to hospital communications administrators and to department/nurse managers limited to their own active department.
+- Recipient resolution is limited to active users with active membership in the same hospital and selected department; optional role filters narrow the audience.
+- Each recipient receives a separately idempotent intent. Channel opt-outs are honored and counted without disclosing message content.
+- Communications dashboard metrics aggregate queue counts by state and channel without exposing notification bodies or patient identifiers.
+- Endpoints added: POST /api/v1/notifications/department-notices and GET /api/v1/notifications/dashboard.
