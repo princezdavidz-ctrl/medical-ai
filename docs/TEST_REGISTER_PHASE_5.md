@@ -635,3 +635,20 @@ No item is considered passed until evidence, environment, build SHA, reviewer an
 - [ ] Revocation enforcement: after revocation, new clinical AI requests, review submissions and review-history reads are denied even if the generic AI session has not expired.
 - [ ] Revocation audit: controlled reason code and timestamp are recorded without patient narrative or prompt/response content.
 - [ ] Revocation idempotency: repeated owner revocation is safe and does not create duplicate revocation events; expired sessions cannot be reopened.
+
+
+## Phase 3.32 — AI Diagnostic Support
+
+- [ ] Case creation: requires active patient-bound AI session, current consent, active care assignment and in-progress encounter.
+- [ ] Context immutability: case is permanently bound to its session/patient/encounter; patient switching and expired sessions are denied.
+- [ ] Authorization revalidation: every case and suggestion operation revalidates consent and care assignment.
+- [ ] Differential grounding: differential concept code and display name must match an approved, currently effective clinical knowledge concept.
+- [ ] Test grounding: test code/name must match an active same-hospital laboratory or imaging definition.
+- [ ] Source binding: suggestion source sequence and digest must match a real assistant message in the bound session.
+- [ ] Citation provenance: evidence citation IDs must be a subset of citations attached to the source assistant message.
+- [ ] Clinician ownership: only the case creator with current patient authorization can add/review/close case suggestions.
+- [ ] Diagnostic integrity: only clinician review can mark a differential considered, ruled out or clinician-confirmed; AI cannot set final diagnosis.
+- [ ] No auto-order: test considerations never create lab/imaging orders; ordering requires separate source-module workflow.
+- [ ] Case closure: clinician-authored assessment reference required and all proposed suggestions must be reviewed.
+- [ ] Tenant isolation: RLS and composite FKs prevent cross-hospital patient, encounter, session, reviewer and test-definition references.
+- [ ] Migration 0055: case, differential and test consideration tables and indexes upgrade/downgrade cleanly.
