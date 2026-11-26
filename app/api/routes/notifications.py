@@ -524,3 +524,76 @@ def get_notification_dashboard(context: tuple = Depends(get_current_context), db
         "by_status": {state: count for state, count in status_rows},
         "by_channel": {channel: count for channel, count in channel_rows},
     }
+
+
+@router.post("/my-notifications/{intent_id}/read", response_model=NotificationIntentRead)
+def mark_staff_notification_read(intent_id: UUID, context: tuple = Depends(get_current_context), db: Session = Depends(get_db)):
+    user, hospital_id = context
+    intent = db.scalar(select(NotificationIntent).where(
+        NotificationIntent.hospital_id == hospital_id,
+        NotificationIntent.id == intent_id,
+        NotificationIntent.recipient_user_id == user.id,
+    ).with_for_update())
+    if intent is None:
+        raise HTTPException(status_code=404, detail={"code": "notification_not_found"})
+    if intent.read_at is None:
+        intent.read_at = datetime.now(timezone.utc)
+        _audit(db, hospital_id, user.id, "notifications.staff_notification_read", "notification_intent", intent.id)
+        db.commit()
+        _restore_context(db, user.id, hospital_id)
+        db.refresh(intent)
+    return intent
+
+
+@router.post("/patient/inbox/{intent_id}/read", response_model=NotificationIntentRead)
+def mark_patient_notification_read(intent_id: UUID, context: tuple = Depends(get_current_patient_context), db: Session = Depends(get_db)):
+    user, hospital_id = context
+    intent = db.scalar(select(NotificationIntent).where(
+        NotificationIntent.hospital_id == hospital_id,
+        NotificationIntent.id == intent_id,
+        NotificationIntent.recipient_user_id == user.id,
+        NotificationIntent.channel == "in_app",
+    ).with_for_update())
+    if intent is None:
+        raise HTTPException(status_code=404, detail={"code": "notification_not_found"})
+    if intent.read_at is None:
+        intent.read_at = datetime.now(timezone.utc)
+        _audit(db, hospital_id, user.id, "notifications.patient_notification_read", "notification_intent", intent.id)
+        db.commit()
+        from sqlalchemy import text
+        db.execute(text("SELECT set_config('app.current_hospital_id', :v, true)"), {"v": str(hospital_id)})
+        db.execute(text("SELECT set_config('app.current_user_id', :v, true)"), {"v": str(user.id)})
+        db.refresh(intent)
+    return intent
+
+
+@router.get("/my-dashboard")
+def get_my_notification_dashboard(context: tuple = Depends(get_current_context), db: Session = Depends(get_db)):
+    user, hospital_id = context
+    total = db.scalar(select(func.count(NotificationIntent.id)).where(
+        NotificationIntent.hospital_id == hospital_id,
+        NotificationIntent.recipient_user_id == user.id,
+    )) or 0
+    unread = db.scalar(select(func.count(NotificationIntent.id)).where(
+        NotificationIntent.hospital_id == hospital_id,
+        NotificationIntent.recipient_user_id == user.id,
+        NotificationIntent.read_at.is_(None),
+    )) or 0
+    return {"total": total, "unread": unread}
+
+
+@router.get("/patient/dashboard")
+def get_patient_notification_dashboard(context: tuple = Depends(get_current_patient_context), db: Session = Depends(get_db)):
+    user, hospital_id = context
+    total = db.scalar(select(func.count(NotificationIntent.id)).where(
+        NotificationIntent.hospital_id == hospital_id,
+        NotificationIntent.recipient_user_id == user.id,
+        NotificationIntent.channel == "in_app",
+    )) or 0
+    unread = db.scalar(select(func.count(NotificationIntent.id)).where(
+        NotificationIntent.hospital_id == hospital_id,
+        NotificationIntent.recipient_user_id == user.id,
+        NotificationIntent.channel == "in_app",
+        NotificationIntent.read_at.is_(None),
+    )) or 0
+    return {"total": total, "unread": unread}
