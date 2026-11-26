@@ -425,12 +425,6 @@ def create_department_notice(payload: DepartmentNoticeCreate, context: tuple = D
     required = _placeholders(template.title_template, template.body_template)
     if not required.issubset(set(template.allowed_placeholders)) or set(payload.variables) != required:
         raise HTTPException(status_code=422, detail={"code": "notification_variables_must_match_template"})
-    try:
-        title = template.title_template.format_map(payload.variables)
-        body = template.body_template.format_map(payload.variables)
-    except (KeyError, ValueError):
-        raise HTTPException(status_code=422, detail={"code": "notification_template_render_failed"}) from None
-
     query = select(HospitalMembership.user_id, Role.name).join(
         Role, Role.id == HospitalMembership.role_id,
     ).join(User, User.id == HospitalMembership.user_id).where(
