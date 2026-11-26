@@ -2,7 +2,7 @@ from datetime import datetime, time, timedelta, timezone
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 from uuid import UUID
 
-from sqlalchemy import select, text
+from sqlalchemy import or_, select, text
 from sqlalchemy.orm import Session
 
 from app.models import HospitalMembership, PatientConsent, User
@@ -84,8 +84,11 @@ def claim_next_notification(db: Session, *, hospital_id: UUID, worker_user_id: U
     now = datetime.now(timezone.utc)
     intent = db.scalar(select(NotificationIntent).where(
         NotificationIntent.hospital_id == hospital_id,
-        NotificationIntent.status.in_(("queued", "retry_scheduled")),
-        NotificationIntent.next_attempt_at <= now,
+        or_(
+            (NotificationIntent.status.in_(("queued", "retry_scheduled")) & (NotificationIntent.next_attempt_at <= now)),
+            ((NotificationIntent.status == "processing") & (NotificationIntent.updated_at <= now - timedelta(minutes=10))),
+        ),
+        NotificationIntent.attempt_count < NotificationIntent.max_attempts,
     ).order_by(NotificationIntent.next_attempt_at, NotificationIntent.created_at).with_for_update(skip_locked=True).limit(1))
     if intent is None:
         return None
@@ -120,11 +123,13 @@ def claim_next_notification(db: Session, *, hospital_id: UUID, worker_user_id: U
         _restore_tenant(db, hospital_id, worker_user_id)
         return None
 
+    recovering_stale_claim = intent.status == "processing"
     intent.status = "processing"
-    intent.attempt_count += 1
+    if not recovering_stale_claim:
+        intent.attempt_count += 1
     db.add(NotificationEvent(
         hospital_id=hospital_id, intent_id=intent.id, actor_user_id=worker_user_id,
-        event_type="dispatch_started", event_metadata={"attempt_number": intent.attempt_count},
+        event_type="dispatch_started", event_metadata={"attempt_number": intent.attempt_count, "recovered_stale_claim": recovering_stale_claim},
     ))
     db.commit()
     _restore_tenant(db, hospital_id, worker_user_id)
