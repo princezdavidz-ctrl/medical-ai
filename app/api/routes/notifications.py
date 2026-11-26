@@ -231,14 +231,23 @@ def enqueue_department_notification(
         if not enabled:
             continue
         key = hashlib.sha256(
-            f"{hospital_id}:{payload.idempotency_key}:{recipient_id}".encode("utf-8")
+            f"{hospital_id}:{department.id}:{payload.idempotency_key}:{recipient_id}".encode("utf-8")
         ).hexdigest()
         existing = db.scalar(select(NotificationIntent).where(
             NotificationIntent.hospital_id == hospital_id,
             NotificationIntent.idempotency_key == key,
         ))
         if existing is not None:
-            if existing.recipient_user_id != recipient_id or existing.template_id != template.id or existing.purpose != payload.purpose:
+            existing_template = db.scalar(select(NotificationTemplate).where(
+                NotificationTemplate.hospital_id == hospital_id,
+                NotificationTemplate.id == existing.template_id,
+            ))
+            if (
+                existing.recipient_user_id != recipient_id
+                or existing_template is None
+                or existing_template.template_code != template.template_code
+                or existing.purpose != payload.purpose
+            ):
                 raise HTTPException(status_code=409, detail={"code": "idempotency_key_reused_for_different_notification"})
             intents.append(existing)
             continue
