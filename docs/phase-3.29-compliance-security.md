@@ -54,3 +54,24 @@ All access, confidentiality, tenant isolation, approval, immutability, evidence,
 - GET /api/v1/compliance/dashboard
 
 Compliance control register, access review campaigns, retention schedules/legal holds and external breach reporting remain follow-on work within Phase 3.29.
+
+
+## Access reviews and compliance control assessments
+- Versioned compliance control definitions map to supported framework labels and have accountable active same-hospital owners.
+- Assessors submit findings and vault evidence; an independent compliance reviewer records the assessment outcome and next review date.
+- Access review campaigns snapshot all active hospital memberships, role names and department assignments for a defined review period.
+- Each access review item requires a reviewer distinct from the subject and a separate approver distinct from both the subject and reviewer.
+- Decisions (keep/change/revoke) are recorded with justification; the workflow does not automatically revoke or change access. A separate authorized human action is required.
+- Campaign completion is blocked until every item has been independently approved.
+- Migration 0050_access_reviews_controls adds control, assessment, campaign and item tables with RLS and composite membership references.
+
+## Additional API surface
+- POST/GET /api/v1/compliance/controls
+- POST /api/v1/compliance/controls/{control_id}/activate
+- POST /api/v1/compliance/controls/{control_id}/assessments
+- POST /api/v1/compliance/assessments/{assessment_id}/review
+- POST/GET /api/v1/compliance/access-reviews
+- GET /api/v1/compliance/access-reviews/{campaign_id}/items
+- POST /api/v1/compliance/access-review-items/{item_id}/review
+- POST /api/v1/compliance/access-review-items/{item_id}/approve
+- POST /api/v1/compliance/access-reviews/{campaign_id}/complete
