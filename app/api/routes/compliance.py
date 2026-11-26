@@ -11,8 +11,15 @@ from app.api.deps import get_current_context
 from app.db.session import get_db
 from app.models import HospitalMembership, Role, User
 from app.models.compliance import (
+    AccessReviewCampaign, AccessReviewItem, ComplianceControl, ControlAssessment,
     CompliancePolicy, ComplianceRisk, PolicyAcknowledgement,
     SecurityIncident, SecurityIncidentEvent,
+)
+from app.schemas.compliance_access import (
+    AccessReviewCampaignCreate, AccessReviewCampaignRead, AccessReviewItemApproval,
+    AccessReviewItemDecision, AccessReviewItemRead, ComplianceControlCreate,
+    ComplianceControlRead, ControlAssessmentCreate, ControlAssessmentRead,
+    ControlAssessmentReview,
 )
 from app.schemas.compliance import (
     CompliancePolicyCreate, CompliancePolicyPublish, CompliancePolicyRead,
@@ -406,3 +413,248 @@ def get_compliance_dashboard(context: tuple = Depends(get_current_context), db: 
         "risks_by_status": {state: count for state, count in risk_rows},
         "published_policy_versions": outstanding_policy_count,
     }
+
+
+@router.post("/controls", response_model=ComplianceControlRead, status_code=status.HTTP_201_CREATED)
+def create_compliance_control(payload: ComplianceControlCreate, context: tuple = Depends(get_current_context), db: Session = Depends(get_db)):
+    user, hospital_id = context
+    _require_compliance(db, user.id, hospital_id)
+    owner = db.scalar(select(HospitalMembership.id).join(
+        User, User.id == HospitalMembership.user_id,
+    ).where(
+        HospitalMembership.hospital_id == hospital_id,
+        HospitalMembership.user_id == payload.owner_user_id,
+        HospitalMembership.status == "active",
+        User.is_active.is_(True),
+    ))
+    if owner is None:
+        raise HTTPException(status_code=404, detail={"code": "active_same_hospital_control_owner_required"})
+    latest = db.scalar(select(ComplianceControl).where(
+        ComplianceControl.hospital_id == hospital_id,
+        ComplianceControl.code == payload.code,
+    ).order_by(ComplianceControl.version.desc()).limit(1))
+    control = ComplianceControl(
+        hospital_id=hospital_id, version=(latest.version + 1 if latest else 1),
+        created_by_user_id=user.id, **payload.model_dump(),
+    )
+    db.add(control)
+    try:
+        db.flush()
+        _audit(db, hospital_id, user.id, "compliance.control_created", "compliance_control", control.id)
+        db.commit()
+    except IntegrityError:
+        db.rollback()
+        raise HTTPException(status_code=409, detail={"code": "compliance_control_version_conflict"}) from None
+    _restore_context(db, user.id, hospital_id)
+    db.refresh(control)
+    return control
+
+
+@router.post("/controls/{control_id}/activate", response_model=ComplianceControlRead)
+def activate_compliance_control(control_id: UUID, context: tuple = Depends(get_current_context), db: Session = Depends(get_db)):
+    user, hospital_id = context
+    _require_compliance(db, user.id, hospital_id)
+    control = db.scalar(select(ComplianceControl).where(
+        ComplianceControl.hospital_id == hospital_id,
+        ComplianceControl.id == control_id,
+    ).with_for_update())
+    if control is None:
+        raise HTTPException(status_code=404, detail={"code": "compliance_control_not_found"})
+    if control.status != "draft":
+        raise HTTPException(status_code=409, detail={"code": "only_draft_compliance_controls_can_be_activated"})
+    control.status = "active"
+    _audit(db, hospital_id, user.id, "compliance.control_activated", "compliance_control", control.id)
+    db.commit()
+    _restore_context(db, user.id, hospital_id)
+    db.refresh(control)
+    return control
+
+
+@router.get("/controls", response_model=list[ComplianceControlRead])
+def list_compliance_controls(context: tuple = Depends(get_current_context), db: Session = Depends(get_db)):
+    user, hospital_id = context
+    _require_compliance(db, user.id, hospital_id)
+    return db.scalars(select(ComplianceControl).where(
+        ComplianceControl.hospital_id == hospital_id,
+        ComplianceControl.status == "active",
+    ).order_by(ComplianceControl.framework, ComplianceControl.code, ComplianceControl.version.desc()).limit(500)).all()
+
+
+@router.post("/controls/{control_id}/assessments", response_model=ControlAssessmentRead, status_code=status.HTTP_201_CREATED)
+def create_control_assessment(control_id: UUID, payload: ControlAssessmentCreate, context: tuple = Depends(get_current_context), db: Session = Depends(get_db)):
+    user, hospital_id = context
+    _require_compliance(db, user.id, hospital_id)
+    control = db.scalar(select(ComplianceControl).where(
+        ComplianceControl.hospital_id == hospital_id,
+        ComplianceControl.id == control_id,
+        ComplianceControl.status == "active",
+    ))
+    if control is None:
+        raise HTTPException(status_code=404, detail={"code": "active_compliance_control_not_found"})
+    assessment = ControlAssessment(
+        hospital_id=hospital_id, control_id=control.id, assessor_user_id=user.id,
+        findings=payload.findings, evidence_reference=payload.evidence_reference,
+        next_review_at=payload.next_review_at,
+    )
+    db.add(assessment)
+    db.flush()
+    _audit(db, hospital_id, user.id, "compliance.control_assessed", "control_assessment", assessment.id)
+    db.commit()
+    _restore_context(db, user.id, hospital_id)
+    db.refresh(assessment)
+    return assessment
+
+
+@router.post("/assessments/{assessment_id}/review", response_model=ControlAssessmentRead)
+def review_control_assessment(assessment_id: UUID, payload: ControlAssessmentReview, context: tuple = Depends(get_current_context), db: Session = Depends(get_db)):
+    user, hospital_id = context
+    _require_compliance(db, user.id, hospital_id)
+    assessment = db.scalar(select(ControlAssessment).where(
+        ControlAssessment.hospital_id == hospital_id,
+        ControlAssessment.id == assessment_id,
+    ).with_for_update())
+    if assessment is None:
+        raise HTTPException(status_code=404, detail={"code": "control_assessment_not_found"})
+    if assessment.status != "pending_review" or assessment.assessor_user_id == user.id:
+        raise HTTPException(status_code=409, detail={"code": "independent_control_assessment_review_required"})
+    assessment.status = payload.status
+    assessment.reviewed_by_user_id = user.id
+    assessment.reviewed_at = datetime.now(timezone.utc)
+    _audit(db, hospital_id, user.id, "compliance.control_assessment_reviewed", "control_assessment", assessment.id)
+    db.commit()
+    _restore_context(db, user.id, hospital_id)
+    db.refresh(assessment)
+    return assessment
+
+
+@router.post("/access-reviews", response_model=AccessReviewCampaignRead, status_code=status.HTTP_201_CREATED)
+def create_access_review_campaign(payload: AccessReviewCampaignCreate, context: tuple = Depends(get_current_context), db: Session = Depends(get_db)):
+    user, hospital_id = context
+    _require_compliance(db, user.id, hospital_id)
+    campaign = AccessReviewCampaign(
+        hospital_id=hospital_id, title=payload.title,
+        period_start=payload.period_start, period_end=payload.period_end,
+        due_at=payload.due_at, status="open", created_by_user_id=user.id,
+    )
+    db.add(campaign)
+    db.flush()
+    memberships = db.execute(select(
+        HospitalMembership.user_id, HospitalMembership.department_id, Role.name,
+    ).join(Role, Role.id == HospitalMembership.role_id).join(
+        User, User.id == HospitalMembership.user_id,
+    ).where(
+        HospitalMembership.hospital_id == hospital_id,
+        HospitalMembership.status == "active",
+        User.is_active.is_(True),
+    )).all()
+    for subject_user_id, department_id, role_name in memberships:
+        db.add(AccessReviewItem(
+            hospital_id=hospital_id, campaign_id=campaign.id,
+            subject_user_id=subject_user_id, department_id=department_id,
+            role_name_snapshot=role_name, decision="pending", review_status="pending",
+        ))
+    _audit(db, hospital_id, user.id, "compliance.access_review_campaign_created", "access_review_campaign", campaign.id)
+    db.commit()
+    _restore_context(db, user.id, hospital_id)
+    db.refresh(campaign)
+    return campaign
+
+
+@router.get("/access-reviews", response_model=list[AccessReviewCampaignRead])
+def list_access_review_campaigns(context: tuple = Depends(get_current_context), db: Session = Depends(get_db)):
+    user, hospital_id = context
+    _require_compliance(db, user.id, hospital_id)
+    return db.scalars(select(AccessReviewCampaign).where(
+        AccessReviewCampaign.hospital_id == hospital_id,
+    ).order_by(AccessReviewCampaign.created_at.desc()).limit(200)).all()
+
+
+@router.get("/access-reviews/{campaign_id}/items", response_model=list[AccessReviewItemRead])
+def list_access_review_items(campaign_id: UUID, context: tuple = Depends(get_current_context), db: Session = Depends(get_db)):
+    user, hospital_id = context
+    _require_compliance(db, user.id, hospital_id)
+    return db.scalars(select(AccessReviewItem).where(
+        AccessReviewItem.hospital_id == hospital_id,
+        AccessReviewItem.campaign_id == campaign_id,
+    ).order_by(AccessReviewItem.role_name_snapshot, AccessReviewItem.subject_user_id).limit(2000)).all()
+
+
+@router.post("/access-review-items/{item_id}/review", response_model=AccessReviewItemRead)
+def review_access_item(item_id: UUID, payload: AccessReviewItemDecision, context: tuple = Depends(get_current_context), db: Session = Depends(get_db)):
+    user, hospital_id = context
+    _require_compliance(db, user.id, hospital_id)
+    item = db.scalar(select(AccessReviewItem).where(
+        AccessReviewItem.hospital_id == hospital_id,
+        AccessReviewItem.id == item_id,
+    ).with_for_update())
+    if item is None:
+        raise HTTPException(status_code=404, detail={"code": "access_review_item_not_found"})
+    campaign = db.scalar(select(AccessReviewCampaign).where(
+        AccessReviewCampaign.hospital_id == hospital_id,
+        AccessReviewCampaign.id == item.campaign_id,
+    ))
+    if campaign is None or campaign.status != "open":
+        raise HTTPException(status_code=409, detail={"code": "open_access_review_campaign_required"})
+    if item.review_status != "pending" or item.subject_user_id == user.id:
+        raise HTTPException(status_code=409, detail={"code": "independent_access_review_required"})
+    item.decision = payload.decision
+    item.justification = payload.justification
+    item.review_status = "awaiting_approval"
+    item.reviewed_by_user_id = user.id
+    item.reviewed_at = datetime.now(timezone.utc)
+    _audit(db, hospital_id, user.id, "compliance.access_review_item_reviewed", "access_review_item", item.id)
+    db.commit()
+    _restore_context(db, user.id, hospital_id)
+    db.refresh(item)
+    return item
+
+
+@router.post("/access-review-items/{item_id}/approve", response_model=AccessReviewItemRead)
+def approve_access_item(item_id: UUID, payload: AccessReviewItemApproval, context: tuple = Depends(get_current_context), db: Session = Depends(get_db)):
+    user, hospital_id = context
+    _require_compliance(db, user.id, hospital_id)
+    item = db.scalar(select(AccessReviewItem).where(
+        AccessReviewItem.hospital_id == hospital_id,
+        AccessReviewItem.id == item_id,
+    ).with_for_update())
+    if item is None:
+        raise HTTPException(status_code=404, detail={"code": "access_review_item_not_found"})
+    if item.review_status != "awaiting_approval" or item.reviewed_by_user_id == user.id or item.subject_user_id == user.id:
+        raise HTTPException(status_code=409, detail={"code": "independent_access_review_approval_required"})
+    item.review_status = "approved"
+    item.approved_by_user_id = user.id
+    item.approved_at = datetime.now(timezone.utc)
+    item.approval_note = payload.approval_note
+    _audit(db, hospital_id, user.id, "compliance.access_review_item_approved", "access_review_item", item.id)
+    db.commit()
+    _restore_context(db, user.id, hospital_id)
+    db.refresh(item)
+    return item
+
+
+@router.post("/access-reviews/{campaign_id}/complete", response_model=AccessReviewCampaignRead)
+def complete_access_review_campaign(campaign_id: UUID, context: tuple = Depends(get_current_context), db: Session = Depends(get_db)):
+    user, hospital_id = context
+    _require_compliance(db, user.id, hospital_id)
+    campaign = db.scalar(select(AccessReviewCampaign).where(
+        AccessReviewCampaign.hospital_id == hospital_id,
+        AccessReviewCampaign.id == campaign_id,
+    ).with_for_update())
+    if campaign is None:
+        raise HTTPException(status_code=404, detail={"code": "access_review_campaign_not_found"})
+    if campaign.status != "open":
+        raise HTTPException(status_code=409, detail={"code": "access_review_campaign_not_open"})
+    pending = db.scalar(select(AccessReviewItem.id).where(
+        AccessReviewItem.hospital_id == hospital_id,
+        AccessReviewItem.campaign_id == campaign_id,
+        AccessReviewItem.review_status != "approved",
+    ).limit(1))
+    if pending is not None:
+        raise HTTPException(status_code=409, detail={"code": "all_access_review_items_must_be_approved"})
+    campaign.status = "completed"
+    campaign.completed_at = datetime.now(timezone.utc)
+    _audit(db, hospital_id, user.id, "compliance.access_review_campaign_completed", "access_review_campaign", campaign.id)
+    db.commit()
+    _restore_context(db, user.id, hospital_id)
+    db.refresh(campaign)
+    return campaign
