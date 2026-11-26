@@ -491,3 +491,9 @@ No item is considered passed until evidence, environment, build SHA, reviewer an
 - [ ] Dispatch revalidation: recipient active state, same-hospital membership or portal link, channel preference and unexpired purpose/channel-matched consent are rechecked immediately before dispatch.
 - [ ] Quiet-hour scheduling: timezone-aware quiet windows defer dispatch and handle windows crossing midnight; invalid timezone configuration safely delays rather than bypasses quiet hours.
 - [ ] Acknowledgement semantics: intent remains non-delivered until provider acknowledgement; retryable failures use bounded exponential backoff; exhausted attempts become terminal failure.
+
+- [ ] Idempotency conflict: reusing an existing key with different recipient/template/patient/consent/purpose returns HTTP 409 and does not disclose the original intent.
+- [ ] Patient event privacy: a patient portal user can inspect only events for their own notification intent; another patient's intent returns 404.
+- [ ] Staff event privacy: a staff user can inspect own notification events; only authorized communications administrators can inspect other recipients' event histories.
+- [ ] Inbox content: rendered title/body are visible only to the intended recipient or an authorized hospital communications administrator; cross-hospital identifiers return no data.
+- [ ] Portal expiry: expired patient portal links cannot be used to enqueue patient notifications and are rechecked before dispatch.
