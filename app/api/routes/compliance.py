@@ -13,6 +13,7 @@ from app.models import HospitalMembership, Role, User
 from app.models.compliance import (
     AccessReviewCampaign, AccessReviewItem, ComplianceControl, ControlAssessment,
     CompliancePolicy, ComplianceRisk, PolicyAcknowledgement,
+    LegalHold, RetentionPolicy, RetentionDispositionRequest,
     SecurityIncident, SecurityIncidentEvent,
 )
 from app.schemas.compliance_access import (
@@ -20,6 +21,11 @@ from app.schemas.compliance_access import (
     AccessReviewItemDecision, AccessReviewItemRead, ComplianceControlCreate,
     ComplianceControlRead, ControlAssessmentCreate, ControlAssessmentRead,
     ControlAssessmentReview,
+)
+from app.schemas.retention import (
+    LegalHoldCreate, LegalHoldRead, LegalHoldRelease, RetentionDispositionCreate,
+    RetentionDispositionRead, RetentionDispositionReview, RetentionPolicyActivate,
+    RetentionPolicyCreate, RetentionPolicyRead,
 )
 from app.schemas.compliance import (
     CompliancePolicyCreate, CompliancePolicyPublish, CompliancePolicyRead,
@@ -666,3 +672,202 @@ def complete_access_review_campaign(campaign_id: UUID, context: tuple = Depends(
     _restore_context(db, user.id, hospital_id)
     db.refresh(campaign)
     return campaign
+
+
+@router.post("/retention-policies", response_model=RetentionPolicyRead, status_code=status.HTTP_201_CREATED)
+def create_retention_policy(payload: RetentionPolicyCreate, context: tuple = Depends(get_current_context), db: Session = Depends(get_db)):
+    user, hospital_id = context
+    _require_compliance(db, user.id, hospital_id)
+    latest = db.scalar(select(RetentionPolicy).where(
+        RetentionPolicy.hospital_id == hospital_id,
+        RetentionPolicy.policy_code == payload.policy_code,
+    ).order_by(RetentionPolicy.version.desc()).limit(1))
+    policy = RetentionPolicy(
+        hospital_id=hospital_id, version=(latest.version + 1 if latest else 1),
+        created_by_user_id=user.id, **payload.model_dump(),
+    )
+    db.add(policy)
+    try:
+        db.flush()
+        _audit(db, hospital_id, user.id, "compliance.retention_policy_created", "retention_policy", policy.id)
+        db.commit()
+    except IntegrityError:
+        db.rollback()
+        raise HTTPException(status_code=409, detail={"code": "retention_policy_version_conflict"}) from None
+    _restore_context(db, user.id, hospital_id)
+    db.refresh(policy)
+    return policy
+
+
+@router.post("/retention-policies/{policy_id}/activate", response_model=RetentionPolicyRead)
+def activate_retention_policy(policy_id: UUID, payload: RetentionPolicyActivate, context: tuple = Depends(get_current_context), db: Session = Depends(get_db)):
+    user, hospital_id = context
+    _require_compliance(db, user.id, hospital_id)
+    policy = db.scalar(select(RetentionPolicy).where(
+        RetentionPolicy.hospital_id == hospital_id,
+        RetentionPolicy.id == policy_id,
+    ).with_for_update())
+    if policy is None:
+        raise HTTPException(status_code=404, detail={"code": "retention_policy_not_found"})
+    if policy.status != "draft" or policy.created_by_user_id == user.id:
+        raise HTTPException(status_code=409, detail={"code": "independent_retention_policy_approval_required"})
+    policy.status = "active"
+    policy.effective_at = payload.effective_at
+    policy.approved_by_user_id = user.id
+    policy.approved_at = datetime.now(timezone.utc)
+    _audit(db, hospital_id, user.id, "compliance.retention_policy_activated", "retention_policy", policy.id)
+    db.commit()
+    _restore_context(db, user.id, hospital_id)
+    db.refresh(policy)
+    return policy
+
+
+@router.get("/retention-policies", response_model=list[RetentionPolicyRead])
+def list_retention_policies(context: tuple = Depends(get_current_context), db: Session = Depends(get_db)):
+    user, hospital_id = context
+    _require_compliance(db, user.id, hospital_id)
+    return db.scalars(select(RetentionPolicy).where(
+        RetentionPolicy.hospital_id == hospital_id,
+    ).order_by(RetentionPolicy.policy_code, RetentionPolicy.version.desc()).limit(500)).all()
+
+
+@router.post("/legal-holds", response_model=LegalHoldRead, status_code=status.HTTP_201_CREATED)
+def create_legal_hold(payload: LegalHoldCreate, context: tuple = Depends(get_current_context), db: Session = Depends(get_db)):
+    user, hospital_id = context
+    _require_compliance(db, user.id, hospital_id)
+    now = datetime.now(timezone.utc)
+    if payload.expires_at is not None and payload.expires_at <= now:
+        raise HTTPException(status_code=422, detail={"code": "legal_hold_expiry_must_be_future"})
+    import re
+    if any(re.fullmatch(r"vault://[0-9a-fA-F-]{36}", ref) is None for ref in payload.resource_references):
+        raise HTTPException(status_code=422, detail={"code": "legal_hold_resource_reference_invalid"})
+    hold = LegalHold(
+        hospital_id=hospital_id, hold_reference=payload.hold_reference,
+        scope={"resource_references": payload.resource_references},
+        reason=payload.reason, issued_by_user_id=user.id, expires_at=payload.expires_at,
+    )
+    db.add(hold)
+    try:
+        db.flush()
+        _audit(db, hospital_id, user.id, "compliance.legal_hold_issued", "legal_hold", hold.id)
+        db.commit()
+    except IntegrityError:
+        db.rollback()
+        raise HTTPException(status_code=409, detail={"code": "legal_hold_reference_conflict"}) from None
+    _restore_context(db, user.id, hospital_id)
+    db.refresh(hold)
+    return hold
+
+
+@router.get("/legal-holds", response_model=list[LegalHoldRead])
+def list_legal_holds(context: tuple = Depends(get_current_context), db: Session = Depends(get_db)):
+    user, hospital_id = context
+    _require_compliance(db, user.id, hospital_id)
+    return db.scalars(select(LegalHold).where(
+        LegalHold.hospital_id == hospital_id,
+    ).order_by(LegalHold.issued_at.desc()).limit(500)).all()
+
+
+@router.post("/legal-holds/{hold_id}/release", response_model=LegalHoldRead)
+def release_legal_hold(hold_id: UUID, payload: LegalHoldRelease, context: tuple = Depends(get_current_context), db: Session = Depends(get_db)):
+    user, hospital_id = context
+    _require_compliance(db, user.id, hospital_id)
+    hold = db.scalar(select(LegalHold).where(
+        LegalHold.hospital_id == hospital_id,
+        LegalHold.id == hold_id,
+    ).with_for_update())
+    if hold is None:
+        raise HTTPException(status_code=404, detail={"code": "legal_hold_not_found"})
+    if hold.status != "active":
+        raise HTTPException(status_code=409, detail={"code": "only_active_legal_holds_can_be_released"})
+    hold.status = "released"
+    hold.released_by_user_id = user.id
+    hold.released_at = datetime.now(timezone.utc)
+    _audit(db, hospital_id, user.id, "compliance.legal_hold_released", "legal_hold", hold.id)
+    db.commit()
+    _restore_context(db, user.id, hospital_id)
+    db.refresh(hold)
+    return hold
+
+
+@router.post("/dispositions", response_model=RetentionDispositionRead, status_code=status.HTTP_201_CREATED)
+def request_retention_disposition(payload: RetentionDispositionCreate, context: tuple = Depends(get_current_context), db: Session = Depends(get_db)):
+    user, hospital_id = context
+    _require_compliance(db, user.id, hospital_id)
+    policy = db.scalar(select(RetentionPolicy).where(
+        RetentionPolicy.hospital_id == hospital_id,
+        RetentionPolicy.id == payload.policy_id,
+        RetentionPolicy.status == "active",
+        RetentionPolicy.effective_at <= datetime.now(timezone.utc),
+        RetentionPolicy.data_domain == payload.resource_type,
+    ))
+    if policy is None:
+        raise HTTPException(status_code=404, detail={"code": "active_matching_retention_policy_not_found"})
+    eligible_at = payload.resource_created_at + __import__("datetime").timedelta(days=policy.retention_days)
+    now = datetime.now(timezone.utc)
+    if now < eligible_at:
+        raise HTTPException(status_code=409, detail={"code": "retention_period_not_elapsed", "eligible_at": eligible_at.isoformat()})
+    holds = db.scalars(select(LegalHold).where(
+        LegalHold.hospital_id == hospital_id,
+        LegalHold.status == "active",
+        or_(LegalHold.expires_at.is_(None), LegalHold.expires_at > now),
+    )).all()
+    if any(payload.resource_reference in (hold.scope or {}).get("resource_references", []) for hold in holds):
+        raise HTTPException(status_code=409, detail={"code": "active_legal_hold_blocks_disposition"})
+    request = RetentionDispositionRequest(
+        hospital_id=hospital_id, policy_id=policy.id,
+        resource_type=payload.resource_type, resource_reference=payload.resource_reference,
+        action=payload.action, reason=payload.reason, eligible_at=eligible_at,
+        requested_by_user_id=user.id,
+    )
+    db.add(request)
+    db.flush()
+    _audit(db, hospital_id, user.id, "compliance.retention_disposition_requested", "retention_disposition_request", request.id)
+    db.commit()
+    _restore_context(db, user.id, hospital_id)
+    db.refresh(request)
+    return request
+
+
+@router.get("/dispositions", response_model=list[RetentionDispositionRead])
+def list_retention_dispositions(context: tuple = Depends(get_current_context), db: Session = Depends(get_db)):
+    user, hospital_id = context
+    _require_compliance(db, user.id, hospital_id)
+    return db.scalars(select(RetentionDispositionRequest).where(
+        RetentionDispositionRequest.hospital_id == hospital_id,
+    ).order_by(RetentionDispositionRequest.created_at.desc()).limit(500)).all()
+
+
+@router.post("/dispositions/{request_id}/review", response_model=RetentionDispositionRead)
+def review_retention_disposition(request_id: UUID, payload: RetentionDispositionReview, context: tuple = Depends(get_current_context), db: Session = Depends(get_db)):
+    user, hospital_id = context
+    _require_compliance(db, user.id, hospital_id)
+    request = db.scalar(select(RetentionDispositionRequest).where(
+        RetentionDispositionRequest.hospital_id == hospital_id,
+        RetentionDispositionRequest.id == request_id,
+    ).with_for_update())
+    if request is None:
+        raise HTTPException(status_code=404, detail={"code": "retention_disposition_not_found"})
+    if request.status != "pending" or request.requested_by_user_id == user.id:
+        raise HTTPException(status_code=409, detail={"code": "independent_retention_disposition_review_required"})
+    now = datetime.now(timezone.utc)
+    if payload.decision == "approved":
+        holds = db.scalars(select(LegalHold).where(
+            LegalHold.hospital_id == hospital_id,
+            LegalHold.status == "active",
+            or_(LegalHold.expires_at.is_(None), LegalHold.expires_at > now),
+        )).all()
+        if any(request.resource_reference in (hold.scope or {}).get("resource_references", []) for hold in holds):
+            request.status = "blocked_by_legal_hold"
+        else:
+            request.status = "approved"
+    else:
+        request.status = "rejected"
+    request.reviewed_by_user_id = user.id
+    request.reviewed_at = now
+    request.review_note = payload.review_note
+    _audit(db, hospital_id, user.id, "compliance.retention_disposition_reviewed", "retention_disposition_request", request.id)
+    db.commit()
+    _restore_context(db, user.id, hospital_id)
+    db.refresh(request)
+    return request
