@@ -1,5 +1,4 @@
 from typing import Literal
-from datetime import datetime
 from uuid import UUID
 from pydantic import BaseModel, ConfigDict, Field
 from app.ai.contracts import AICapability
