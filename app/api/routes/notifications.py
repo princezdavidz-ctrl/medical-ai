@@ -1,3 +1,4 @@
+import hashlib
 import re
 import uuid
 from datetime import datetime, timezone
@@ -12,11 +13,11 @@ from sqlalchemy.orm import Session
 from app.api.audit import write_audit_event
 from app.api.deps import get_current_context, get_current_patient_context
 from app.db.session import get_db
-from app.models import HospitalMembership, PatientConsent, Role
+from app.models import Department, HospitalMembership, PatientConsent, Role, User
 from app.models.notifications import NotificationEvent, NotificationIntent, NotificationPreference, NotificationTemplate
 from app.models.patient_portal import PatientPortalLink
 from app.schemas.notifications import (
-    NotificationEnqueue, NotificationIntentRead, NotificationPreferenceUpdate,
+    NotificationDepartmentEnqueue, NotificationEnqueue, NotificationIntentRead, NotificationPreferenceUpdate,
     NotificationTemplateCreate, NotificationTemplatePublish, NotificationTemplateRead,
 )
 
@@ -159,6 +160,120 @@ def publish_notification_template(template_id: UUID, payload: NotificationTempla
     _restore_context(db, user.id, hospital_id)
     db.refresh(template)
     return template
+
+
+@router.post("/enqueue-department", response_model=list[NotificationIntentRead], status_code=status.HTTP_202_ACCEPTED)
+def enqueue_department_notification(
+    payload: NotificationDepartmentEnqueue,
+    context: tuple = Depends(get_current_context),
+    db: Session = Depends(get_db),
+):
+    user, hospital_id = context
+    _require_admin(db, user.id, hospital_id)
+    department = db.scalar(select(Department).where(
+        Department.id == payload.department_id,
+        Department.hospital_id == hospital_id,
+        Department.status == "active",
+    ))
+    if department is None:
+        raise HTTPException(status_code=404, detail={"code": "active_department_not_found"})
+    template = db.scalar(select(NotificationTemplate).where(
+        NotificationTemplate.hospital_id == hospital_id,
+        NotificationTemplate.id == payload.template_id,
+        NotificationTemplate.status == "published",
+    ))
+    if template is None:
+        raise HTTPException(status_code=404, detail={"code": "published_notification_template_not_found"})
+    if payload.role_id is not None:
+        role = db.scalar(select(Role).where(
+            Role.id == payload.role_id,
+            Role.hospital_id == hospital_id,
+        ))
+        if role is None:
+            raise HTTPException(status_code=404, detail={"code": "hospital_role_not_found"})
+    required = _placeholders(template.title_template, template.body_template)
+    if not required.issubset(set(template.allowed_placeholders)):
+        raise HTTPException(status_code=422, detail={"code": "template_placeholder_configuration_invalid"})
+    if set(payload.variables) != required or not set(payload.variables).issubset(set(template.allowed_placeholders)):
+        raise HTTPException(status_code=422, detail={"code": "notification_variables_must_match_template"})
+    try:
+        title = template.title_template.format_map(payload.variables)
+        body = template.body_template.format_map(payload.variables)
+    except (KeyError, ValueError):
+        raise HTTPException(status_code=422, detail={"code": "notification_template_render_failed"}) from None
+
+    recipient_query = (
+        select(User.id)
+        .join(HospitalMembership, HospitalMembership.user_id == User.id)
+        .where(
+            HospitalMembership.hospital_id == hospital_id,
+            HospitalMembership.department_id == department.id,
+            HospitalMembership.status == "active",
+            User.is_active.is_(True),
+        )
+    )
+    if payload.role_id is not None:
+        recipient_query = recipient_query.where(HospitalMembership.role_id == payload.role_id)
+    recipient_ids = db.scalars(recipient_query.distinct()).all()
+    if not recipient_ids:
+        raise HTTPException(status_code=404, detail={"code": "no_active_department_recipients"})
+
+    intents = []
+    for recipient_id in recipient_ids:
+        preference = db.scalar(select(NotificationPreference).where(
+            NotificationPreference.hospital_id == hospital_id,
+            NotificationPreference.user_id == recipient_id,
+        ))
+        enabled = template.channel == "in_app" and (preference is None or preference.in_app_enabled)
+        if template.channel != "in_app" and preference is not None:
+            enabled = bool(getattr(preference, _CHANNEL_PREF[template.channel]))
+        if not enabled:
+            continue
+        key = hashlib.sha256(
+            f"{hospital_id}:{payload.idempotency_key}:{recipient_id}".encode("utf-8")
+        ).hexdigest()
+        existing = db.scalar(select(NotificationIntent).where(
+            NotificationIntent.hospital_id == hospital_id,
+            NotificationIntent.idempotency_key == key,
+        ))
+        if existing is not None:
+            if existing.recipient_user_id != recipient_id or existing.template_id != template.id or existing.purpose != payload.purpose:
+                raise HTTPException(status_code=409, detail={"code": "idempotency_key_reused_for_different_notification"})
+            intents.append(existing)
+            continue
+        intent = NotificationIntent(
+            hospital_id=hospital_id,
+            recipient_user_id=recipient_id,
+            template_id=template.id,
+            channel=template.channel,
+            purpose=payload.purpose,
+            idempotency_key=key,
+            rendered_title=title,
+            rendered_body=body,
+            created_by_user_id=user.id,
+        )
+        db.add(intent)
+        db.flush()
+        db.add(NotificationEvent(
+            hospital_id=hospital_id,
+            intent_id=intent.id,
+            actor_user_id=user.id,
+            event_type="enqueued",
+            event_metadata={"channel": template.channel, "audience": "department", "department_id": str(department.id)},
+        ))
+        _audit(db, hospital_id, user.id, "notifications.department_enqueued", "notification_intent", intent.id)
+        intents.append(intent)
+    if not intents:
+        raise HTTPException(status_code=409, detail={"code": "no_recipients_enabled_for_notification_channel"})
+    try:
+        db.commit()
+    except IntegrityError:
+        db.rollback()
+        raise HTTPException(status_code=409, detail={"code": "notification_department_enqueue_conflict"}) from None
+    _restore_context(db, user.id, hospital_id)
+    for intent in intents:
+        db.refresh(intent)
+    return intents
 
 
 @router.post("/enqueue", response_model=NotificationIntentRead, status_code=status.HTTP_202_ACCEPTED)
