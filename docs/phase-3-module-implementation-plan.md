@@ -110,7 +110,8 @@ Every module milestone must include:
 | Reports & Hospital Analytics | Phase 3.30 | Implemented; Phase 5 verification pending | PR #68 (merged) |
 | AI Medical Assistant | Phase 3.31 | Implemented; Phase 5 verification pending | PRs #69, #74–#75 (merged) |
 | AI Diagnostic Support | Phase 3.32 | Implemented; Phase 5 verification pending | PR #76 (merged) |
-| AI Laboratory Assistant | Phase 3.33 | Implemented; Phase 5 verification pending | PR pending |
+| AI Laboratory Assistant | Phase 3.33 | Implemented; Phase 5 verification pending | PR #77 (closed; implementation present on main) |
+| AI Radiology Assistant | Phase 3.34 | In progress | — |
 
 Patient Registration & Management extends the Phase 1 patient foundation with governed duplicate review, identity/document metadata, contact and next-of-kin details, consent/lawful-basis recording, patient status and audit history. Automatic patient merging is prohibited.
 
@@ -177,3 +178,6 @@ Phase 3.32 implementation status: diagnostic support cases are bound to patient-
 
 
 Phase 3.33 AI Laboratory Assistant adds patient/encounter-bound interpretation review records for exact verified final laboratory results. It accepts only completed orders and specimens, binds each case to an active patient-bound AI session and the exact assistant response digest under the laboratory-interpretation capability, and snapshots the source result values, units, abnormality flags, specimen/accession and verification timestamp. Clinicians can record an auditable review decision using private vault references. The workflow is read-only: it cannot alter laboratory results, acknowledge critical results, create orders or diagnoses. Context-specific reference-interval matching and deeper knowledge-citation presentation remain follow-on hardening; Phase 5 verification is pending.
+
+
+Phase 3.34 scope: clinician-supervised interpretation review for verified finalized imaging reports and studies. Cases must bind to the exact patient, encounter, same-hospital imaging order/study/report version, active care assignment, consent/purpose context, active patient-bound clinical AI session, and exact assistant response digest for the approved radiology capability. The module is read-only: it cannot create/modify imaging reports, acknowledge critical findings, create diagnoses/orders/referrals, or alter image data. Only structured report text and approved metadata are used; raw DICOM/image transfer, PACS/RIS connectivity, image-model inference, external radiology gateways and report publication remain Phase 4 or separately governed capabilities. All output is advisory and requires clinician review.
