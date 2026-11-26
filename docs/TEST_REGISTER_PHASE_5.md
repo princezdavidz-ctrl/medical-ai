@@ -554,3 +554,14 @@ No item is considered passed until evidence, environment, build SHA, reviewer an
 - [ ] Dashboard privacy: compliance dashboard aggregates only hospital-scoped counts and exposes no security incident narrative or reporter identity.
 - [ ] Evidence privacy: policy documents use vault references only; no public URLs or credentials are stored.
 - [ ] Migration 0049: RLS, composite membership references, immutable policy/acknowledgement/event triggers and downgrade behavior are verified.
+
+- [ ] Compliance control governance: only compliance roles create/activate versioned controls; control owner must be an active same-hospital member.
+- [ ] Control assessment: active controls only; assessor submits evidence/findings; an independent reviewer must finalize the assessment.
+- [ ] Assessment evidence: vault reference format enforced; next review date must follow assessment date.
+- [ ] Access review snapshot: campaign includes only active same-hospital memberships and active users, with role/department snapshot.
+- [ ] Access review reviewer independence: reviewer cannot be the subject; approval must be performed by a different compliance officer from both reviewer and subject.
+- [ ] Access review completion: campaign cannot complete until all items have approved decisions and justifications.
+- [ ] Access review non-automation: keep/change/revoke are recorded recommendations only; no membership/role change occurs as a side effect.
+- [ ] Access review idempotency and concurrency: duplicate campaign/item decisions cannot create inconsistent duplicate items or bypass independent approval.
+- [ ] Tenant isolation: RLS and composite membership references prevent cross-hospital control owners, assessors, campaign subjects, reviewers and approvers.
+- [ ] Migration 0050: four tables, RLS, constraints and indexes upgrade/downgrade cleanly.
