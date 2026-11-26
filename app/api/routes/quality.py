@@ -1,4 +1,5 @@
 from datetime import datetime, timezone
+from decimal import Decimal
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, status
@@ -10,7 +11,17 @@ from app.api.audit import write_audit_event
 from app.api.deps import get_current_context
 from app.db.session import get_db
 from app.models import Department, Encounter, HospitalMembership, Patient, Role, User
-from app.models.quality import CAPAAction, SafetyIncident, SafetyIncidentEvent, SafetyInvestigation
+from app.models.quality import (
+    CAPAAction, QualityIndicatorDefinition, QualityIndicatorMeasurement,
+    SafetyIncident, SafetyIncidentEvent, SafetyInvestigation,
+    SafetyRound, SafetyRoundFinding,
+)
+from app.schemas.quality_rounds import (
+    QualityIndicatorCreate, QualityIndicatorDefinitionRead,
+    QualityIndicatorMeasurementCreate, QualityIndicatorMeasurementRead,
+    SafetyRoundComplete, SafetyRoundCreate, SafetyRoundFindingCreate,
+    SafetyRoundFindingRead, SafetyRoundFindingResolve, SafetyRoundRead,
+)
 from app.schemas.quality import (
     CAPACreate, CAPAEffectivenessReview, CAPAEvidenceSubmit, CAPARead,
     SafetyIncidentCreate, SafetyIncidentRead, SafetyIncidentTriage,
@@ -451,3 +462,269 @@ def list_my_capa_actions(context: tuple = Depends(get_current_context), db: Sess
         CAPAAction.owner_user_id == user.id,
         CAPAAction.status.in_(("open", "in_progress", "pending_effectiveness_review")),
     ).order_by(CAPAAction.due_at).limit(200)).all()
+
+
+@router.post("/rounds", response_model=SafetyRoundRead, status_code=status.HTTP_201_CREATED)
+def create_safety_round(payload: SafetyRoundCreate, context: tuple = Depends(get_current_context), db: Session = Depends(get_db)):
+    user, hospital_id = context
+    role = _role(db, user.id, hospital_id)
+    if role not in _SAFETY_ROLES and role not in _DEPARTMENT_ROLES:
+        raise HTTPException(status_code=403, detail={"code": "safety_round_manager_role_required"})
+    department_id = payload.department_id
+    if role in _DEPARTMENT_ROLES:
+        own_department = _department_scope(db, user.id, hospital_id, role)
+        if department_id is not None and department_id != own_department:
+            raise HTTPException(status_code=403, detail={"code": "safety_round_department_scope_denied"})
+        department_id = own_department
+    if department_id is not None:
+        exists = db.scalar(select(Department.id).where(
+            Department.hospital_id == hospital_id,
+            Department.id == department_id,
+            Department.status == "active",
+        ))
+        if exists is None:
+            raise HTTPException(status_code=404, detail={"code": "active_department_not_found"})
+    lead_user_id = payload.lead_user_id or user.id
+    lead = db.scalar(select(HospitalMembership.id).where(
+        HospitalMembership.hospital_id == hospital_id,
+        HospitalMembership.user_id == lead_user_id,
+        HospitalMembership.status == "active",
+    ))
+    if lead is None:
+        raise HTTPException(status_code=404, detail={"code": "active_same_hospital_round_lead_required"})
+    round_record = SafetyRound(
+        hospital_id=hospital_id, department_id=department_id, lead_user_id=lead_user_id,
+        title=payload.title, scheduled_at=payload.scheduled_at, created_by_user_id=user.id,
+    )
+    db.add(round_record)
+    db.flush()
+    _audit(db, hospital_id, user.id, "quality.safety_round_created", "safety_round", round_record.id)
+    db.commit()
+    _restore_context(db, user.id, hospital_id)
+    db.refresh(round_record)
+    return round_record
+
+
+@router.post("/rounds/{round_id}/start", response_model=SafetyRoundRead)
+def start_safety_round(round_id: UUID, context: tuple = Depends(get_current_context), db: Session = Depends(get_db)):
+    user, hospital_id = context
+    round_record = db.scalar(select(SafetyRound).where(
+        SafetyRound.hospital_id == hospital_id,
+        SafetyRound.id == round_id,
+    ).with_for_update())
+    if round_record is None:
+        raise HTTPException(status_code=404, detail={"code": "safety_round_not_found"})
+    if round_record.lead_user_id != user.id and _role(db, user.id, hospital_id) not in _SAFETY_ROLES:
+        raise HTTPException(status_code=403, detail={"code": "safety_round_lead_required"})
+    if round_record.status != "planned":
+        raise HTTPException(status_code=409, detail={"code": "safety_round_not_planned"})
+    round_record.status = "in_progress"
+    round_record.conducted_at = datetime.now(timezone.utc)
+    _audit(db, hospital_id, user.id, "quality.safety_round_started", "safety_round", round_record.id)
+    db.commit()
+    _restore_context(db, user.id, hospital_id)
+    db.refresh(round_record)
+    return round_record
+
+
+@router.post("/rounds/{round_id}/findings", response_model=SafetyRoundFindingRead, status_code=status.HTTP_201_CREATED)
+def create_safety_round_finding(round_id: UUID, payload: SafetyRoundFindingCreate, context: tuple = Depends(get_current_context), db: Session = Depends(get_db)):
+    user, hospital_id = context
+    round_record = db.scalar(select(SafetyRound).where(
+        SafetyRound.hospital_id == hospital_id,
+        SafetyRound.id == round_id,
+    ).with_for_update())
+    if round_record is None:
+        raise HTTPException(status_code=404, detail={"code": "safety_round_not_found"})
+    if round_record.status != "in_progress":
+        raise HTTPException(status_code=409, detail={"code": "active_safety_round_required"})
+    if round_record.lead_user_id != user.id and _role(db, user.id, hospital_id) not in _SAFETY_ROLES:
+        raise HTTPException(status_code=403, detail={"code": "safety_round_lead_required"})
+    owner = db.scalar(select(HospitalMembership.id).where(
+        HospitalMembership.hospital_id == hospital_id,
+        HospitalMembership.user_id == payload.owner_user_id,
+        HospitalMembership.status == "active",
+    ))
+    if owner is None:
+        raise HTTPException(status_code=404, detail={"code": "active_same_hospital_finding_owner_required"})
+    finding = SafetyRoundFinding(
+        hospital_id=hospital_id, round_id=round_record.id, owner_user_id=payload.owner_user_id,
+        severity=payload.severity, description=payload.description, due_at=payload.due_at,
+        created_by_user_id=user.id,
+    )
+    db.add(finding)
+    _audit(db, hospital_id, user.id, "quality.safety_round_finding_created", "safety_round_finding", finding.id)
+    db.commit()
+    _restore_context(db, user.id, hospital_id)
+    db.refresh(finding)
+    return finding
+
+
+@router.post("/round-findings/{finding_id}/resolve", response_model=SafetyRoundFindingRead)
+def resolve_safety_round_finding(finding_id: UUID, payload: SafetyRoundFindingResolve, context: tuple = Depends(get_current_context), db: Session = Depends(get_db)):
+    user, hospital_id = context
+    finding = db.scalar(select(SafetyRoundFinding).where(
+        SafetyRoundFinding.hospital_id == hospital_id,
+        SafetyRoundFinding.id == finding_id,
+    ).with_for_update())
+    if finding is None:
+        raise HTTPException(status_code=404, detail={"code": "safety_round_finding_not_found"})
+    if finding.owner_user_id != user.id and _role(db, user.id, hospital_id) not in _SAFETY_ROLES:
+        raise HTTPException(status_code=403, detail={"code": "finding_owner_or_safety_officer_required"})
+    if finding.status in ("resolved", "accepted_risk"):
+        raise HTTPException(status_code=409, detail={"code": "safety_round_finding_already_closed"})
+    finding.status = "resolved"
+    finding.resolution_note = payload.resolution_note
+    finding.resolved_by_user_id = user.id
+    finding.resolved_at = datetime.now(timezone.utc)
+    _audit(db, hospital_id, user.id, "quality.safety_round_finding_resolved", "safety_round_finding", finding.id)
+    db.commit()
+    _restore_context(db, user.id, hospital_id)
+    db.refresh(finding)
+    return finding
+
+
+@router.post("/rounds/{round_id}/complete", response_model=SafetyRoundRead)
+def complete_safety_round(round_id: UUID, payload: SafetyRoundComplete, context: tuple = Depends(get_current_context), db: Session = Depends(get_db)):
+    user, hospital_id = context
+    round_record = db.scalar(select(SafetyRound).where(
+        SafetyRound.hospital_id == hospital_id,
+        SafetyRound.id == round_id,
+    ).with_for_update())
+    if round_record is None:
+        raise HTTPException(status_code=404, detail={"code": "safety_round_not_found"})
+    if round_record.lead_user_id != user.id and _role(db, user.id, hospital_id) not in _SAFETY_ROLES:
+        raise HTTPException(status_code=403, detail={"code": "safety_round_lead_required"})
+    if round_record.status != "in_progress":
+        raise HTTPException(status_code=409, detail={"code": "active_safety_round_required"})
+    open_finding = db.scalar(select(SafetyRoundFinding.id).where(
+        SafetyRoundFinding.hospital_id == hospital_id,
+        SafetyRoundFinding.round_id == round_id,
+        SafetyRoundFinding.status.in_(("open", "in_progress")),
+    ).limit(1))
+    if open_finding is not None:
+        raise HTTPException(status_code=409, detail={"code": "unresolved_safety_round_findings_remain"})
+    round_record.status = "completed"
+    round_record.completed_at = datetime.now(timezone.utc)
+    round_record.summary = payload.summary
+    _audit(db, hospital_id, user.id, "quality.safety_round_completed", "safety_round", round_record.id)
+    db.commit()
+    _restore_context(db, user.id, hospital_id)
+    db.refresh(round_record)
+    return round_record
+
+
+@router.get("/my-round-findings", response_model=list[SafetyRoundFindingRead])
+def list_my_safety_round_findings(context: tuple = Depends(get_current_context), db: Session = Depends(get_db)):
+    user, hospital_id = context
+    return db.scalars(select(SafetyRoundFinding).where(
+        SafetyRoundFinding.hospital_id == hospital_id,
+        SafetyRoundFinding.owner_user_id == user.id,
+        SafetyRoundFinding.status.in_(("open", "in_progress")),
+    ).order_by(SafetyRoundFinding.due_at).limit(200)).all()
+
+
+@router.post("/indicators", response_model=QualityIndicatorDefinitionRead, status_code=status.HTTP_201_CREATED)
+def create_quality_indicator(payload: QualityIndicatorCreate, context: tuple = Depends(get_current_context), db: Session = Depends(get_db)):
+    user, hospital_id = context
+    _require_safety_role(db, user.id, hospital_id)
+    latest = db.scalar(select(QualityIndicatorDefinition).where(
+        QualityIndicatorDefinition.hospital_id == hospital_id,
+        QualityIndicatorDefinition.code == payload.code,
+    ).order_by(QualityIndicatorDefinition.version.desc()).limit(1))
+    indicator = QualityIndicatorDefinition(
+        hospital_id=hospital_id, version=(latest.version + 1 if latest else 1),
+        created_by_user_id=user.id, **payload.model_dump(),
+    )
+    db.add(indicator)
+    try:
+        db.flush()
+        _audit(db, hospital_id, user.id, "quality.indicator_created", "quality_indicator_definition", indicator.id)
+        db.commit()
+    except IntegrityError:
+        db.rollback()
+        raise HTTPException(status_code=409, detail={"code": "quality_indicator_version_conflict"}) from None
+    _restore_context(db, user.id, hospital_id)
+    db.refresh(indicator)
+    return indicator
+
+
+@router.post("/indicators/{indicator_id}/activate", response_model=QualityIndicatorDefinitionRead)
+def activate_quality_indicator(indicator_id: UUID, context: tuple = Depends(get_current_context), db: Session = Depends(get_db)):
+    user, hospital_id = context
+    _require_safety_role(db, user.id, hospital_id)
+    indicator = db.scalar(select(QualityIndicatorDefinition).where(
+        QualityIndicatorDefinition.hospital_id == hospital_id,
+        QualityIndicatorDefinition.id == indicator_id,
+    ).with_for_update())
+    if indicator is None:
+        raise HTTPException(status_code=404, detail={"code": "quality_indicator_not_found"})
+    if indicator.status != "draft":
+        raise HTTPException(status_code=409, detail={"code": "only_draft_quality_indicators_can_be_activated"})
+    indicator.status = "active"
+    _audit(db, hospital_id, user.id, "quality.indicator_activated", "quality_indicator_definition", indicator.id)
+    db.commit()
+    _restore_context(db, user.id, hospital_id)
+    db.refresh(indicator)
+    return indicator
+
+
+@router.get("/indicators", response_model=list[QualityIndicatorDefinitionRead])
+def list_quality_indicators(context: tuple = Depends(get_current_context), db: Session = Depends(get_db)):
+    user, hospital_id = context
+    if _role(db, user.id, hospital_id) not in _SAFETY_ROLES | _DEPARTMENT_ROLES:
+        raise HTTPException(status_code=403, detail={"code": "quality_indicator_access_required"})
+    return db.scalars(select(QualityIndicatorDefinition).where(
+        QualityIndicatorDefinition.hospital_id == hospital_id,
+        QualityIndicatorDefinition.status == "active",
+    ).order_by(QualityIndicatorDefinition.code, QualityIndicatorDefinition.version.desc()).limit(300)).all()
+
+
+@router.post("/indicators/{indicator_id}/measurements", response_model=QualityIndicatorMeasurementRead, status_code=status.HTTP_201_CREATED)
+def record_quality_indicator_measurement(indicator_id: UUID, payload: QualityIndicatorMeasurementCreate, context: tuple = Depends(get_current_context), db: Session = Depends(get_db)):
+    user, hospital_id = context
+    _require_safety_role(db, user.id, hospital_id)
+    indicator = db.scalar(select(QualityIndicatorDefinition).where(
+        QualityIndicatorDefinition.hospital_id == hospital_id,
+        QualityIndicatorDefinition.id == indicator_id,
+        QualityIndicatorDefinition.status == "active",
+    ))
+    if indicator is None:
+        raise HTTPException(status_code=404, detail={"code": "active_quality_indicator_not_found"})
+    if indicator.unit == "percent":
+        value = Decimal(payload.numerator) / Decimal(payload.denominator) * Decimal("100")
+    elif indicator.unit == "per_1000":
+        value = Decimal(payload.numerator) / Decimal(payload.denominator) * Decimal("1000")
+    elif indicator.unit == "count":
+        value = Decimal(payload.numerator)
+    else:
+        value = Decimal(payload.numerator) / Decimal(payload.denominator)
+    measurement = QualityIndicatorMeasurement(
+        hospital_id=hospital_id, indicator_id=indicator.id,
+        period_start=payload.period_start, period_end=payload.period_end,
+        numerator=payload.numerator, denominator=payload.denominator,
+        value=value, data_source=payload.data_source, source_version=payload.source_version,
+        created_by_user_id=user.id,
+    )
+    db.add(measurement)
+    try:
+        db.flush()
+        _audit(db, hospital_id, user.id, "quality.indicator_measurement_recorded", "quality_indicator_measurement", measurement.id)
+        db.commit()
+    except IntegrityError:
+        db.rollback()
+        raise HTTPException(status_code=409, detail={"code": "quality_indicator_period_already_recorded"}) from None
+    _restore_context(db, user.id, hospital_id)
+    db.refresh(measurement)
+    return measurement
+
+
+@router.get("/indicators/{indicator_id}/measurements", response_model=list[QualityIndicatorMeasurementRead])
+def list_quality_indicator_measurements(indicator_id: UUID, context: tuple = Depends(get_current_context), db: Session = Depends(get_db)):
+    user, hospital_id = context
+    if _role(db, user.id, hospital_id) not in _SAFETY_ROLES | _DEPARTMENT_ROLES:
+        raise HTTPException(status_code=403, detail={"code": "quality_indicator_access_required"})
+    return db.scalars(select(QualityIndicatorMeasurement).where(
+        QualityIndicatorMeasurement.hospital_id == hospital_id,
+        QualityIndicatorMeasurement.indicator_id == indicator_id,
+    ).order_by(QualityIndicatorMeasurement.period_start.desc()).limit(500)).all()
