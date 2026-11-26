@@ -119,6 +119,7 @@ def create_notification_template(payload: NotificationTemplateCreate, context: t
     latest = db.scalar(select(NotificationTemplate).where(
         NotificationTemplate.hospital_id == hospital_id,
         NotificationTemplate.template_code == payload.template_code,
+        NotificationTemplate.locale == payload.locale,
     ).order_by(NotificationTemplate.version.desc()).limit(1))
     template = NotificationTemplate(
         hospital_id=hospital_id, version=(latest.version + 1 if latest else 1),
@@ -241,15 +242,34 @@ def enqueue_department_notification(
                 raise HTTPException(status_code=409, detail={"code": "idempotency_key_reused_for_different_notification"})
             intents.append(existing)
             continue
+        recipient_locale = preference.locale if preference is not None else "en"
+        localized_template = db.scalar(select(NotificationTemplate).where(
+            NotificationTemplate.hospital_id == hospital_id,
+            NotificationTemplate.template_code == template.template_code,
+            NotificationTemplate.locale == recipient_locale,
+            NotificationTemplate.status == "published",
+        ).order_by(NotificationTemplate.version.desc()).limit(1))
+        target_template = localized_template if localized_template is not None and localized_template.channel == template.channel else template
+        target_required = _placeholders(target_template.title_template, target_template.body_template)
+        if set(payload.variables) != target_required or not target_required.issubset(set(target_template.allowed_placeholders)):
+            target_template = template
+            target_required = _placeholders(target_template.title_template, target_template.body_template)
+        if set(payload.variables) != target_required:
+            raise HTTPException(status_code=422, detail={"code": "localized_template_variables_mismatch"})
+        try:
+            rendered_title = target_template.title_template.format_map(payload.variables)
+            rendered_body = target_template.body_template.format_map(payload.variables)
+        except (KeyError, ValueError):
+            raise HTTPException(status_code=422, detail={"code": "notification_template_render_failed"}) from None
         intent = NotificationIntent(
             hospital_id=hospital_id,
             recipient_user_id=recipient_id,
-            template_id=template.id,
-            channel=template.channel,
+            template_id=target_template.id,
+            channel=target_template.channel,
             purpose=payload.purpose,
             idempotency_key=key,
-            rendered_title=title,
-            rendered_body=body,
+            rendered_title=rendered_title,
+            rendered_body=rendered_body,
             created_by_user_id=user.id,
         )
         db.add(intent)
@@ -301,6 +321,12 @@ def enqueue_notification(payload: NotificationEnqueue, context: tuple = Depends(
     ))
     if template is None:
         raise HTTPException(status_code=404, detail={"code": "published_notification_template_not_found"})
+    if preference := db.scalar(select(NotificationPreference).where(
+        NotificationPreference.hospital_id == hospital_id,
+        NotificationPreference.user_id == payload.recipient_user_id,
+    )):
+        if template.locale not in (preference.locale, "en"):
+            raise HTTPException(status_code=422, detail={"code": "notification_template_locale_mismatch"})
     required_placeholders = _placeholders(template.title_template, template.body_template)
     if not required_placeholders.issubset(set(template.allowed_placeholders)):
         raise HTTPException(status_code=422, detail={"code": "template_placeholder_configuration_invalid"})
