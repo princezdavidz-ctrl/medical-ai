@@ -539,3 +539,18 @@ No item is considered passed until evidence, environment, build SHA, reviewer an
 - [ ] Tenant isolation: RLS and composite keys prevent cross-hospital round leads, finding owners/resolvers, indicator definitions and measurement references.
 - [ ] Department dashboard: department managers receive only their department's incident aggregates; indicator values remain hospital-scoped and contain no patient identifiers.
 - [ ] Migration 0048: all four tables, indexes, RLS policies and composite references upgrade/downgrade cleanly.
+
+
+## Phase 3.29 — Compliance & Security Management
+
+- [ ] Policy governance: only authorized compliance roles create/publish policies; publisher must differ from author; published versions are immutable.
+- [ ] Policy acknowledgements: only active same-hospital members acknowledge effective published policies; duplicate acknowledgement is idempotent; acknowledgement history is append-only.
+- [ ] Confidential security incident: ordinary staff see only reports they filed or are assigned; reporter identity remains hidden from assignees unless they are the reporter or authorized security officer.
+- [ ] Security incident triage: only compliance/security roles classify severity and breach assessment; invalid state transitions are rejected.
+- [ ] Security incident assignment: only active same-hospital members can be assigned; cross-hospital assignment is rejected.
+- [ ] Security incident lifecycle: containment precedes resolution; breach assessment must be completed before resolution/closure; event history is append-only.
+- [ ] Risk scoring: inherent and residual scores equal likelihood × impact; values outside 1–5 are rejected by schema and database.
+- [ ] Risk ownership/review: owners are active same-hospital members; independent compliance reviewer must differ from owner.
+- [ ] Dashboard privacy: compliance dashboard aggregates only hospital-scoped counts and exposes no security incident narrative or reporter identity.
+- [ ] Evidence privacy: policy documents use vault references only; no public URLs or credentials are stored.
+- [ ] Migration 0049: RLS, composite membership references, immutable policy/acknowledgement/event triggers and downgrade behavior are verified.
