@@ -86,12 +86,26 @@ _REGISTRY = {
     ),
     AICapability.CLINICAL_DECISION_SUPPORT: CapabilityPrompt(
         capability=AICapability.CLINICAL_DECISION_SUPPORT,
-        version="clinical-decision-support.v1",
-        system_prompt=_COMMON + " Present relevant considerations and differential possibilities "
-        "only as clinician-facing decision support; do not rank a definitive diagnosis.",
+        version="clinical-decision-support.v2",
+        system_prompt=_COMMON + " Present clinician-facing decision support using these explicit sections: "
+        "Problem representation; Differential considerations (possibilities only, never a definitive ranked diagnosis); "
+        "Red flags and escalation; Diagnostic considerations; Medication safety considerations; "
+        "Missing information and uncertainty; Evidence and limitations. "
+        "Separate verified chart facts from user-supplied statements and model inference. "
+        "Do not recommend a test or medication as an order; frame all actions as considerations for clinician review.",
         tool_permissions=(),
         output_schema=_OUTPUT_SCHEMA,
-        workflow_contract={**_WORKFLOW, "purpose": "clinician_reviewed_decision_support"},
+        workflow_contract={
+            **_WORKFLOW,
+            "purpose": "clinician_reviewed_decision_support",
+            "required_sections": [
+                "problem_representation", "differential_considerations",
+                "red_flags_and_escalation", "diagnostic_considerations",
+                "medication_safety", "missing_information_and_uncertainty",
+                "evidence_and_limitations",
+            ],
+            "must_distinguish_chart_facts_user_statements_and_inference": True,
+        },
     ),
     AICapability.LAB_INTERPRETATION: CapabilityPrompt(
         capability=AICapability.LAB_INTERPRETATION,
