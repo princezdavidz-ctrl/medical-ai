@@ -247,6 +247,7 @@ class RetentionPolicy(Base):
     __table_args__ = (
         UniqueConstraint("hospital_id", "policy_code", "version", name="uq_retention_policy_version"),
         UniqueConstraint("hospital_id", "id", name="uq_retention_policy_hospital_id"),
+        ForeignKeyConstraint(["hospital_id", "approved_by_user_id"], ["hospital_memberships.hospital_id", "hospital_memberships.user_id"], name="fk_retention_policy_approver"),
         CheckConstraint("data_domain IN ('clinical_records', 'billing_records', 'audit_logs', 'communications', 'security_logs', 'hr_records', 'other')", name="ck_retention_policy_domain"),
         CheckConstraint("status IN ('draft', 'active', 'retired')", name="ck_retention_policy_status"),
         CheckConstraint("retention_days BETWEEN 1 AND 36500", name="ck_retention_policy_days"),
@@ -263,7 +264,7 @@ class RetentionPolicy(Base):
     status: Mapped[str] = mapped_column(String(16), nullable=False, default="draft")
     effective_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     created_by_user_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id"), nullable=False)
-    approved_by_user_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("users.id"))
+    approved_by_user_id: Mapped[uuid.UUID | None] = mapped_column(Uuid(as_uuid=True))
     approved_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
 
@@ -272,6 +273,7 @@ class LegalHold(Base):
     __tablename__ = "legal_holds"
     __table_args__ = (
         UniqueConstraint("hospital_id", "id", name="uq_legal_hold_hospital_id"),
+        UniqueConstraint("hospital_id", "hold_reference", name="uq_legal_hold_reference"),
         ForeignKeyConstraint(["hospital_id", "issued_by_user_id"], ["hospital_memberships.hospital_id", "hospital_memberships.user_id"], name="fk_legal_hold_issuer"),
         ForeignKeyConstraint(["hospital_id", "released_by_user_id"], ["hospital_memberships.hospital_id", "hospital_memberships.user_id"], name="fk_legal_hold_releaser"),
         CheckConstraint("status IN ('active', 'released', 'expired')", name="ck_legal_hold_status"),
