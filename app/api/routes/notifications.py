@@ -1,5 +1,4 @@
 import re
-import uuid
 from datetime import datetime, timezone
 from string import Formatter
 from uuid import UUID
