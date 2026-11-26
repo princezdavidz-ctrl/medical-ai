@@ -322,10 +322,13 @@ def close_security_incident(incident_id: UUID, context: tuple = Depends(get_curr
 def create_compliance_risk(payload: ComplianceRiskCreate, context: tuple = Depends(get_current_context), db: Session = Depends(get_db)):
     user, hospital_id = context
     _require_compliance(db, user.id, hospital_id)
-    owner = db.scalar(select(HospitalMembership.id).where(
+    owner = db.scalar(select(HospitalMembership.id).join(
+        User, User.id == HospitalMembership.user_id,
+    ).where(
         HospitalMembership.hospital_id == hospital_id,
         HospitalMembership.user_id == payload.owner_user_id,
         HospitalMembership.status == "active",
+        User.is_active.is_(True),
     ))
     if owner is None:
         raise HTTPException(status_code=404, detail={"code": "active_same_hospital_risk_owner_required"})
