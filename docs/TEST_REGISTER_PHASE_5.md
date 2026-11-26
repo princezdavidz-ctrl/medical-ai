@@ -675,6 +675,6 @@ No item is considered passed until evidence, environment, build SHA, reviewer an
 - [ ] Context-specific reference intervals: exact laboratory test concept, unit, specimen, method, age and administrative-sex matching; pregnancy/population-specific intervals are withheld unless context is explicitly available.
 - [ ] Reference interval ambiguity/freshness: no interval is attached when multiple equally specific intervals match, the knowledge document/source is inactive, review is overdue, or effective dates have passed.
 - [ ] Reference comparison semantics: computed below/within/above interval is advisory metadata only and never overrides the laboratory's verified abnormality/critical flags.
-- [ ] Evidence presentation: source response citation IDs are retained with the case; interval source title, publisher, version, review date and canonical URL are exposed with provenance.
+- [ ] Evidence presentation: source response citation IDs and allow-listed citation metadata (title, publisher, version, jurisdiction, evidence grade, review dates and canonical URL) are retained and displayed; interval provenance is visible.
 - [ ] Review decision storage: maximum decision length and allowed values match the database column/check constraint; vault references are validated at both schema and database layers.
 - [ ] Duplicate result IDs: request schema rejects duplicate IDs and stored snapshots are deterministically ordered.
