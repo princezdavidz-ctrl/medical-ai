@@ -652,3 +652,9 @@ No item is considered passed until evidence, environment, build SHA, reviewer an
 - [ ] Case closure: clinician-authored assessment reference required and all proposed suggestions must be reviewed.
 - [ ] Tenant isolation: RLS and composite FKs prevent cross-hospital patient, encounter, session, reviewer and test-definition references.
 - [ ] Migration 0055: case, differential and test consideration tables and indexes upgrade/downgrade cleanly.
+
+- [ ] Source capability binding: diagnostic cases accept only assistant messages created under the approved `clinical_decision_support` capability; general medical-information responses cannot seed a diagnostic case.
+- [ ] Source response integrity: assistant sequence and SHA-256 digest must identify the exact encrypted assistant message; a digest from another sequence/session is rejected.
+- [ ] Knowledge freshness: disease concepts from draft, rejected, superseded, archived, expired or overdue-for-review documents are rejected; only active sources and currently effective approved documents qualify.
+- [ ] Same-hospital catalog binding: lab/imaging definitions from another hospital, retired definitions or code/name mismatches are rejected.
+- [ ] Duplicate case prevention: only one diagnostic case can be created for a given hospital/session/assistant sequence.
