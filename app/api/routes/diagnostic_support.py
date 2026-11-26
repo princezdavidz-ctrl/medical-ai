@@ -22,7 +22,7 @@ from app.schemas.diagnostic_support import (
     DiagnosticTestConsiderationCreate, DiagnosticTestConsiderationRead,
     DiagnosticTestConsiderationReview,
 )
-from app.services.patient_context import PatientContextDenied, load_authorized_patient_context
+from app.ai.patient_context import PatientContextDenied, load_authorized_patient_context
 
 router = APIRouter(prefix="/diagnostic-support", tags=["AI diagnostic support"])
 
