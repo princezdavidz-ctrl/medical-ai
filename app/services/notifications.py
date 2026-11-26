@@ -88,7 +88,7 @@ def claim_next_notification(db: Session, *, hospital_id: UUID, worker_user_id: U
             (NotificationIntent.status.in_(("queued", "retry_scheduled")) & (NotificationIntent.next_attempt_at <= now)),
             ((NotificationIntent.status == "processing") & (NotificationIntent.updated_at <= now - timedelta(minutes=10))),
         ),
-        NotificationIntent.attempt_count < NotificationIntent.max_attempts,
+        or_(NotificationIntent.status == "processing", NotificationIntent.attempt_count < NotificationIntent.max_attempts),
     ).order_by(NotificationIntent.next_attempt_at, NotificationIntent.created_at).with_for_update(skip_locked=True).limit(1))
     if intent is None:
         return None
