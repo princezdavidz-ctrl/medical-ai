@@ -41,7 +41,7 @@ def ask_patient_assistant(
 ):
     user, hospital_id = context
     settings = get_settings()
-    metadata = {"capability": AICapability.MEDICAL_INFORMATION.value, "surface": "patient_portal"}
+    metadata = {"capability": AICapability.PATIENT_EDUCATION.value, "surface": "patient_portal"}
 
     if not settings.ai_requests_enabled:
         raise HTTPException(status_code=503, detail={"code": "ai_requests_disabled_by_safety_gate"})
@@ -90,7 +90,7 @@ def ask_patient_assistant(
         })
 
     prompt = (
-        "Patient-facing health education request. Explain in plain, respectful language suitable for a general audience. "
+        ""
         "Answer the question using only the approved evidence supplied to you. Do not diagnose, prescribe, change medication, "
         "interpret an individual test result, or make a personal treatment decision. If the user describes severe or rapidly "
         "worsening symptoms, advise immediate emergency assessment. For medication instructions, explain only general wording "
