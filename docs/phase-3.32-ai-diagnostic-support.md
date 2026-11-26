@@ -49,3 +49,7 @@ Phase 3 provides case binding, governed concept/test references, citation proven
 
 ## Verification
 All clinical authorization, evidence provenance, concept/test grounding, review, closure, tenant isolation and migration scenarios are registered in `docs/TEST_REGISTER_PHASE_5.md`. Backend tests remain deferred to Phase 5.
+
+
+## Implementation status
+Implemented and merged in PR #76. The backend module is registered in the central API and ORM metadata; migration 0055 follows the Phase 3.31 feedback migration 0054. Phase 5 verification remains pending.
