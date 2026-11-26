@@ -622,3 +622,11 @@ No item is considered passed until evidence, environment, build SHA, reviewer an
 - [ ] Access review metrics: open and overdue campaigns are counted separately; pending-review and awaiting-approval items remain distinct.
 - [ ] Retention metrics: only active unexpired legal holds count; expired/released holds are excluded; pending disposition requests are counted without triggering destructive actions.
 - [ ] Compliance dashboard authorization: only designated compliance/security roles can access aggregate governance metrics.
+
+- [ ] Clinician feedback category: only approved categories are accepted; unknown values are rejected by schema and database constraints.
+- [ ] Correction reference privacy: correction references must use the private vault URI format; public URLs, free-text clinical narratives and credentials are rejected.
+- [ ] Feedback immutability: review feedback/category/correction reference cannot be updated or deleted after insertion.
+- [ ] Feedback governance boundary: recording feedback never changes production prompt versions, model weights, medical knowledge or clinical authorization.
+- [ ] Review history authorization: only the session owner can list reviews for their active clinical session; other users and hospitals receive no data.
+- [ ] Review history reauthorization: revoked/expired consent, changed care assignment or expired session blocks review-history access.
+- [ ] Migration 0054: feedback category and correction reference constraints/index upgrade and downgrade cleanly without changing existing review records.

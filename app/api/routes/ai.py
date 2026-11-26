@@ -554,7 +554,9 @@ def review_clinical_ai_response(
         hospital_id=hospital_id, session_id=session_id, owner_user_id=user.id,
         patient_id=session_context.patient_id, encounter_id=session_context.encounter_id,
         assistant_sequence=payload.assistant_sequence, response_digest=payload.response_digest,
-        decision=payload.decision, reviewed_by_user_id=user.id, note_reference=payload.note_reference,
+        decision=payload.decision, feedback_category=payload.feedback_category,
+        correction_reference=payload.correction_reference,
+        reviewed_by_user_id=user.id, note_reference=payload.note_reference,
     )
     db.add(review)
     try:
@@ -567,11 +569,61 @@ def review_clinical_ai_response(
         db, user_id=user.id, hospital_id=hospital_id,
         action="ai.clinical_response.reviewed", outcome="success",
         reason="Clinician review decision recorded",
-        metadata={"session_id": str(session_id), "assistant_sequence": payload.assistant_sequence, "decision": payload.decision},
+        metadata={
+            "session_id": str(session_id),
+            "assistant_sequence": payload.assistant_sequence,
+            "decision": payload.decision,
+            "feedback_category": payload.feedback_category,
+            "correction_reference_supplied": payload.correction_reference is not None,
+        },
         resource_type="ai_clinical_review", resource_id=str(review.id),
     )
     return review_result
 
+
+
+@router.get(
+    "/clinical-sessions/{session_id}/reviews",
+    summary="List clinician feedback for the authenticated session owner",
+    response_model=list[AIClinicalReviewRead],
+)
+def list_clinical_ai_reviews(
+    session_id: UUID,
+    context=Depends(get_current_context),
+    db: Session = Depends(get_db),
+) -> list[AIClinicalReviewRead]:
+    user, hospital_id = context
+    now = datetime.now(timezone.utc)
+    session_context = db.scalar(select(ClinicalAISessionContext).where(
+        ClinicalAISessionContext.hospital_id == hospital_id,
+        ClinicalAISessionContext.session_id == session_id,
+        ClinicalAISessionContext.owner_user_id == user.id,
+        ClinicalAISessionContext.status == "active",
+    ))
+    session_record = db.scalar(select(AISession).where(
+        AISession.hospital_id == hospital_id,
+        AISession.id == session_id,
+        AISession.owner_user_id == user.id,
+        AISession.status == "active",
+        AISession.expires_at > now,
+    ))
+    if session_context is None or session_record is None:
+        raise HTTPException(status_code=404, detail={"code": "active_clinical_ai_session_not_found"})
+    try:
+        authorized = load_authorized_patient_context(
+            db, hospital_id=hospital_id, actor_user_id=user.id,
+            patient_id=session_context.patient_id, encounter_id=session_context.encounter_id,
+        )
+    except PatientContextDenied as exc:
+        raise HTTPException(status_code=403, detail={"code": str(exc)}) from exc
+    if authorized.consent_id != session_context.consent_id or authorized.assignment_id != session_context.assignment_id:
+        raise HTTPException(status_code=403, detail={"code": "clinical_ai_session_authorization_context_changed"})
+    reviews = db.scalars(select(AIClinicalReviewRecord).where(
+        AIClinicalReviewRecord.hospital_id == hospital_id,
+        AIClinicalReviewRecord.session_id == session_id,
+        AIClinicalReviewRecord.owner_user_id == user.id,
+    ).order_by(AIClinicalReviewRecord.reviewed_at.desc()).limit(100)).all()
+    return [AIClinicalReviewRead.model_validate(item) for item in reviews]
 
 def _session_cipher(settings) -> SessionCipher:
     if not settings.ai_sessions_enabled or settings.ai_session_encryption_keys is None:
