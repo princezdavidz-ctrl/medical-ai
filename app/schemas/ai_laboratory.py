@@ -40,6 +40,7 @@ class AILaboratoryInterpretationRead(BaseModel):
     laboratory_result_ids: list[str]
     result_snapshot: list[dict[str, Any]]
     evidence_citation_ids: list[str]
+    evidence_citations: list[dict[str, Any]]
     status: str
     review_decision: str | None
     review_note_reference: str | None
