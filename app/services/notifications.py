@@ -35,6 +35,7 @@ def _recipient_is_active(db: Session, intent: NotificationIntent) -> bool:
         PatientPortalLink.patient_id == intent.patient_id,
         PatientPortalLink.portal_user_id == intent.recipient_user_id,
         PatientPortalLink.status == "active",
+        or_(PatientPortalLink.expires_at.is_(None), PatientPortalLink.expires_at > datetime.now(timezone.utc)),
     ))
     return link is not None
 

@@ -94,3 +94,9 @@ The notification service exposes provider-neutral claim and result-recording ope
 - Staff and patient portal users can mark only their own notifications as read; patient routes are restricted to in-app notifications.
 - Staff and patient dashboard endpoints expose total and unread counts without cross-user visibility.
 - Migration 0046_notification_read_state adds the nullable read timestamp.
+
+
+## Recipient event history and final hardening
+- Staff recipients can retrieve lifecycle events only for their own notifications; patient portal recipients can retrieve events only for their own in-app notifications. Event payloads expose event type and timestamp, not internal metadata.
+- Reusing an idempotency key with a different recipient, patient, consent, purpose or template code returns HTTP 409. Localized versions of the same template code remain idempotently equivalent.
+- Patient portal links are checked for expiry both when enqueueing and immediately before dispatch.

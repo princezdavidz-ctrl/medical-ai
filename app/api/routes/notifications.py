@@ -194,6 +194,24 @@ def enqueue_notification(payload: NotificationEnqueue, context: tuple = Depends(
         NotificationIntent.idempotency_key == payload.idempotency_key,
     ))
     if existing is not None:
+        requested_template = db.scalar(select(NotificationTemplate).where(
+            NotificationTemplate.hospital_id == hospital_id,
+            NotificationTemplate.id == payload.template_id,
+        ))
+        existing_template = db.scalar(select(NotificationTemplate).where(
+            NotificationTemplate.hospital_id == hospital_id,
+            NotificationTemplate.id == existing.template_id,
+        ))
+        if (
+            existing.recipient_user_id != payload.recipient_user_id
+            or existing.patient_id != payload.patient_id
+            or existing.consent_id != payload.consent_id
+            or existing.purpose != payload.purpose
+            or requested_template is None
+            or existing_template is None
+            or existing_template.template_code != requested_template.template_code
+        ):
+            raise HTTPException(status_code=409, detail={"code": "idempotency_key_reused_for_different_notification"})
         return existing
     template = db.scalar(select(NotificationTemplate).where(
         NotificationTemplate.hospital_id == hospital_id,
@@ -225,6 +243,7 @@ def enqueue_notification(payload: NotificationEnqueue, context: tuple = Depends(
             PatientPortalLink.patient_id == payload.patient_id,
             PatientPortalLink.portal_user_id == payload.recipient_user_id,
             PatientPortalLink.status == "active",
+            (PatientPortalLink.expires_at.is_(None) | (PatientPortalLink.expires_at > datetime.now(timezone.utc))),
         ))
     if membership is None and portal_link is None:
         raise HTTPException(status_code=404, detail={"code": "active_same_hospital_recipient_not_found"})
@@ -597,3 +616,38 @@ def get_patient_notification_dashboard(context: tuple = Depends(get_current_pati
         NotificationIntent.read_at.is_(None),
     )) or 0
     return {"total": total, "unread": unread}
+
+
+@router.get("/my-notifications/{intent_id}/events")
+def get_staff_notification_events(intent_id: UUID, context: tuple = Depends(get_current_context), db: Session = Depends(get_db)):
+    user, hospital_id = context
+    intent = db.scalar(select(NotificationIntent).where(
+        NotificationIntent.hospital_id == hospital_id,
+        NotificationIntent.id == intent_id,
+        NotificationIntent.recipient_user_id == user.id,
+    ))
+    if intent is None:
+        raise HTTPException(status_code=404, detail={"code": "notification_not_found"})
+    events = db.scalars(select(NotificationEvent).where(
+        NotificationEvent.hospital_id == hospital_id,
+        NotificationEvent.intent_id == intent_id,
+    ).order_by(NotificationEvent.created_at.asc()).limit(200)).all()
+    return [{"id": event.id, "event_type": event.event_type, "created_at": event.created_at} for event in events]
+
+
+@router.get("/patient/inbox/{intent_id}/events")
+def get_patient_notification_events(intent_id: UUID, context: tuple = Depends(get_current_patient_context), db: Session = Depends(get_db)):
+    user, hospital_id = context
+    intent = db.scalar(select(NotificationIntent).where(
+        NotificationIntent.hospital_id == hospital_id,
+        NotificationIntent.id == intent_id,
+        NotificationIntent.recipient_user_id == user.id,
+        NotificationIntent.channel == "in_app",
+    ))
+    if intent is None:
+        raise HTTPException(status_code=404, detail={"code": "notification_not_found"})
+    events = db.scalars(select(NotificationEvent).where(
+        NotificationEvent.hospital_id == hospital_id,
+        NotificationEvent.intent_id == intent_id,
+    ).order_by(NotificationEvent.created_at.asc()).limit(200)).all()
+    return [{"id": event.id, "event_type": event.event_type, "created_at": event.created_at} for event in events]

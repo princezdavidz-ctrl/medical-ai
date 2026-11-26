@@ -151,3 +151,6 @@ Phase 3.26 adds telemedicine scheduling and session lifecycle, active verified p
 
 
 Phase 3.27 scope: hospital-scoped communication preferences and consent-aware notification intents; role- and department-scoped recipient resolution; template/version governance; queued delivery with idempotency, retry scheduling and terminal failure states; provider-neutral delivery attempts and immutable event history. Notifications must contain minimum-necessary content, avoid clinical details and direct identifiers by default, respect quiet hours and channel opt-outs, and never claim delivery until a provider acknowledgement is recorded. SMS, email, push and in-app provider execution, patient contact verification, appointment integrations and external messaging credentials are Phase 4 integrations. No clinical urgency routing or emergency dispatch is introduced by this module.
+
+
+Phase 3.27 hardening follow-up: recipient-scoped notification event-history endpoints, idempotency-key payload collision protection, and patient portal link expiry revalidation are implemented in the current follow-up branch. Phase 5 verification remains pending.
