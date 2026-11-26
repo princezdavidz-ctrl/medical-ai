@@ -143,7 +143,7 @@ def process_voice_turn(
            })
     return {
         "transcript": transcript,
-        "spoken_response": re.sub(r"\\s*\\[K-[0-9a-f]{10}-[0-9a-f]{10}\\]", "", response.content).strip(),
+        "spoken_response": re.sub(r"\s*\[K-[0-9a-f]{10}-[0-9a-f]{10}\]", "", response.content).strip(),
         "locale": payload.locale,
         "speech_input": "on_device",
         "speech_output": "on_device",
