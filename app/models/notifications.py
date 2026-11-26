@@ -84,7 +84,7 @@ class NotificationIntent(Base):
     )
     id: Mapped[uuid.UUID] = mapped_column(Uuid(as_uuid=True), primary_key=True, default=uuid.uuid4)
     hospital_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("hospitals.id"), nullable=False)
-    recipient_user_id: Mapped[uuid.UUID] = mapped_column(Uuid(as_uuid=True), nullable=False)
+    recipient_user_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id"), nullable=False)
     patient_id: Mapped[uuid.UUID | None] = mapped_column(Uuid(as_uuid=True))
     consent_id: Mapped[uuid.UUID | None] = mapped_column(Uuid(as_uuid=True))
     template_id: Mapped[uuid.UUID] = mapped_column(Uuid(as_uuid=True), nullable=False)
