@@ -31,7 +31,7 @@ def upgrade() -> None:
         sa.Column("quiet_start", sa.String(5)),
         sa.Column("quiet_end", sa.String(5)),
         sa.Column("updated_at", sa.DateTime(timezone=True), server_default=sa.func.now(), nullable=False),
-        sa.ForeignKeyConstraint(["hospital_id", "user_id"], ["hospital_memberships.hospital_id", "hospital_memberships.user_id"], name="fk_notification_preference_membership"),
+        sa.ForeignKeyConstraint(["user_id"], ["users.id"], name="fk_notification_preference_user"),
         sa.UniqueConstraint("hospital_id", "user_id", name="uq_notification_preference_hospital_user"),
         sa.CheckConstraint("locale ~ '^[a-z]{2}(-[A-Z]{2})?$'", name="ck_notification_preference_locale"),
         sa.CheckConstraint("timezone_name <> ''", name="ck_notification_preference_timezone"),
