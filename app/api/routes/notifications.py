@@ -178,7 +178,8 @@ def enqueue_notification(payload: NotificationEnqueue, context: tuple = Depends(
     ))
     if template is None:
         raise HTTPException(status_code=404, detail={"code": "published_notification_template_not_found"})
-    if _placeholders(template.title_template, template.body_template) != set(template.allowed_placeholders) & _placeholders(template.title_template, template.body_template):
+    required_placeholders = _placeholders(template.title_template, template.body_template)
+    if not required_placeholders.issubset(set(template.allowed_placeholders)):
         raise HTTPException(status_code=422, detail={"code": "template_placeholder_configuration_invalid"})
     required = _placeholders(template.title_template, template.body_template)
     if set(payload.variables) != required or not set(payload.variables).issubset(set(template.allowed_placeholders)):
@@ -243,6 +244,7 @@ def enqueue_notification(payload: NotificationEnqueue, context: tuple = Depends(
         db.commit()
     except IntegrityError:
         db.rollback()
+        _restore_context(db, user.id, hospital_id)
         duplicate = db.scalar(select(NotificationIntent).where(
             NotificationIntent.hospital_id == hospital_id,
             NotificationIntent.idempotency_key == payload.idempotency_key,
