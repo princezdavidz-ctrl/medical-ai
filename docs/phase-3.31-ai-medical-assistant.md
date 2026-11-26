@@ -30,3 +30,19 @@ Phase 3 builds the assistant session, context authorization, structured response
 
 ## Verification
 Clinical safety, authorization, prompt injection, source grounding, medication safety, offline behavior, audit, latency and failure-mode scenarios are registered in docs/TEST_REGISTER_PHASE_5.md. Backend tests remain deferred to Phase 5.
+
+
+## Implemented foundation
+- Patient-bound clinician AI sessions require active clinical role, patient-care assignment, in-progress encounter and purpose-bound consent before session creation.
+- A clinical session is permanently bound to one hospital, owner, patient, encounter, consent and care assignment; the same session cannot be switched to another patient.
+- Every clinical AI request revalidates the current patient assignment and consent. If the original consent or assignment changes, the session must be restarted.
+- Clinical decision support prompt v2 enforces explicit sections for problem representation, differential considerations, red flags/escalation, diagnostic considerations, medication safety, missing information and evidence/limitations.
+- Assistant responses expose a SHA-256 digest and assistant message sequence. The encrypted session stores the digest as metadata without storing plaintext outside encrypted messages.
+- Clinicians can record accepted-for-consideration, rejected or needs-revision decisions against the exact assistant response digest. Review records are append-only and may include a private vault reference to a separately saved clinical note.
+- The workflow does not write AI output into the legal medical record or autonomously order, diagnose, prescribe, triage or discharge.
+- Migration 0053_ai_clinical_assistant creates patient-bound session context and immutable clinician review records with RLS.
+
+## API additions
+- POST /api/v1/ai/clinical-sessions
+- POST /api/v1/ai/clinical-sessions/{session_id}/reviews
+- Existing POST /api/v1/ai/requests accepts the created session ID plus the same patient and encounter references; it returns session ID, assistant sequence and response digest.
