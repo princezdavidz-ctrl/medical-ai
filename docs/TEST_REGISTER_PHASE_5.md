@@ -497,3 +497,11 @@ No item is considered passed until evidence, environment, build SHA, reviewer an
 - [ ] Department notice idempotency: repeat requests do not create duplicate intents for any recipient, including concurrent submissions.
 - [ ] Department opt-outs: recipients with disabled channel preferences are skipped; in-app default behavior is explicit and external channels require opt-in.
 - [ ] Notification dashboard: aggregate counts are hospital-scoped, expose no message body or direct patient identifiers, and are restricted to authorized communications administrators.
+
+- [ ] Template locale validation: accept supported language/region format and reject malformed locale tags.
+- [ ] Template version uniqueness: same code/version may exist for different locales, but duplicate versions within one locale are rejected.
+- [ ] Locale resolution: recipient locale translation is preferred only when published and channel-compatible; fallback order is English then selected base template.
+- [ ] Placeholder parity: localized templates render only with the supplied allow-listed variables; missing or extra placeholders fail safely or fall back without leaking raw template syntax.
+- [ ] Department localization: each recipient receives the correct locale variant independently while retaining a stable recipient-specific idempotency key.
+- [ ] Migration 0045: existing templates migrate to English; upgrade/downgrade preserves data and downgrade refuses unsafe localized-data loss.
+- [ ] Quiet-hour database constraints: invalid hour/minute values are rejected by PostgreSQL check constraints.
