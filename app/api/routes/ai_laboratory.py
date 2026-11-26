@@ -133,6 +133,8 @@ def _reference_interval_context(
         "age_min_days": interval.age_min_days,
         "age_max_days": interval.age_max_days,
         "sex_context": interval.sex_context,
+        "effective_from": interval.effective_from.isoformat() if interval.effective_from else None,
+        "effective_to": interval.effective_to.isoformat() if interval.effective_to else None,
         "interpretation_notes": interval.interpretation_notes,
         "numeric_comparison": comparison,
         "comparison_notice": "Reference comparison only; does not replace the laboratory's verified flag or clinician interpretation.",
@@ -285,6 +287,15 @@ def create_laboratory_interpretation(
             value for value in metadata.get("citation_ids", [])
             if isinstance(value, str) and 0 < len(value) <= 160
         }) if isinstance(metadata.get("citation_ids", []), list) else [],
+        evidence_citations=[{
+            key: value for key, value in item.items()
+            if key in {
+                "citation_id", "source_id", "source_title", "publisher", "canonical_url",
+                "document_id", "title", "version", "jurisdiction", "evidence_grade",
+                "reviewed_at", "next_review_at",
+            } and value is not None
+        } for item in metadata.get("citations", [])[:50] if isinstance(item, dict)]
+        if isinstance(metadata.get("citations", []), list) else [],
         result_snapshot=snapshot,
     )
     db.add(case)
