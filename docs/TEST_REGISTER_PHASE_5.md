@@ -565,3 +565,12 @@ No item is considered passed until evidence, environment, build SHA, reviewer an
 - [ ] Access review idempotency and concurrency: duplicate campaign/item decisions cannot create inconsistent duplicate items or bypass independent approval.
 - [ ] Tenant isolation: RLS and composite membership references prevent cross-hospital control owners, assessors, campaign subjects, reviewers and approvers.
 - [ ] Migration 0050: four tables, RLS, constraints and indexes upgrade/downgrade cleanly.
+
+- [ ] Retention policy governance: policy code/version uniqueness, domain/duration validation, and independent approver distinct from author.
+- [ ] Retention eligibility: disposition cannot be requested before resource creation date plus active policy retention duration.
+- [ ] Legal hold scope: only valid vault references are accepted; holds are hospital-scoped, auditable and released only with reason.
+- [ ] Legal hold precedence: active, unexpired hold blocks disposition creation and is rechecked during review; a hold created after request still blocks approval.
+- [ ] Disposition review: requester cannot approve own request; reviewer must be authorized; decision and review note are retained.
+- [ ] No destructive side effects: approving a delete/archive request records approval only and does not delete, move or mutate source data in Phase 3.
+- [ ] Expiry behavior: expired legal holds no longer block disposition; explicit release and automatic expiry remain distinguishable.
+- [ ] Migration 0051: retention policy, legal hold and disposition tables have RLS and same-hospital issuer/approver/reviewer references.
