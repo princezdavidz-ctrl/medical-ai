@@ -25,6 +25,8 @@ def upgrade() -> None:
         sa.Column("source_response_digest", sa.String(64), nullable=False),
         sa.Column("laboratory_result_ids", sa.JSON(), nullable=False),
         sa.Column("result_snapshot", sa.JSON(), nullable=False),
+        sa.Column("evidence_citation_ids", sa.JSON(), nullable=False, server_default=sa.text("'[]'::json")),
+        sa.Column("evidence_citations", sa.JSON(), nullable=False, server_default=sa.text("'[]'::json")),
         sa.Column("status", sa.String(24), nullable=False, server_default="pending_review"),
         sa.Column("review_decision", sa.String(40)),
         sa.Column("review_note_reference", sa.String(80)),
@@ -43,6 +45,9 @@ def upgrade() -> None:
         sa.CheckConstraint("source_response_digest ~ '^[0-9a-f]{64}$'", name="ck_ai_lab_case_digest"),
         sa.CheckConstraint("json_typeof(laboratory_result_ids) = 'array' AND json_array_length(laboratory_result_ids) > 0", name="ck_ai_lab_case_result_ids"),
         sa.CheckConstraint("json_typeof(result_snapshot) = 'array' AND json_array_length(result_snapshot) > 0", name="ck_ai_lab_case_snapshot"),
+        sa.CheckConstraint("json_typeof(evidence_citation_ids) = 'array'", name="ck_ai_lab_case_citations"),
+        sa.CheckConstraint("json_typeof(evidence_citations) = 'array'", name="ck_ai_lab_case_citation_details"),
+        sa.CheckConstraint("review_decision IS NULL OR review_decision IN ('accepted_for_clinical_consideration', 'needs_correction', 'not_applicable')", name="ck_ai_lab_case_review_decision"),
         sa.CheckConstraint("status IN ('pending_review', 'reviewed')", name="ck_ai_lab_case_status"),
         sa.CheckConstraint("review_reference IS NULL OR review_reference ~ '^vault://[0-9a-fA-F-]{36}$'", name="ck_ai_lab_case_review_reference"),
         sa.CheckConstraint("review_note_reference IS NULL OR review_note_reference ~ '^vault://[0-9a-fA-F-]{36}$'", name="ck_ai_lab_case_note_reference"),
@@ -54,6 +59,7 @@ def upgrade() -> None:
     )
     op.create_index("ix_ai_lab_case_patient_created", TABLE, ["hospital_id", "patient_id", "created_at"])
     op.execute(sa.text(f'ALTER TABLE "{TABLE}" ENABLE ROW LEVEL SECURITY'))
+    op.execute(sa.text(f'ALTER TABLE "{TABLE}" FORCE ROW LEVEL SECURITY'))
     op.execute(sa.text(
         f'CREATE POLICY "{TABLE}_hospital_isolation" ON "{TABLE}" '
         "USING (hospital_id = NULLIF(current_setting('app.current_hospital_id', true), '')::uuid) "
